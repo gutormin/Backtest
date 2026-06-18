@@ -1836,28 +1836,28 @@
                         <div style="font-size: 12.5px; color: var(--text-muted); line-height: 1.5; padding-top: 5px;">
                             <details style="cursor: pointer; background: rgba(255,255,255,0.02); padding: 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.04);">
                                 <summary style="color: var(--info); font-weight: 600; display: flex; align-items: center; gap: 6px; outline: none;">
-                                    <i class="fa-solid fa-circle-question"></i> Como interpretar estes cenários? (Exemplos e Referências)
+                                    <i class="fa-solid fa-circle-question"></i> Como interpretar estes cenários? (Valores de Referência)
                                 </summary>
                                 <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding-left: 8px; border-left: 2px solid var(--info);">
                                     <p>
                                         <strong>1. Probabilidade de Lucro:</strong> Percentual de simulações em que a banca final foi superior à banca inicial. 
-                                        <br><span style="color: var(--success); font-weight: 500;">Exemplo:</span> 100.0% significa que a estratégia obteve lucro em todos os 1.000 cenários futuros projetados, demonstrando extrema resiliência matemática à variância de curto prazo.
-                                        <br><span style="color: var(--text-muted); font-size: 11px;"><em>Referência: Teorema do Limite Central e Lei dos Grandes Números.</em></span>
+                                        <br><span style="color: var(--success); font-weight: 500;">Exemplo:</span> 100.0% significa que a estratégia obteve lucro em todos os 1.000 cenários futuros projetados.
+                                        <br><span style="color: var(--success);">Muito Bom: &gt; 85%</span> | <span style="color: var(--warning);">Atenção: 70% a 85%</span> | <span style="color: var(--danger);">Ruim: &lt; 70%</span>
                                     </p>
                                     <p>
-                                        <strong>2. Lucro Mediano Esperado:</strong> A mediana exata dos resultados obtidos. Representa a expectativa de retorno financeiro mais realista (50% de chance de lucrar mais que isso, 50% de lucrar menos).
-                                        <br><span style="color: var(--success); font-weight: 500;">Exemplo:</span> Para R$ 15.153,51, este valor divide ao meio os cenários simulados, sendo o ponto de equilíbrio de maior probabilidade física.
-                                        <br><span style="color: var(--text-muted); font-size: 11px;"><em>Referência: Métodos de Monte Carlo para Análise de Sensibilidade e Risco.</em></span>
+                                        <strong>2. Lucro Mediano Esperado:</strong> Retorno financeiro central mais provável das 1.000 projeções.
+                                        <br><span style="color: var(--success); font-weight: 500;">Exemplo:</span> R$ 15.153,51 divide ao meio os cenários simulados.
+                                        <br><span style="color: var(--success);">Muito Bom: &gt; +30% do capital</span> | <span style="color: var(--warning);">Atenção: +10% a +30% do capital</span> | <span style="color: var(--danger);">Ruim: &lt; +10% ou negativo</span>
                                     </p>
                                     <p>
-                                        <strong>3. Pior Cenário (5%):</strong> Value at Risk (VaR 95%). Apenas os 50 piores caminhos (5% mais infelizes com longas sequências de derrotas) ficaram abaixo deste valor.
-                                        <br><span style="color: var(--success); font-weight: 500;">Exemplo:</span> R$ 4.269,32 indica que você possui 95% de certeza matemática de que o seu lucro será de <strong>no mínimo</strong> R$ 4.269,32, mantendo-se positivo mesmo em cenários muito adversos.
-                                        <br><span style="color: var(--text-muted); font-size: 11px;"><em>Referência: Modelagem de Value-at-Risk (VaR) para Risco de Cauda Esquerda.</em></span>
+                                        <strong>3. Pior Cenário (5%):</strong> Value at Risk (VaR 95%). O pior resultado esperado em 95% do tempo.
+                                        <br><span style="color: var(--success); font-weight: 500;">Exemplo:</span> R$ 4.269,32 indica que você tem 95% de certeza de lucrar no mínimo R$ 4.269,32.
+                                        <br><span style="color: var(--success);">Muito Bom: &gt; $0 (Lucrativo na queda)</span> | <span style="color: var(--warning);">Atenção: -15% a $0 de perda</span> | <span style="color: var(--danger);">Ruim: &lt; -15% de perda</span>
                                     </p>
                                     <p>
-                                        <strong>4. Melhor Cenário (95%):</strong> O limite superior dos cenários típicos. Apenas 5% das simulações (com muita sorte e sequências longas de vitórias) ultrapassaram esta marca de lucro.
-                                        <br><span style="color: var(--success); font-weight: 500;">Exemplo:</span> R$ 59.365,59 estabelece o teto estatisticamente viável sob condições de alta variação positiva.
-                                        <br><span style="color: var(--text-muted); font-size: 11px;"><em>Referência: Análise de Quantis 95% em Finanças Quantitativas.</em></span>
+                                        <strong>4. Melhor Cenário (95%):</strong> O teto esperado sob condições de alta sorte de curto prazo.
+                                        <br><span style="color: var(--success); font-weight: 500;">Exemplo:</span> R$ 59.365,59 estabelece o lucro máximo esperado.
+                                        <br><span style="color: var(--success);">Muito Bom: &gt; +80% do capital</span> | <span style="color: var(--warning);">Atenção: +30% a +80% do capital</span> | <span style="color: var(--danger);">Ruim: &lt; +30% do capital</span>
                                     </p>
                                 </div>
                             </details>
@@ -1996,24 +1996,23 @@
                         </li>
                         <li style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                             <strong><i class="fa-solid fa-dice" style="color: var(--info); width: 20px; text-align: center;"></i> Probabilidade de Lucro (Monte Carlo):</strong> Percentual das 1.000 projeções de cenários futuros simulados em que a banca final foi superior à inicial após todas as operações do período.<br>
-                            <span style="color: var(--success);">Ideal: &gt; 85%</span> | <span style="color: var(--warning);">Aceitável: 70% a 85%</span> | <span style="color: var(--danger);">Risco Alto: &lt; 70%</span><br>
-                            <em>Exemplo: Se for de 100.0%, significa que a estratégia obteve lucro em todas as 1.000 simulações futuras geradas, demonstrando imunidade matemática à variância negativa de curto prazo.</em><br>
-                            <span style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 4px;"><strong>Referência:</strong> Teorema do Limite Central e Modelagens Estatísticas Multivariadas.</span>
+                            <span style="color: var(--success);">Muito Bom: &gt; 85%</span> | <span style="color: var(--warning);">Atenção: 70% a 85%</span> | <span style="color: var(--danger);">Ruim: &lt; 70%</span><br>
+                            <em>Exemplo: Se for de 100.0% (como na imagem), significa que a estratégia obteve lucro em todas as 1.000 simulações futuras geradas, demonstrando imunidade matemática à variância de longo prazo.</em>
                         </li>
                         <li style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                             <strong><i class="fa-solid fa-calculator" style="color: var(--primary); width: 20px; text-align: center;"></i> Lucro Mediano Esperado (Monte Carlo):</strong> O retorno mediano exato dos 1.000 cenários simulados ordenados (500º cenário). Indica a expectativa de retorno financeiro mais realista e representativa.<br>
-                            <em>Exemplo: Com um Lucro Mediano de R$ 15.153,51, existe 50% de probabilidade de o resultado real superar este patamar e 50% de probabilidade de ficar abaixo dele.</em><br>
-                            <span style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 4px;"><strong>Referência:</strong> Mediana de Distribuição Acumulada em Simulações Numéricas Financeiras.</span>
+                            <span style="color: var(--success);">Muito Bom: &gt; +30% do capital inicial</span> | <span style="color: var(--warning);">Atenção: +10% a +30% do capital inicial</span> | <span style="color: var(--danger);">Ruim: &lt; +10% ou negativo</span><br>
+                            <em>Exemplo: Com um Lucro Mediano de R$ 15.153,51, existe 50% de probabilidade de o resultado real superar este patamar e 50% de probabilidade de ficar abaixo dele.</em>
                         </li>
                         <li style="margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid rgba(255,255,255,0.05);">
                             <strong><i class="fa-solid fa-shield-halved" style="color: var(--danger); width: 20px; text-align: center;"></i> Pior Cenário (5% - Value at Risk / VaR):</strong> O rendimento limite das 50 piores projeções simuladas (percentil 5%). Indica com 95% de certeza que o resultado será de <strong>no mínimo</strong> este valor.<br>
-                            <em>Exemplo: Se for de R$ 4.269,32, há 95% de certeza de que o lucro será no mínimo este valor, provando que a estratégia se mantém lucrativa mesmo sob severas sequências de derrotas.</em><br>
-                            <span style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 4px;"><strong>Referência:</strong> Parametrização Value-at-Risk (VaR 95%) para mitigação de Risco de Cauda.</span>
+                            <span style="color: var(--success);">Muito Bom: &gt; $0 (Lucrativo mesmo no azar)</span> | <span style="color: var(--warning);">Atenção: -15% a $0 de perda</span> | <span style="color: var(--danger);">Ruim: &lt; -15% de perda</span><br>
+                            <em>Exemplo: Se for de R$ 4.269,32, há 95% de certeza de que o lucro será no mínimo este valor, provando que a estratégia se mantém lucrativa mesmo sob severas sequências de derrotas.</em>
                         </li>
                         <li style="margin-bottom: 15px; padding-bottom: 10px;">
                             <strong><i class="fa-solid fa-circle-up" style="color: var(--success); width: 20px; text-align: center;"></i> Melhor Cenário (95%):</strong> O rendimento limite superior dos cenários mais otimistas (percentil 95%). Apenas os 5% de caminhos mais sortudos superam esse valor.<br>
-                            <em>Exemplo: Um valor de R$ 59.365,59 estabelece o teto esperado de ganho para um cenário com alta dose de variância positiva (sorte extrema).</em><br>
-                            <span style="color: var(--text-muted); font-size: 12px; display: block; margin-top: 4px;"><strong>Referência:</strong> Quantil 95% de Distribuições Cumuladas Não-Normais.</span>
+                            <span style="color: var(--success);">Muito Bom: &gt; +80% do capital inicial</span> | <span style="color: var(--warning);">Atenção: +30% a +80% do capital inicial</span> | <span style="color: var(--danger);">Ruim: &lt; +30% do capital inicial</span><br>
+                            <em>Exemplo: Um valor de R$ 59.365,59 estabelece o teto esperado de ganho para um cenário com alta dose de variância positiva (sorte extrema).</em>
                         </li>
                     </ul>
                 </div>
