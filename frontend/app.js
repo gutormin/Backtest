@@ -2514,19 +2514,33 @@ function displayOptimizationSuggestions(suggestions) {
 
     
 
-    if (!suggestions || suggestions.length === 0) {
-
-        optPanel.style.display = 'none';
-
-        return;
-
-    }
+    if (!optPanel || !suggestionsContainer) return;
 
     
 
     optPanel.style.display = 'block';
 
     suggestionsContainer.innerHTML = '';
+
+    
+
+    if (!suggestions || suggestions.length === 0) {
+
+        suggestionsContainer.innerHTML = `
+
+            <div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 13px; background: rgba(255, 255, 255, 0.01); border: 1px dashed rgba(255, 255, 255, 0.05); border-radius: 8px;">
+
+                <i class="fa-solid fa-circle-check" style="color: var(--success); font-size: 20px; margin-bottom: 10px; display: block;"></i>
+
+                O sistema realizou a varredura em múltiplos ranges de odds e limites de EV+ em segundo plano, mas o seu modelo de estratégia atual já se encontra no ponto ótimo. Nenhuma variação testada obteve ganho de ROI superior a 1.5%.
+
+            </div>
+
+        `;
+
+        return;
+
+    }
 
     
 
@@ -8216,8 +8230,46 @@ window.runBacktest = async function() {
     }
 };
 
-// Funções de fallback mantidas para compatibilidade
-window.renderQuartiles = function(q) {};
+window.renderQuartiles = function(q) {
+    const panel = document.getElementById('quartiles-panel');
+    if (!panel) return;
+    
+    if (!q || !Array.isArray(q) || q.length < 4) {
+        panel.style.display = 'none';
+        return;
+    }
+    
+    for (let i = 0; i < 4; i++) {
+        const quart = q[i];
+        const num = i + 1;
+        
+        const profitEl = document.getElementById(`q${num}-profit`);
+        const stakesEl = document.getElementById(`q${num}-stakes`);
+        const roiEl = document.getElementById(`q${num}-roi`);
+        const winrateEl = document.getElementById(`q${num}-winrate`);
+        const betsEl = document.getElementById(`q${num}-bets`);
+        
+        if (profitEl) {
+            profitEl.textContent = (quart.profit >= 0 ? '+' : '') + '$' + quart.profit.toFixed(2);
+            profitEl.style.color = quart.profit >= 0 ? 'var(--success)' : 'var(--danger)';
+        }
+        if (stakesEl) {
+            stakesEl.textContent = quart.stakes.toFixed(2) + ' st.';
+        }
+        if (roiEl) {
+            roiEl.textContent = (quart.roi >= 0 ? '+' : '') + quart.roi.toFixed(1) + '%';
+            roiEl.style.color = quart.roi >= 0 ? 'var(--success)' : 'var(--danger)';
+        }
+        if (winrateEl) {
+            winrateEl.textContent = quart.win_rate.toFixed(1) + '%';
+        }
+        if (betsEl) {
+            betsEl.textContent = quart.total_bets;
+        }
+    }
+    
+    panel.style.display = 'block';
+};
 
 
 
