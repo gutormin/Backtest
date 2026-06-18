@@ -70,18 +70,17 @@ def send_test_message():
     return send_telegram_message(message)
 
 def format_telegram_tip(league_name, date_str, time_str, home_team, away_team, market_label, prob, fair_odds, bookie_odds, ev, stake_pct):
-    # Formats a beautiful alert for tips
+    # Formats the alert exactly as requested by the user
     message = (
         f"<b>🔔 NOVA ENTRADA SUGERIDA (+EV)</b>\n\n"
-        f"🏆 <b>Liga:</b> {league_name}\n"
-        f"⚔️ <b>Jogo:</b> {home_team} vs {away_team}\n"
-        f"📅 <b>Data/Hora:</b> {date_str} às {time_str}\n\n"
-        f"🎯 <b>Entrada:</b> <u>{market_label}</u>\n"
+        f"🎯 <b>Entrada:</b> {market_label}\n"
+        f"⚔️ <b>Jogo:</b> {home_team} x {away_team} - {time_str} ({date_str})\n"
         f"📊 <b>Probabilidade IA:</b> {prob:.1f}%\n"
         f"📈 <b>Odd Mínima (Justa):</b> {fair_odds:.2f}\n"
-        f"🚀 <b>Odd Encontrada:</b> {bookie_odds:.2f} (Edge EV: +{((ev-1)*100):.1f}%)\n"
+        f"🚀 <b>Odd Encontrada:</b> {bookie_odds:.2f}\n"
+        f"📈 <b>(Edge EV: +{((ev-1)*100):.1f}%)</b>\n"
         f"💰 <b>Gestão Sugerida:</b> Stake de <b>{stake_pct:.1f}%</b> da banca\n\n"
-        f"🤖 <i>Sports Betting Pro Bot - Tips Inteligentes</i>"
+        f"🤖 <i>Sports Betting Pro Bot</i>"
     )
     return message
 
