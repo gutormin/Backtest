@@ -7510,16 +7510,16 @@ function renderSteamTable(results) {
     results.sort((a, b) => b.net_profit - a.net_profit);
     
     let html = `
-        <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+        <table class="radar-smart-table" style="width: 100%; margin-top: 15px;">
             <thead>
-                <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
-                    <th style="padding: 12px 15px; text-align: left; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Nicho</th>
-                    <th style="padding: 12px 15px; text-align: center; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Apostas Feitas</th>
-                    <th style="padding: 12px 15px; text-align: right; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Drop Médio (%)</th>
-                    <th style="padding: 12px 15px; text-align: center; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Confiança</th>
-                    <th style="padding: 12px 15px; text-align: center; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Taxa de Acerto</th>
-                    <th style="padding: 12px 15px; text-align: right; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">ROI</th>
-                    <th style="padding: 12px 15px; text-align: right; font-size: 12px; color: var(--text-muted); text-transform: uppercase;">Lucro Líquido</th>
+                <tr>
+                    <th style="text-align: left;">Nicho</th>
+                    <th>Apostas Feitas</th>
+                    <th>Drop Médio (%)</th>
+                    <th>Confiança</th>
+                    <th>Taxa de Acerto</th>
+                    <th>ROI</th>
+                    <th>Lucro Líquido</th>
                 </tr>
             </thead>
             <tbody>
@@ -7531,58 +7531,67 @@ function renderSteamTable(results) {
         const leagueName = (window.AVAILABLE_LEAGUES && window.AVAILABLE_LEAGUES.find(l => l.code === codeParts[0])) ? 
             window.AVAILABLE_LEAGUES.find(l => l.code === codeParts[0]).name : codeParts[0];
             
+        let rowGlowClass = '';
+        if (r.confidence_level === 'Alta') rowGlowClass = 'radar-row-glow-alta';
+        else if (r.confidence_level === 'Média') rowGlowClass = 'radar-row-glow-media';
+        else rowGlowClass = 'radar-row-glow-baixa';
+            
         let badgeColor = 'var(--text-muted)';
         let badgeBg = 'rgba(255,255,255,0.05)';
         let badgeBorder = '1px solid rgba(255,255,255,0.1)';
+        let icon = 'fa-circle-question';
         
         if (r.confidence_level === 'Alta') {
             badgeColor = '#10b981';
-            badgeBg = 'rgba(16, 185, 129, 0.15)';
+            badgeBg = 'rgba(16, 185, 129, 0.12)';
             badgeBorder = '1px solid rgba(16, 185, 129, 0.3)';
+            icon = 'fa-circle-check';
         } else if (r.confidence_level === 'Média') {
             badgeColor = '#f59e0b';
-            badgeBg = 'rgba(245, 158, 11, 0.15)';
+            badgeBg = 'rgba(245, 158, 11, 0.12)';
             badgeBorder = '1px solid rgba(245, 158, 11, 0.3)';
+            icon = 'fa-circle-exclamation';
         } else if (r.confidence_level === 'Baixa') {
             badgeColor = '#ef4444';
-            badgeBg = 'rgba(239, 68, 68, 0.15)';
+            badgeBg = 'rgba(239, 68, 68, 0.12)';
             badgeBorder = '1px solid rgba(239, 68, 68, 0.3)';
+            icon = 'fa-triangle-exclamation';
         }
         
         const confidenceHTML = `
-            <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; vertical-align: middle;">
-                <span style="display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; color: ${badgeColor}; background: ${badgeBg}; border: ${badgeBorder}; text-transform: uppercase;">
-                    ${r.confidence_level || 'Baixa'}
+            <div style="display: inline-flex; flex-direction: column; align-items: center; justify-content: center; vertical-align: middle; gap: 4px;">
+                <span style="display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 6px; font-size: 10px; font-weight: 800; color: ${badgeColor}; background: ${badgeBg}; border: ${badgeBorder}; text-transform: uppercase;">
+                    <i class="fa-solid ${icon}" style="font-size: 10px;"></i> ${r.confidence_level || 'Baixa'}
                 </span>
-                <span style="font-size: 9px; color: var(--text-muted); margin-top: 2px; font-weight: 500;">
+                <span style="font-size: 9px; color: var(--text-muted); font-weight: bold;">
                     Score: ${(r.confidence_score || 0).toFixed(0)}% (Liq: ${r.liquidity_tier || 'Baixa'})
                 </span>
             </div>
         `;
             
         html += `
-            <tr style="border-bottom: 1px solid rgba(255,255,255,0.05); transition: background-color 0.2s;">
-                <td style="padding: 12px 15px; font-weight: 500; font-size: 13px;">
+            <tr class="${rowGlowClass}">
+                <td style="font-weight: 500; font-size: 13px; text-align: left;">
                     <span style="color: var(--text-secondary);">${leagueName}</span>
                     <span style="color: var(--text-muted); margin: 0 5px;"><i class="fa-solid fa-angle-right" style="font-size: 10px;"></i></span>
-                    <span style="color: var(--text-primary);">${r.market_name}</span>
+                    <span style="color: #67e8f9; font-weight: bold;">${r.market_name}</span>
                 </td>
-                <td style="padding: 12px 15px; text-align: center; font-family: var(--font-mono); color: var(--text-primary);">
+                <td style="font-family: var(--font-mono); color: var(--text-primary);">
                     ${r.total_bets}
                 </td>
-                <td style="padding: 12px 15px; text-align: right; color: var(--info); font-family: var(--font-mono); font-weight: bold;">
+                <td style="color: var(--info); font-family: var(--font-mono); font-weight: bold;">
                     -${r.avg_drop.toFixed(1)}% <i class="fa-solid fa-arrow-trend-down" style="font-size: 10px; margin-left: 2px;"></i>
                 </td>
-                <td style="padding: 12px 15px; text-align: center;">
+                <td>
                     ${confidenceHTML}
                 </td>
-                <td style="padding: 12px 15px; text-align: center; color: var(--text-secondary);">
+                <td style="color: var(--text-secondary);">
                     ${r.win_rate.toFixed(1)}%
                 </td>
-                <td style="padding: 12px 15px; text-align: right; font-family: var(--font-mono); color: ${isProfit ? 'var(--success)' : 'var(--danger)'};">
+                <td style="font-family: var(--font-mono); color: ${isProfit ? 'var(--success)' : 'var(--danger)'};">
                     ${r.roi > 0 ? '+' : ''}${r.roi.toFixed(1)}%
                 </td>
-                <td style="padding: 12px 15px; text-align: right; font-family: var(--font-mono); color: ${isProfit ? 'var(--success)' : 'var(--danger)'}; font-weight: bold;">
+                <td style="font-family: var(--font-mono); color: ${isProfit ? 'var(--success)' : 'var(--danger)'}; font-weight: bold;">
                     $${r.net_profit.toFixed(2)}
                 </td>
             </tr>
@@ -7845,55 +7854,98 @@ window.runLiveSteamScan = async function() {
             return;
         }
         
-        data.scan_results.forEach(item => {
+        data.scan_results.forEach((item, idx) => {
             const tr = document.createElement('tr');
+            
+            if (item.confidence_level === 'Alta') {
+                tr.className = 'radar-row-glow-alta';
+            } else if (item.confidence_level === 'Média') {
+                tr.className = 'radar-row-glow-media';
+            } else {
+                tr.className = 'radar-row-glow-baixa';
+            }
             
             let badgeColor = 'var(--text-muted)';
             let badgeBg = 'rgba(255,255,255,0.05)';
             let badgeBorder = '1px solid rgba(255,255,255,0.1)';
+            let icon = 'fa-circle-question';
             
             if (item.confidence_level === 'Alta') {
                 badgeColor = '#10b981';
-                badgeBg = 'rgba(16, 185, 129, 0.15)';
+                badgeBg = 'rgba(16, 185, 129, 0.12)';
                 badgeBorder = '1px solid rgba(16, 185, 129, 0.3)';
+                icon = 'fa-circle-check';
             } else if (item.confidence_level === 'Média') {
                 badgeColor = '#f59e0b';
-                badgeBg = 'rgba(245, 158, 11, 0.15)';
+                badgeBg = 'rgba(245, 158, 11, 0.12)';
                 badgeBorder = '1px solid rgba(245, 158, 11, 0.3)';
+                icon = 'fa-circle-exclamation';
             } else if (item.confidence_level === 'Baixa') {
                 badgeColor = '#ef4444';
-                badgeBg = 'rgba(239, 68, 68, 0.15)';
+                badgeBg = 'rgba(239, 68, 68, 0.12)';
                 badgeBorder = '1px solid rgba(239, 68, 68, 0.3)';
+                icon = 'fa-triangle-exclamation';
             }
 
             const confidenceHTML = `
-                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-                    <span style="display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: bold; color: ${badgeColor}; background: ${badgeBg}; border: ${badgeBorder}; text-transform: uppercase; letter-spacing: 0.5px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
-                        ${item.confidence_level || 'Baixa'}
+                <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 4px;">
+                    <span style="display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 800; color: ${badgeColor}; background: ${badgeBg}; border: ${badgeBorder}; text-transform: uppercase; letter-spacing: 0.5px;">
+                        <i class="fa-solid ${icon}" style="font-size: 11px;"></i> ${item.confidence_level || 'Baixa'}
                     </span>
-                    <span style="font-size: 10px; color: var(--text-muted); margin-top: 5px; font-weight: 500;">
-                        Score: ${(item.confidence_score || 0).toFixed(0)}% (${item.liquidity_tier || 'Baixa'})
+                    <span style="font-size: 9px; color: var(--text-muted); font-weight: bold;">
+                        Score: ${(item.confidence_score || 0).toFixed(0)}% (Liq: ${item.liquidity_tier || 'Baixa'})
                     </span>
                 </div>
             `;
 
-            tr.innerHTML = `
-                <td>
-                    <div style="font-weight: bold; color: var(--text-primary);">${item.match}</div>
-                    <div style="font-size: 11px; color: var(--text-muted);">${item.date}</div>
-                </td>
-                <td><span style="background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 4px; font-size: 11px;">${item.bookmaker}</span></td>
-                <td><span style="color: var(--primary); font-weight: bold;">${item.market}</span></td>
-                <td>@${item.opening_odd.toFixed(2)}</td>
-                <td style="color: var(--warning); font-weight: bold;">@${item.current_odd.toFixed(2)}</td>
-                <td>
-                    <div style="display: inline-block; padding: 4px 8px; background: rgba(var(--warning-rgb), 0.1); color: var(--warning); border-radius: 4px; font-weight: bold; font-size: 12px;">
-                        <i class="fa-solid fa-arrow-trend-down"></i> -${item.drop_pct}%
+            let indexCell = `<span style="color: var(--text-muted); font-size: 13px; font-weight: bold; margin-right: 12px; font-family: var(--font-mono);">${idx + 1}.</span>`;
+            const teams = item.match.split(' vs ');
+            const home = teams[0] || 'Desconhecido';
+            const away = teams[1] || 'Desconhecido';
+            
+            const matchHTML = `
+                <div style="display: flex; align-items: center;">
+                    ${indexCell}
+                    <div style="display: flex; flex-direction: column; gap: 3px;">
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-shirt" style="font-size: 11px; color: var(--text-muted);"></i>
+                            <span style="font-weight: 700; color: var(--text-primary); font-size: 13px;">${home}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-shirt" style="font-size: 11px; color: var(--text-muted); opacity: 0.6;"></i>
+                            <span style="font-weight: 700; color: var(--text-secondary); font-size: 13px;">${away}</span>
+                        </div>
+                        <div style="font-size: 11px; color: var(--text-muted); margin-top: 4px; display: flex; align-items: center; gap: 4px;">
+                            <i class="fa-regular fa-clock" style="font-size: 10px;"></i> ${item.date}
+                        </div>
                     </div>
-                </td>
-                <td>
-                    ${confidenceHTML}
-                </td>
+                </div>
+            `;
+
+            let bookieClass = 'radar-bookie-neutral';
+            const bName = item.bookmaker.toLowerCase();
+            if (bName.includes('365')) bookieClass = 'radar-bookie-bet365';
+            else if (bName.includes('pinnacle')) bookieClass = 'radar-bookie-pinnacle';
+            else if (bName.includes('betfair')) bookieClass = 'radar-bookie-betfair';
+            
+            const bookieHTML = `<span class="radar-bookmaker-badge ${bookieClass}">${item.bookmaker}</span>`;
+            const marketHTML = `<span style="color: #67e8f9; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 0.5px;">${item.market}</span>`;
+            const openingHTML = `<span style="color: var(--text-secondary); font-family: var(--font-mono); font-size: 13px;">@${item.opening_odd.toFixed(2)}</span>`;
+            const currentHTML = `<span class="radar-odd-badge-current">@${item.current_odd.toFixed(2)}</span>`;
+            const dropHTML = `
+                <span class="radar-drop-pct-red">
+                    ${item.drop_pct.toFixed(0)}% <i class="fa-solid fa-arrow-down-long" style="font-size: 11px;"></i>
+                </span>
+            `;
+
+            tr.innerHTML = `
+                <td>${matchHTML}</td>
+                <td>${bookieHTML}</td>
+                <td>${marketHTML}</td>
+                <td>${openingHTML}</td>
+                <td>${currentHTML}</td>
+                <td>${dropHTML}</td>
+                <td>${confidenceHTML}</td>
             `;
             tbody.appendChild(tr);
         });

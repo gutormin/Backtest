@@ -380,15 +380,224 @@
 
 <!-- Tab: Radar Smart Money -->
 <div class="tab-pane" id="tab-radar" style="display: none;">
-    <div class="scanner-card" style="margin-bottom: 20px;">
+    <!-- Radar Smart Money - Premium UI Styles -->
+    <style>
+    .radar-header-banner {
+        text-align: center;
+        margin-bottom: 25px;
+        padding: 30px 20px;
+        background: radial-gradient(circle at center, rgba(16, 185, 129, 0.08) 0%, transparent 70%);
+        border-radius: 12px;
+    }
+    .radar-logo-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        margin-bottom: 12px;
+    }
+    .radar-logo-icon {
+        font-size: 32px;
+        color: #10b981;
+        animation: radar-pulse-anim 2.5s infinite ease-in-out;
+        filter: drop-shadow(0 0 8px rgba(16, 185, 129, 0.4));
+    }
+    @keyframes radar-pulse-anim {
+        0% { transform: rotate(0deg) scale(1); opacity: 0.8; }
+        50% { transform: rotate(180deg) scale(1.1); opacity: 1; filter: drop-shadow(0 0 15px rgba(16, 185, 129, 0.6)); }
+        100% { transform: rotate(360deg) scale(1); opacity: 0.8; }
+    }
+    .radar-logo-text {
+        font-family: 'Outfit', sans-serif;
+        font-size: 26px;
+        font-weight: 800;
+        letter-spacing: 0.5px;
+        color: #ffffff;
+        text-transform: uppercase;
+    }
+    .radar-logo-text span {
+        color: #10b981;
+        margin-left: 8px;
+    }
+    .radar-beta-tag {
+        background: #06b6d4;
+        color: #ffffff;
+        font-size: 10px;
+        font-weight: 700;
+        padding: 2px 6px;
+        border-radius: 4px;
+        text-transform: uppercase;
+        vertical-align: middle;
+        margin-left: 10px;
+        letter-spacing: 0.5px;
+    }
+    .radar-sub-banner {
+        font-family: 'Outfit', sans-serif;
+        font-size: 36px;
+        font-weight: 800;
+        color: #ffffff;
+        margin-bottom: 8px;
+        letter-spacing: -0.5px;
+        text-transform: uppercase;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+    }
+    .radar-desc-banner {
+        font-size: 15px;
+        color: #9ca3af;
+        font-weight: 500;
+    }
+    .radar-panel-card {
+        background: #0b0e14 !important;
+        border: 1px solid rgba(16, 185, 129, 0.25) !important;
+        box-shadow: 0 0 25px rgba(16, 185, 129, 0.04) !important;
+        border-radius: 16px !important;
+        padding: 24px !important;
+        margin-bottom: 20px;
+    }
+    .radar-inner-title-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 15px;
+    }
+    .radar-inner-title {
+        font-family: 'Outfit', sans-serif;
+        font-size: 16px;
+        font-weight: 700;
+        color: #ffffff;
+        text-transform: uppercase;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .radar-smart-table {
+        width: 100%;
+        border-collapse: separate !important;
+        border-spacing: 0 12px !important;
+        margin-top: 10px;
+    }
+    .radar-smart-table th {
+        padding: 10px 15px !important;
+        font-size: 11px !important;
+        color: #6b7280 !important;
+        font-weight: bold !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+        border: none !important;
+    }
+    .radar-smart-table tbody tr {
+        background: #11151d !important;
+        border: 1px solid rgba(255, 255, 255, 0.02) !important;
+        transition: all 0.2s ease-in-out !important;
+    }
+    .radar-smart-table tbody tr:hover {
+        background: #161c27 !important;
+        transform: translateY(-2px);
+        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.3) !important;
+    }
+    .radar-row-glow-alta {
+        box-shadow: 0 0 12px rgba(16, 185, 129, 0.06) !important;
+        border-left: 4px solid #10b981 !important;
+    }
+    .radar-row-glow-media {
+        box-shadow: 0 0 12px rgba(245, 158, 11, 0.04) !important;
+        border-left: 4px solid #f59e0b !important;
+    }
+    .radar-row-glow-baixa {
+        box-shadow: 0 0 12px rgba(239, 68, 68, 0.02) !important;
+        border-left: 4px solid #ef4444 !important;
+    }
+    .radar-smart-table td {
+        padding: 16px 20px !important;
+        border: none !important;
+        vertical-align: middle !important;
+    }
+    .radar-smart-table td:first-child {
+        border-top-left-radius: 10px;
+        border-bottom-left-radius: 10px;
+    }
+    .radar-smart-table td:last-child {
+        border-top-right-radius: 10px;
+        border-bottom-right-radius: 10px;
+    }
+    .radar-bookmaker-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-size: 11px;
+        font-weight: 800;
+        min-width: 100px;
+        text-align: center;
+        letter-spacing: 0.5px;
+        box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 2px 4px rgba(0,0,0,0.15);
+        text-transform: uppercase;
+    }
+    .radar-bookie-bet365 {
+        background: #006041 !important;
+        color: #ffdf1b !important;
+        border: 1px solid #008055 !important;
+    }
+    .radar-bookie-pinnacle {
+        background: #071226 !important;
+        color: #ff7020 !important;
+        border: 1px solid #10203e !important;
+    }
+    .radar-bookie-betfair {
+        background: #231f20 !important;
+        color: #e5a900 !important;
+        border: 1px solid #ffbe00 !important;
+    }
+    .radar-bookie-neutral {
+        background: rgba(255, 255, 255, 0.05) !important;
+        color: #e5e7eb !important;
+        border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    }
+    .radar-odd-badge-current {
+        background: rgba(99, 102, 241, 0.12) !important;
+        color: #a5b4fc !important;
+        border: 1px solid rgba(99, 102, 241, 0.35) !important;
+        padding: 6px 14px;
+        border-radius: 8px;
+        font-family: var(--font-mono);
+        font-weight: bold;
+        font-size: 13px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .radar-drop-pct-red {
+        color: #f87171 !important;
+        font-family: var(--font-mono);
+        font-weight: bold;
+        font-size: 14px;
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        text-shadow: 0 0 10px rgba(248, 113, 113, 0.1);
+    }
+    </style>
+
+    <!-- Radar Banner Superior -->
+    <div class="radar-header-banner">
+        <div class="radar-logo-wrapper">
+            <i class="fa-solid fa-circle-notch radar-logo-icon"></i>
+            <span class="radar-logo-text">Radar<span>Smart Money</span></span>
+            <span class="radar-beta-tag">Beta</span>
+        </div>
+        <h1 class="radar-sub-banner">Odds Drops Live Monitoring</h1>
+        <p class="radar-desc-banner">Recent sharp odds movements detected across global football markets</p>
+    </div>
+
+    <div class="radar-panel-card">
         <div class="scanner-header-wrapper">
             <div class="scanner-title">
-                <h3><i class="fa-solid fa-satellite-dish text-glow" style="color: var(--warning);"></i> Radar Smart Money (Dropping Odds)</h3>
-                <p>Detecte movimentações violentas de dinheiro institucional e acompanhe o fluxo contra ou a favor do mercado.</p>
+                <h3 class="radar-inner-title"><i class="fa-solid fa-satellite-dish" style="color: #10b981;"></i> Painel de Controle e Histórico</h3>
             </div>
             
             <div class="steam-mode-toggle" style="display: flex; gap: 10px; margin-bottom: 10px; margin-top: 10px; align-items: center; width: 100%;">
-                <button id="btn-mode-lab" class="action-button active" onclick="toggleSteamMode('lab')" style="padding: 8px 15px; font-size: 13px; background: rgba(var(--primary-rgb), 0.2); color: var(--primary); border: 1px solid rgba(var(--primary-rgb), 0.4);">
+                <button id="btn-mode-lab" class="action-button active" onclick="toggleSteamMode('lab')" style="padding: 8px 15px; font-size: 13px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);">
                     <i class="fa-solid fa-flask"></i> Modo Laboratório (Backtest)
                 </button>
                 <button id="btn-mode-live" class="action-button" onclick="toggleSteamMode('live')" style="padding: 8px 15px; font-size: 13px; background: transparent; color: var(--text-secondary); border: 1px solid transparent;">
@@ -447,7 +656,7 @@
     
     <div id="steam-table-container" style="margin-top: 20px;"></div>
     <div id="steam-live-table-container" style="margin-top: 20px; display: none;">
-        <table class="data-table" id="steam-live-table">
+        <table class="radar-smart-table" id="steam-live-table">
             <thead>
                 <tr>
                     <th>JOGO / DATA</th>
