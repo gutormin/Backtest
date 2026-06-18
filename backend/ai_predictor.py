@@ -558,12 +558,20 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
             stake = stake_value
         elif staking_rule == 'proportional':
             stake = bankroll * (stake_value / 100.0)
-        elif staking_rule == 'kelly':
+        elif staking_rule.startswith('kelly'):
+            mult_k = 1.0
+            if staking_rule == 'kelly_half': mult_k = 0.5
+            elif staking_rule == 'kelly_quarter': mult_k = 0.25
+            elif staking_rule == 'kelly_eighth': mult_k = 0.125
+            elif staking_rule == 'kelly_sixteenth': mult_k = 0.0625
+            elif staking_rule == 'kelly': mult_k = stake_value
+            else: mult_k = stake_value
+
             if bookie_odds > 1.0:
                 f_star = (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
                 f_star = max(0.0, f_star)
-                stake = bankroll * f_star * stake_value
-                stake = min(stake, bankroll * 0.10) # 10% cap
+                stake = bankroll * f_star * mult_k
+                stake = min(stake, bankroll * 0.05) # Cap at 5% of bankroll to match backtester.py cap
             else:
                 stake = 0.0
         else:
