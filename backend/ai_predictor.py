@@ -663,6 +663,7 @@ def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rul
     n_bets = len(df)
     final_bankrolls = []
     ruined_runs = 0
+    half_ruined_runs = 0
     profitable_runs = 0
     
     odds_arr = df['odds'].values
@@ -673,6 +674,7 @@ def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rul
         sampled_indices = np.random.choice(n_bets, size=n_bets, replace=True)
         br = initial_bankroll
         ruined = False
+        half_ruined = False
         
         for idx in sampled_indices:
             bookie_odds = odds_arr[idx]
@@ -684,12 +686,8 @@ def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rul
                 stake = stake_value
             elif staking_rule == 'proportional':
                 stake = br * (stake_value / 100.0)
-            elif staking_rule.startswith('kelly'):
+            elif staking_rule == 'kelly':
                 mult_k = stake_value
-                if staking_rule == 'kelly_half': mult_k = 0.5
-                elif staking_rule == 'kelly_quarter': mult_k = 0.25
-                elif staking_rule == 'kelly_eighth': mult_k = 0.125
-                elif staking_rule == 'kelly_sixteenth': mult_k = 0.0625
                 
                 if bookie_odds > 1.0:
                     f_star = (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
@@ -711,9 +709,13 @@ def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rul
             
             if br < (initial_bankroll * 0.10):
                 ruined = True
+            if br < (initial_bankroll * 0.50):
+                half_ruined = True
                 
         if ruined:
             ruined_runs += 1
+        if half_ruined:
+            half_ruined_runs += 1
             
         final_bankrolls.append(br)
         if br > initial_bankroll:
@@ -728,11 +730,13 @@ def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rul
     
     profit_prob = float(profitable_runs / runs * 100.0)
     ruin_prob = float(ruined_runs / runs * 100.0)
+    half_ruin_prob = float(half_ruined_runs / runs * 100.0)
     
     return {
         "runs": runs,
         "profit_probability": round(profit_prob, 1),
         "ruin_probability": round(ruin_prob, 1),
+        "half_ruin_probability": round(half_ruin_prob, 1),
         "median_final_bankroll": round(p50, 2),
         "mean_final_bankroll": round(avg_final, 2),
         "percentile_5": round(p5, 2),

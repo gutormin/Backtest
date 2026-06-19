@@ -140,18 +140,24 @@ class ChronologicalBacktester:
         # Track statistics for each staking method to return alternative summaries
         peak_fixed = initial_bankroll
         max_dd_fixed = 0.0
+        current_dd_duration_fixed = 0
+        max_dd_duration_fixed = 0
         bets_fixed = 0
         wins_fixed = 0
         staked_fixed = 0.0
         
         peak_prop = initial_bankroll
         max_dd_prop = 0.0
+        current_dd_duration_prop = 0
+        max_dd_duration_prop = 0
         bets_prop = 0
         wins_prop = 0
         staked_prop = 0.0
         
         peak_kelly = initial_bankroll
         max_dd_kelly = 0.0
+        current_dd_duration_kelly = 0
+        max_dd_duration_kelly = 0
         bets_kelly = 0
         wins_kelly = 0
         staked_kelly = 0.0
@@ -923,14 +929,8 @@ class ChronologicalBacktester:
                             elif staking_rule == 'proportional':
                                 # e.g., 2% of current bankroll
                                 stake = bankroll * (stake_value / 100.0)
-                            elif staking_rule.startswith('kelly'):
-                                mult_k = 1.0
-                                if staking_rule == 'kelly_half': mult_k = 0.5
-                                elif staking_rule == 'kelly_quarter': mult_k = 0.25
-                                elif staking_rule == 'kelly_eighth': mult_k = 0.125
-                                elif staking_rule == 'kelly_sixteenth': mult_k = 0.0625
-                                elif staking_rule == 'kelly': mult_k = stake_value
-                                else: mult_k = stake_value
+                            elif staking_rule == 'kelly':
+                                mult_k = stake_value
                                 
                                 # Kelly Criterion = (p * b - 1) / (b - 1)
                                 if bookie_odds > 1.0:
@@ -990,9 +990,15 @@ class ChronologicalBacktester:
                                     else:
                                         bankroll_fixed -= st_fixed
 
-                                    if bankroll_fixed > peak_fixed:
+                                    if bankroll_fixed >= peak_fixed:
                                         peak_fixed = bankroll_fixed
-                                    dd_fixed = (peak_fixed - bankroll_fixed) / peak_fixed
+                                        current_dd_duration_fixed = 0
+                                    else:
+                                        current_dd_duration_fixed += 1
+                                        if current_dd_duration_fixed > max_dd_duration_fixed:
+                                            max_dd_duration_fixed = current_dd_duration_fixed
+                                            
+                                    dd_fixed = (peak_fixed - bankroll_fixed) / peak_fixed if peak_fixed > 0 else 0
                                     if dd_fixed > max_dd_fixed:
                                         max_dd_fixed = dd_fixed
                                     equity_curve_fixed.append({'date': date_str, 'bankroll': round(bankroll_fixed, 2)})
@@ -1009,9 +1015,15 @@ class ChronologicalBacktester:
                                     else:
                                         bankroll_proportional -= st_prop
 
-                                    if bankroll_proportional > peak_prop:
+                                    if bankroll_proportional >= peak_prop:
                                         peak_prop = bankroll_proportional
-                                    dd_prop = (peak_prop - bankroll_proportional) / peak_prop
+                                        current_dd_duration_prop = 0
+                                    else:
+                                        current_dd_duration_prop += 1
+                                        if current_dd_duration_prop > max_dd_duration_prop:
+                                            max_dd_duration_prop = current_dd_duration_prop
+                                            
+                                    dd_prop = (peak_prop - bankroll_proportional) / peak_prop if peak_prop > 0 else 0
                                     if dd_prop > max_dd_prop:
                                         max_dd_prop = dd_prop
                                     equity_curve_proportional.append({'date': date_str, 'bankroll': round(bankroll_proportional, 2)})
@@ -1019,10 +1031,6 @@ class ChronologicalBacktester:
                                 # 3. Kelly Stake Simulation (1/4 Kelly or active fraction if Kelly)
                                 mult_k = 0.25
                                 if staking_rule == 'kelly': mult_k = stake_value
-                                elif staking_rule == 'kelly_half': mult_k = 0.5
-                                elif staking_rule == 'kelly_quarter': mult_k = 0.25
-                                elif staking_rule == 'kelly_eighth': mult_k = 0.125
-                                elif staking_rule == 'kelly_sixteenth': mult_k = 0.0625
 
                                 if bookie_odds > 1.0:
                                     f_star = (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
@@ -1041,9 +1049,15 @@ class ChronologicalBacktester:
                                     else:
                                         bankroll_kelly -= st_kelly
 
-                                    if bankroll_kelly > peak_kelly:
+                                    if bankroll_kelly >= peak_kelly:
                                         peak_kelly = bankroll_kelly
-                                    dd_kelly = (peak_kelly - bankroll_kelly) / peak_kelly
+                                        current_dd_duration_kelly = 0
+                                    else:
+                                        current_dd_duration_kelly += 1
+                                        if current_dd_duration_kelly > max_dd_duration_kelly:
+                                            max_dd_duration_kelly = current_dd_duration_kelly
+                                            
+                                    dd_kelly = (peak_kelly - bankroll_kelly) / peak_kelly if peak_kelly > 0 else 0
                                     if dd_kelly > max_dd_kelly:
                                         max_dd_kelly = dd_kelly
                                     equity_curve_kelly.append({'date': date_str, 'bankroll': round(bankroll_kelly, 2)})
@@ -1363,7 +1377,8 @@ class ChronologicalBacktester:
             'total_bets': bets_fixed,
             'win_rate': round((wins_fixed / bets_fixed * 100) if bets_fixed > 0 else 0.0, 1),
             'roi': round(((bankroll_fixed - initial_bankroll) / staked_fixed * 100) if staked_fixed > 0 else 0.0, 2),
-            'max_drawdown': round(max_dd_fixed * 100, 2)
+            'max_drawdown': round(max_dd_fixed * 100, 2),
+            'max_dd_duration': max_dd_duration_fixed
         }
         
         summary_proportional = {
@@ -1372,7 +1387,8 @@ class ChronologicalBacktester:
             'total_bets': bets_prop,
             'win_rate': round((wins_prop / bets_prop * 100) if bets_prop > 0 else 0.0, 1),
             'roi': round(((bankroll_proportional - initial_bankroll) / staked_prop * 100) if staked_prop > 0 else 0.0, 2),
-            'max_drawdown': round(max_dd_prop * 100, 2)
+            'max_drawdown': round(max_dd_prop * 100, 2),
+            'max_dd_duration': max_dd_duration_prop
         }
         
         summary_kelly = {
@@ -1381,7 +1397,8 @@ class ChronologicalBacktester:
             'total_bets': bets_kelly,
             'win_rate': round((wins_kelly / bets_kelly * 100) if bets_kelly > 0 else 0.0, 1),
             'roi': round(((bankroll_kelly - initial_bankroll) / staked_kelly * 100) if staked_kelly > 0 else 0.0, 2),
-            'max_drawdown': round(max_dd_kelly * 100, 2)
+            'max_drawdown': round(max_dd_kelly * 100, 2),
+            'max_dd_duration': max_dd_duration_kelly
         }
         
         summary = {
@@ -1395,6 +1412,7 @@ class ChronologicalBacktester:
                 'win_rate': round(win_rate, 1),
                 'roi': round(yield_roi, 2),
                 'max_drawdown': round(max_drawdown * 100, 2),
+                'max_dd_duration': max_dd_duration_fixed if staking_rule == 'fixed' else (max_dd_duration_prop if staking_rule == 'proportional' else max_dd_duration_kelly),
                 'total_staked': round(total_staked, 2),
                 'avg_odds': round(np.mean([b['odds'] for b in bets_record]), 2) if bets_record else 0.0,
                 'sharpe_ratio': round(sharpe_ratio, 2),

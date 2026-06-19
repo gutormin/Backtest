@@ -220,12 +220,21 @@ async function loadLeagues() {
 function toggleStakeLabel() {
     const rule = document.getElementById('stake-rule').value;
     const label = document.getElementById('stake-value-label');
+    const stakeInput = document.getElementById('stake-value');
+    const stakeValGroup = document.getElementById('stake-val-group');
+    const kellySliderContainer = document.getElementById('kelly-slider-container');
+    
     if (rule === 'fixed') {
         label.innerText = 'Valor Fixo ($):';
+        if (stakeValGroup) stakeValGroup.style.display = 'block';
+        if (kellySliderContainer) kellySliderContainer.style.display = 'none';
     } else if (rule === 'proportional') {
         label.innerText = 'Risco na Banca (%):';
+        if (stakeValGroup) stakeValGroup.style.display = 'block';
+        if (kellySliderContainer) kellySliderContainer.style.display = 'none';
     } else {
-        label.innerText = 'Multiplicador Kelly:';
+        if (stakeValGroup) stakeValGroup.style.display = 'none';
+        if (kellySliderContainer) kellySliderContainer.style.display = 'flex';
     }
 }
 
@@ -240,24 +249,13 @@ const gradient = ctxEquity.createLinearGradient(0, 0, 0, 400);
 gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
 gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
     const rule = document.getElementById('stake-rule').value;
-    const stakeValueInput = parseFloat(document.getElementById('stake-value').value) || 10;
+    const stakeValueInput = rule === 'kelly' ? parseFloat(document.getElementById('kelly-fraction').value) || 0.25 : parseFloat(document.getElementById('stake-value').value) || 10;
 
     const fixedStakeVal = rule === 'fixed' ? stakeValueInput : 10;
 
     const propStakePct = rule === 'proportional' ? stakeValueInput : 2;
 
-    
-
-    let kellyFractionText = '1/4';
-
-    if (rule === 'kelly_half') kellyFractionText = '1/2';
-
-    else if (rule === 'kelly_quarter') kellyFractionText = '1/4';
-
-    else if (rule === 'kelly_eighth') kellyFractionText = '1/8';
-        else if (rule === 'kelly_sixteenth') kellyFractionText = '1/16';
-
-
+       let kellyFractionText = rule === 'kelly' ? stakeValueInput.toFixed(2) + (stakeValueInput == 1 ? ' (Full)' : ' (' + (1/stakeValueInput).toFixed(0) + ')') : '1/4';
 
     const datasets = [{
 
@@ -2225,6 +2223,10 @@ function displayAiAnalysis(aiAnalysis, results) {
         
 
         document.getElementById('mc-ruin-probability').innerText = `${mc.ruin_probability.toFixed(1)}%`;
+        const halfRuinEl = document.getElementById('mc-half-ruin-probability');
+        if (halfRuinEl && mc.half_ruin_probability !== undefined) {
+            halfRuinEl.innerText = `${mc.half_ruin_probability.toFixed(1)}%`;
+        }
 
         const ruinProgress = document.getElementById('mc-ruin-progress');
 
@@ -2261,6 +2263,8 @@ function displayAiAnalysis(aiAnalysis, results) {
         document.getElementById('mc-profit-progress').style.width = '0%';
 
         document.getElementById('mc-ruin-probability').innerText = '0.0%';
+        const halfRuinEl2 = document.getElementById('mc-half-ruin-probability');
+        if (halfRuinEl2) halfRuinEl2.innerText = '0.0%';
 
         document.getElementById('mc-ruin-progress').style.width = '0%';
 
@@ -2945,6 +2949,8 @@ function clearDashboard() {
     document.getElementById('metric-avg-odds').innerText = '1.00';
 
     document.getElementById('metric-drawdown').innerText = '0.0%';
+    const ddDur = document.getElementById('metric-dd-duration');
+    if (ddDur) ddDur.innerText = 'Recup: 0 apostas';
 
     document.getElementById('metric-final-bankroll').innerText = '$0.00';
 
@@ -3161,6 +3167,8 @@ function clearDashboard() {
     document.getElementById('mc-profit-progress').style.width = '0%';
 
     document.getElementById('mc-ruin-probability').innerText = '0.0%';
+    const halfRuinEl = document.getElementById('mc-half-ruin-probability');
+    if (halfRuinEl) halfRuinEl.innerText = '0.0%';
 
     document.getElementById('mc-ruin-progress').style.width = '0%';
 
@@ -5420,7 +5428,7 @@ function displayStakingComparison(results) {
 
     const rule = document.getElementById('stake-rule').value;
 
-    const stakeValueInput = parseFloat(document.getElementById('stake-value').value) || 10;
+    const stakeValueInput = rule === 'kelly' ? parseFloat(document.getElementById('kelly-fraction').value) || 0.25 : parseFloat(document.getElementById('stake-value').value) || 10;
 
     
 
@@ -5430,14 +5438,9 @@ function displayStakingComparison(results) {
 
     
 
-    let kellyFractionText = '1/4 de Kelly';
+    let kellyFractionText = rule === 'kelly' ? stakeValueInput.toFixed(2) + (stakeValueInput == 1 ? ' (Full)' : ' (' + (1/stakeValueInput).toFixed(0) + ')') : '1/4 de Kelly';
 
-    if (rule === 'kelly_half') kellyFractionText = '1/2 de Kelly';
 
-    else if (rule === 'kelly_quarter') kellyFractionText = '1/4 de Kelly';
-
-    else if (rule === 'kelly_eighth') kellyFractionText = '1/8 de Kelly';
-        else if (rule === 'kelly_sixteenth') kellyFractionText = '1/16 de Kelly';
 
     
 
@@ -8132,7 +8135,7 @@ window.runBacktest = async function() {
     const valThreshold = parseFloat(document.getElementById('val-threshold').value) || 1.0;
     const initialBankroll = parseFloat(document.getElementById('init-bankroll') ? document.getElementById('init-bankroll').value : 1000.0) || 1000.0;
     const stakeRule = document.getElementById('stake-rule').value;
-    const stakeValue = parseFloat(document.getElementById('stake-value').value) || 10.0;
+    const stakeValue = stakeRule === 'kelly' ? parseFloat(document.getElementById('kelly-fraction').value) || 0.25 : parseFloat(document.getElementById('stake-value').value) || 10.0;
     const oddsSource = document.getElementById('odds-source').value || 'B365';
     const minOdds = parseFloat(document.getElementById('min-odds').value) || 1.0;
     const maxOdds = parseFloat(document.getElementById('max-odds').value) || 50.0;
@@ -8205,7 +8208,14 @@ window.runBacktest = async function() {
             if(document.getElementById('metric-win-rate')) document.getElementById('metric-win-rate').innerText = summary.win_rate.toFixed(1) + '%';
             if(document.getElementById('metric-avg-odds')) document.getElementById('metric-avg-odds').innerText = summary.avg_odds.toFixed(2);
             if(document.getElementById('metric-max-drawdown')) document.getElementById('metric-max-drawdown').innerText = (summary.max_drawdown || 0).toFixed(1) + '%';
-            if(document.getElementById('metric-drawdown')) document.getElementById('metric-drawdown').innerText = (summary.max_drawdown || 0).toFixed(1) + '%';
+            if(document.getElementById('metric-drawdown')) {
+                document.getElementById('metric-drawdown').innerText = (summary.max_drawdown || 0).toFixed(1) + '%';
+                const ddDurationEl = document.getElementById('metric-dd-duration');
+                if (ddDurationEl) {
+                    const dur = summary.max_dd_duration || 0;
+                    ddDurationEl.innerText = 'Recup: ' + dur + ' aposta' + (dur !== 1 ? 's' : '');
+                }
+            }
             if(document.getElementById('metric-total-bets')) document.getElementById('metric-total-bets').innerText = summary.total_bets;
             if(document.getElementById('metric-final-bankroll')) document.getElementById('metric-final-bankroll').innerText = '$' + summary.final_bankroll.toFixed(2);
             if(document.getElementById('metric-sharpe')) document.getElementById('metric-sharpe').innerText = (summary.sharpe_ratio || 0).toFixed(2);
