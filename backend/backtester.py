@@ -93,6 +93,14 @@ class ChronologicalBacktester:
         team_away_scored = defaultdict(list)
         team_away_conceded = defaultdict(list)
         
+        # Track HT goals
+        team_home_scored_ht = defaultdict(list)
+        team_home_conceded_ht = defaultdict(list)
+        team_away_scored_ht = defaultdict(list)
+        team_away_conceded_ht = defaultdict(list)
+        league_home_goals_ht = defaultdict(list)
+        league_away_goals_ht = defaultdict(list)
+        
         # Track Shots on Target (SOT) for home and away separately
         team_home_sot = defaultdict(list)
         team_home_sot_conceded = defaultdict(list)
@@ -191,6 +199,14 @@ class ChronologicalBacktester:
             ftag = row['FTAG']
             ftr = row['FTR']
             
+            # HT Goals extraction
+            hthg = row.get('HTHG')
+            htag = row.get('HTAG')
+            if pd.isna(hthg) or pd.isna(htag):
+                # Fallback to 45% of full-time goals if HT data is completely missing
+                hthg = fthg * 0.45 if not pd.isna(fthg) else 0.0
+                htag = ftag * 0.45 if not pd.isna(ftag) else 0.0
+            
             # Skip matches that haven't been played yet (missing scores)
             if pd.isna(fthg) or pd.isna(ftag):
                 continue
@@ -248,7 +264,9 @@ class ChronologicalBacktester:
                                   team_home_sot, team_home_sot_conceded, team_away_sot, team_away_sot_conceded,
                                   league_home_sot, league_away_sot, hst, ast,
                                   team_home_xg, team_home_xg_conceded, team_away_xg, team_away_xg_conceded,
-                                  league_home_xg, league_away_xg, hxg, axg)
+                                  league_home_xg, league_away_xg, hxg, axg,
+                                  team_home_scored_ht, team_home_conceded_ht, team_away_scored_ht, team_away_conceded_ht,
+                                  league_home_goals_ht, league_away_goals_ht, hthg, htag)
                 continue
                 
             # Map odds columns based on source
@@ -313,7 +331,9 @@ class ChronologicalBacktester:
                                   team_home_sot, team_home_sot_conceded, team_away_sot, team_away_sot_conceded,
                                   league_home_sot, league_away_sot, hst, ast,
                                   team_home_xg, team_home_xg_conceded, team_away_xg, team_away_xg_conceded,
-                                  league_home_xg, league_away_xg, hxg, axg)
+                                  league_home_xg, league_away_xg, hxg, axg,
+                                  team_home_scored_ht, team_home_conceded_ht, team_away_scored_ht, team_away_conceded_ht,
+                                  league_home_goals_ht, league_away_goals_ht, hthg, htag)
                 continue
                 
             # Compute predictive probabilities
@@ -348,6 +368,34 @@ class ChronologicalBacktester:
             
             lambda_goals_home = avg_h_goals * h_att * a_def
             lambda_goals_away = avg_a_goals * a_att * h_def
+            
+            # HT Goals lambda
+            h_scored_ht = team_home_scored_ht[home_team][-self.rolling_games:]
+            h_conceded_ht = team_home_conceded_ht[home_team][-self.rolling_games:]
+            a_scored_ht = team_away_scored_ht[away_team][-self.rolling_games:]
+            a_conceded_ht = team_away_conceded_ht[away_team][-self.rolling_games:]
+            
+            leg_h_goals_ht = league_home_goals_ht[league_code][-100:]
+            leg_a_goals_ht = league_away_goals_ht[league_code][-100:]
+            
+            avg_h_goals_ht = np.mean(leg_h_goals_ht) if leg_h_goals_ht else (avg_h_goals * 0.45)
+            avg_a_goals_ht = np.mean(leg_a_goals_ht) if leg_a_goals_ht else (avg_a_goals * 0.45)
+            
+            if avg_h_goals_ht == 0: avg_h_goals_ht = 0.6
+            if avg_a_goals_ht == 0: avg_a_goals_ht = 0.45
+            
+            h_att_ht = (weighted_mean(h_scored_ht, 0.06) / avg_h_goals_ht) if h_scored_ht else 1.0
+            h_def_ht = (weighted_mean(h_conceded_ht, 0.06) / avg_a_goals_ht) if h_conceded_ht else 1.0
+            a_att_ht = (weighted_mean(a_scored_ht, 0.06) / avg_a_goals_ht) if a_scored_ht else 1.0
+            a_def_ht = (weighted_mean(a_conceded_ht, 0.06) / avg_h_goals_ht) if a_conceded_ht else 1.0
+            
+            h_att_ht = 1.0 if pd.isna(h_att_ht) else max(0.2, min(4.0, h_att_ht))
+            h_def_ht = 1.0 if pd.isna(h_def_ht) else max(0.2, min(4.0, h_def_ht))
+            a_att_ht = 1.0 if pd.isna(a_att_ht) else max(0.2, min(4.0, a_att_ht))
+            a_def_ht = 1.0 if pd.isna(a_def_ht) else max(0.2, min(4.0, a_def_ht))
+            
+            lambda_home_ht = avg_h_goals_ht * h_att_ht * a_def_ht
+            lambda_away_ht = avg_a_goals_ht * a_att_ht * h_def_ht
 
             # Gratefully blend with SOT expected goals if shot data is available
             h_sot_scored = team_home_sot[home_team][-self.rolling_games:]
@@ -496,6 +544,32 @@ class ChronologicalBacktester:
             
             prob_btts_yes = float((1.0 - home_probs[0]) * (1.0 - away_probs[0]))
             
+            # HT Probabilities
+            home_probs_ht = [math.exp(-lambda_home_ht) * (lambda_home_ht**i) / _FACTORIALS[i] for i in range(max_goals + 1)]
+            away_probs_ht = [math.exp(-lambda_away_ht) * (lambda_away_ht**i) / _FACTORIALS[i] for i in range(max_goals + 1)]
+            prob_matrix_ht = np.outer(home_probs_ht, away_probs_ht)
+            
+            tau_00_ht = 1.0 - lambda_home_ht * lambda_away_ht * rho
+            tau_10_ht = 1.0 + lambda_away_ht * rho
+            tau_01_ht = 1.0 + lambda_home_ht * rho
+            tau_11_ht = 1.0 - rho
+            prob_matrix_ht[0, 0] *= max(0.0, tau_00_ht)
+            prob_matrix_ht[1, 0] *= max(0.0, tau_10_ht)
+            prob_matrix_ht[0, 1] *= max(0.0, tau_01_ht)
+            prob_matrix_ht[1, 1] *= max(0.0, tau_11_ht)
+            matrix_sum_ht = np.sum(prob_matrix_ht)
+            if matrix_sum_ht > 0:
+                prob_matrix_ht = prob_matrix_ht / matrix_sum_ht
+                
+            prob_h_ht = float(np.sum(np.tril(prob_matrix_ht, -1)))
+            prob_d_ht = float(np.sum(np.diag(prob_matrix_ht)))
+            prob_a_ht = float(np.sum(np.triu(prob_matrix_ht, 1)))
+            prob_over_05_ht = 1.0 - float(prob_matrix_ht[0, 0])
+            prob_over_15_ht = 0.0
+            for x in range(max_goals + 1):
+                for y in range(max_goals + 1):
+                    if x + y > 1: prob_over_15_ht += prob_matrix_ht[x, y]
+            
             # Lazy loading of estimated odds from the solver
             est_odds = None
             
@@ -533,6 +607,41 @@ class ChronologicalBacktester:
                     bookie_odds = odds_under25
                     bet_won = (fthg + ftag < 3)
                     market_label = "Under 2.5"
+                elif mkt == 'ht_home':
+                    model_prob = prob_h_ht
+                    bookie_odds = 1.0 / (prob_h_ht + 0.035) if (prob_h_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg > htag)
+                    market_label = "HT Mandante"
+                elif mkt == 'ht_draw':
+                    model_prob = prob_d_ht
+                    bookie_odds = 1.0 / (prob_d_ht + 0.035) if (prob_d_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg == htag)
+                    market_label = "HT Empate"
+                elif mkt == 'ht_away':
+                    model_prob = prob_a_ht
+                    bookie_odds = 1.0 / (prob_a_ht + 0.035) if (prob_a_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg < htag)
+                    market_label = "HT Visitante"
+                elif mkt == 'ht_over05':
+                    model_prob = prob_over_05_ht
+                    bookie_odds = 1.0 / (prob_over_05_ht + 0.035) if (prob_over_05_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg + htag > 0)
+                    market_label = "HT Over 0.5"
+                elif mkt == 'ht_under05':
+                    model_prob = 1.0 - prob_over_05_ht
+                    bookie_odds = 1.0 / ((1.0 - prob_over_05_ht) + 0.035) if ((1.0 - prob_over_05_ht) + 0.035) > 0 else 1.01
+                    bet_won = (hthg + htag == 0)
+                    market_label = "HT Under 0.5"
+                elif mkt == 'ht_over15':
+                    model_prob = prob_over_15_ht
+                    bookie_odds = 1.0 / (prob_over_15_ht + 0.035) if (prob_over_15_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg + htag > 1)
+                    market_label = "HT Over 1.5"
+                elif mkt == 'ht_under15':
+                    model_prob = 1.0 - prob_over_15_ht
+                    bookie_odds = 1.0 / ((1.0 - prob_over_15_ht) + 0.035) if ((1.0 - prob_over_15_ht) + 0.035) > 0 else 1.01
+                    bet_won = (hthg + htag <= 1)
+                    market_label = "HT Under 1.5"
                 elif mkt == 'over15':
                     if est_odds is None: est_odds = estimate_bookmaker_odds(odds_over25, odds_under25, lambda_home, lambda_away)
                     model_prob = prob_over_15
@@ -1137,7 +1246,9 @@ class ChronologicalBacktester:
                               team_home_sot, team_home_sot_conceded, team_away_sot, team_away_sot_conceded,
                               league_home_sot, league_away_sot, hst, ast,
                               team_home_xg, team_home_xg_conceded, team_away_xg, team_away_xg_conceded,
-                              league_home_xg, league_away_xg, hxg, axg)
+                              league_home_xg, league_away_xg, hxg, axg,
+                              team_home_scored_ht, team_home_conceded_ht, team_away_scored_ht, team_away_conceded_ht,
+                              league_home_goals_ht, league_away_goals_ht, hthg, htag)
                               
             elo_tracker.update(home_team, away_team, int(fthg), int(ftag))
             # Update rho estimation data
@@ -1677,7 +1788,9 @@ class ChronologicalBacktester:
                                   team_home_sot, team_home_sot_conceded, team_away_sot, team_away_sot_conceded,
                                   league_home_sot, league_away_sot, hst, ast,
                                   team_home_xg, team_home_xg_conceded, team_away_xg, team_away_xg_conceded,
-                                  league_home_xg, league_away_xg, hxg, axg)
+                                  league_home_xg, league_away_xg, hxg, axg,
+                                  team_home_scored_ht, team_home_conceded_ht, team_away_scored_ht, team_away_conceded_ht,
+                                  league_home_goals_ht, league_away_goals_ht, hthg, htag)
                 continue
                 
             odds_h = row.get('B365H') if odds_source == 'B365' else (row.get('AvgH') if odds_source == 'Avg' else row.get('MaxH'))
@@ -1701,7 +1814,10 @@ class ChronologicalBacktester:
                 self._update_form(team_home_scored, team_home_conceded, team_away_scored, team_away_conceded,
                                   league_home_goals, league_away_goals, league_code, home_team, away_team, fthg, ftag,
                                   team_home_sot, team_home_sot_conceded, team_away_sot, team_away_sot_conceded,
-                                  league_home_sot, league_away_sot, hst, ast)
+                                  league_home_sot, league_away_sot, hst, ast,
+                                  team_home_scored_ht=team_home_scored_ht, team_home_conceded_ht=team_home_conceded_ht, 
+                                  team_away_scored_ht=team_away_scored_ht, team_away_conceded_ht=team_away_conceded_ht,
+                                  league_home_goals_ht=league_home_goals_ht, league_away_goals_ht=league_away_goals_ht, hthg=hthg, htag=htag)
                 continue
                 
             # Compute predictive ratings
@@ -2187,7 +2303,9 @@ class ChronologicalBacktester:
                               team_home_sot, team_home_sot_conceded, team_away_sot, team_away_sot_conceded,
                               league_home_sot, league_away_sot, hst, ast,
                               team_home_xg, team_home_xg_conceded, team_away_xg, team_away_xg_conceded,
-                              league_home_xg, league_away_xg, hxg, axg)
+                              league_home_xg, league_away_xg, hxg, axg,
+                              team_home_scored_ht, team_home_conceded_ht, team_away_scored_ht, team_away_conceded_ht,
+                              league_home_goals_ht, league_away_goals_ht, hthg, htag)
                               
             # Fit Calibration Periodically
             self.matches_since_calibration += 1
@@ -2432,7 +2550,9 @@ class ChronologicalBacktester:
                      team_home_sot=None, team_home_sot_conceded=None, team_away_sot=None, team_away_sot_conceded=None,
                      league_home_sot=None, league_away_sot=None, hst=None, ast=None,
                      team_home_xg=None, team_home_xg_conceded=None, team_away_xg=None, team_away_xg_conceded=None,
-                     league_home_xg=None, league_away_xg=None, hxg=None, axg=None):
+                     league_home_xg=None, league_away_xg=None, hxg=None, axg=None,
+                     team_home_scored_ht=None, team_home_conceded_ht=None, team_away_scored_ht=None, team_away_conceded_ht=None,
+                     league_home_goals_ht=None, league_away_goals_ht=None, hthg=None, htag=None):
         """Helper to append current match results to team form databases."""
         if not pd.isna(fthg) and not pd.isna(ftag):
             team_home_scored[home_team].append(fthg)
@@ -2442,6 +2562,15 @@ class ChronologicalBacktester:
             
             league_home_goals[league_code].append(fthg)
             league_away_goals[league_code].append(ftag)
+            
+        if hthg is not None and htag is not None and not pd.isna(hthg) and not pd.isna(htag):
+            if team_home_scored_ht is not None:
+                team_home_scored_ht[home_team].append(hthg)
+                team_home_conceded_ht[home_team].append(htag)
+                team_away_scored_ht[away_team].append(htag)
+                team_away_conceded_ht[away_team].append(hthg)
+                league_home_goals_ht[league_code].append(hthg)
+                league_away_goals_ht[league_code].append(htag)
 
             if hst is not None and ast is not None and not pd.isna(hst) and not pd.isna(ast):
                 if team_home_sot is not None:

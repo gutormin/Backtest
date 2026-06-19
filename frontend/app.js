@@ -893,11 +893,11 @@ function renderProbValue(prob, barType) {
 
     
 
-    if (['home', 'over', 'over15', 'over25', 'over35', 'over45', 'over55', 'btts_yes', 'yes'].includes(barType)) {
+    if (['home', 'ht_home', 'over', 'over15', 'over25', 'over35', 'over45', 'over55', 'btts_yes', 'yes', 'ht_over05', 'ht_over15'].includes(barType)) {
 
         colorClass = 'bar-home';
 
-    } else if (['away', 'under', 'under25', 'under35', 'under45', 'under55', 'btts_no', 'no'].includes(barType)) {
+    } else if (['away', 'ht_away', 'under', 'under25', 'under35', 'under45', 'under55', 'btts_no', 'no', 'ht_under05', 'ht_under15'].includes(barType)) {
 
         colorClass = 'bar-away';
 
@@ -3813,6 +3813,14 @@ async function showMatchDetails(bet) {
 
             { key: 'under55', name: 'Under 5.5 Gols', label: 'Under 5.5' },
 
+            { key: 'ht_home', name: 'HT Mandante', label: 'HT Mandante' },
+            { key: 'ht_draw', name: 'HT Empate', label: 'HT Empate' },
+            { key: 'ht_away', name: 'HT Visitante', label: 'HT Visitante' },
+            { key: 'ht_over05', name: 'HT Over 0.5', label: 'HT Over 0.5' },
+            { key: 'ht_under05', name: 'HT Under 0.5', label: 'HT Under 0.5' },
+            { key: 'ht_over15', name: 'HT Over 1.5', label: 'HT Over 1.5' },
+            { key: 'ht_under15', name: 'HT Under 1.5', label: 'HT Under 1.5' },
+
             { key: 'lay_home', name: 'Contra Mandante (X2)', label: 'Contra Mandante (X2)' },
 
             { key: 'lay_away', name: 'Contra Visitante (1X)', label: 'Contra Visitante (1X)' },
@@ -5348,11 +5356,11 @@ function renderProbValue(prob, barType) {
 
     
 
-    if (['home', 'over', 'over15', 'over25', 'over35', 'over45', 'over55', 'btts_yes', 'yes'].includes(barType)) {
+    if (['home', 'ht_home', 'over', 'over15', 'over25', 'over35', 'over45', 'over55', 'btts_yes', 'yes', 'ht_over05', 'ht_over15'].includes(barType)) {
 
         colorClass = 'bar-home';
 
-    } else if (['away', 'under', 'under25', 'under35', 'under45', 'under55', 'btts_no', 'no'].includes(barType)) {
+    } else if (['away', 'ht_away', 'under', 'under25', 'under35', 'under45', 'under55', 'btts_no', 'no', 'ht_under05', 'ht_under15'].includes(barType)) {
 
         colorClass = 'bar-away';
 
