@@ -652,7 +652,8 @@ async def run_automatic_arbitrage_scan():
             match_name, match_date, opp.get('bookmakers', {}), profit,
             market_name=opp.get('market', 'Match Odds (1X2)'),
             is_2_way=opp.get('is_2_way', False),
-            labels_dict=opp.get('labels', None)
+            labels_dict=opp.get('labels', None),
+            odds_dict=opp.get('odds', {})
         )
         
         ok, msg = send_telegram_message(msg_text)
