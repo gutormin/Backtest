@@ -1675,6 +1675,13 @@ class ChronologicalBacktester:
         league_home_xg = defaultdict(list)
         league_away_xg = defaultdict(list)
         
+        team_home_scored_ht = defaultdict(list)
+        team_home_conceded_ht = defaultdict(list)
+        team_away_scored_ht = defaultdict(list)
+        team_away_conceded_ht = defaultdict(list)
+        league_home_goals_ht = defaultdict(list)
+        league_away_goals_ht = defaultdict(list)
+        
         elo_tracker = EloTracker(k_factor=20, home_advantage=65)
         league_rho_cache = {}
         league_goals_for_rho = defaultdict(lambda: {'h': [], 'a': [], 'lh': [], 'la': []})
@@ -1975,6 +1982,32 @@ class ChronologicalBacktester:
                     
             prob_btts_yes = float((1.0 - home_probs[0]) * (1.0 - away_probs[0]))
             
+            # HT Probabilities
+            home_probs_ht = [math.exp(-lambda_home_ht) * (lambda_home_ht**i) / _FACTORIALS[i] for i in range(max_goals + 1)]
+            away_probs_ht = [math.exp(-lambda_away_ht) * (lambda_away_ht**i) / _FACTORIALS[i] for i in range(max_goals + 1)]
+            prob_matrix_ht = np.outer(home_probs_ht, away_probs_ht)
+            
+            tau_00_ht = 1.0 - lambda_home_ht * lambda_away_ht * rho
+            tau_10_ht = 1.0 + lambda_away_ht * rho
+            tau_01_ht = 1.0 + lambda_home_ht * rho
+            tau_11_ht = 1.0 - rho
+            prob_matrix_ht[0, 0] *= max(0.0, tau_00_ht)
+            prob_matrix_ht[1, 0] *= max(0.0, tau_10_ht)
+            prob_matrix_ht[0, 1] *= max(0.0, tau_01_ht)
+            prob_matrix_ht[1, 1] *= max(0.0, tau_11_ht)
+            matrix_sum_ht = np.sum(prob_matrix_ht)
+            if matrix_sum_ht > 0:
+                prob_matrix_ht = prob_matrix_ht / matrix_sum_ht
+                
+            prob_h_ht = float(np.sum(np.tril(prob_matrix_ht, -1)))
+            prob_d_ht = float(np.sum(np.diag(prob_matrix_ht)))
+            prob_a_ht = float(np.sum(np.triu(prob_matrix_ht, 1)))
+            prob_over_05_ht = 1.0 - float(prob_matrix_ht[0, 0])
+            prob_over_15_ht = 0.0
+            for x in range(max_goals + 1):
+                for y in range(max_goals + 1):
+                    if x + y > 1: prob_over_15_ht += prob_matrix_ht[x, y]
+            
             est_odds = None
             
             def eval_market(mkt):
@@ -2003,6 +2036,34 @@ class ChronologicalBacktester:
                     model_prob = 1.0 - prob_over_25
                     bookie_odds = odds_under25
                     bet_won = (fthg + ftag < 3)
+                elif mkt == 'ht_home':
+                    model_prob = prob_h_ht
+                    bookie_odds = 1.0 / (prob_h_ht + 0.035) if (prob_h_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg > htag)
+                elif mkt == 'ht_draw':
+                    model_prob = prob_d_ht
+                    bookie_odds = 1.0 / (prob_d_ht + 0.035) if (prob_d_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg == htag)
+                elif mkt == 'ht_away':
+                    model_prob = prob_a_ht
+                    bookie_odds = 1.0 / (prob_a_ht + 0.035) if (prob_a_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg < htag)
+                elif mkt == 'ht_over05':
+                    model_prob = prob_over_05_ht
+                    bookie_odds = 1.0 / (prob_over_05_ht + 0.035) if (prob_over_05_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg + htag > 0)
+                elif mkt == 'ht_under05':
+                    model_prob = 1.0 - prob_over_05_ht
+                    bookie_odds = 1.0 / ((1.0 - prob_over_05_ht) + 0.035) if ((1.0 - prob_over_05_ht) + 0.035) > 0 else 1.01
+                    bet_won = (hthg + htag == 0)
+                elif mkt == 'ht_over15':
+                    model_prob = prob_over_15_ht
+                    bookie_odds = 1.0 / (prob_over_15_ht + 0.035) if (prob_over_15_ht + 0.035) > 0 else 1.01
+                    bet_won = (hthg + htag > 1)
+                elif mkt == 'ht_under15':
+                    model_prob = 1.0 - prob_over_15_ht
+                    bookie_odds = 1.0 / ((1.0 - prob_over_15_ht) + 0.035) if ((1.0 - prob_over_15_ht) + 0.035) > 0 else 1.01
+                    bet_won = (hthg + htag <= 1)
                 elif mkt == 'ah_home':
                     if ahh_line is None or pd.isna(ahh_line): return None
                     from .models import calculate_ah_probabilities
