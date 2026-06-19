@@ -143,6 +143,14 @@
 <label class="multiselect-option-item">
 <input onchange="onMarketSelectionChange()" type="checkbox" value="btts_no"/> Ambas Marcam Não
                                     </label>
+                                    <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Empate Anula (DNB)</div>
+                                    <label class="multiselect-option-item">
+                                        <input type="checkbox" value="dnb_h" onchange="onMarketSelectionChange()"> DNB Casa
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input type="checkbox" value="dnb_a" onchange="onMarketSelectionChange()"> DNB Fora
+                                    </label>
+
                                     <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Handicap Asiático (Main Spread)</div>
                                     <label class="multiselect-option-item">
                                         <input type="checkbox" value="ah_home" onchange="onMarketSelectionChange()"> AH Casa

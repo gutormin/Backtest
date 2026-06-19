@@ -508,6 +508,9 @@ def predict_matchup(req: PredictRequest):
         prob_lay_away = pred['prob_home'] + pred['prob_draw']
         prob_lay_draw = pred['prob_home'] + pred['prob_away']
         
+        prob_dnb_h = pred['prob_home'] / (pred['prob_home'] + pred['prob_away']) if (pred['prob_home'] + pred['prob_away']) > 0 else 0.5
+        prob_dnb_a = pred['prob_away'] / (pred['prob_home'] + pred['prob_away']) if (pred['prob_home'] + pred['prob_away']) > 0 else 0.5
+        
         fair_lay_home = round(1.0 / prob_lay_home, 2) if prob_lay_home > 0 else 99.0
         fair_lay_away = round(1.0 / prob_lay_away, 2) if prob_lay_away > 0 else 99.0
         fair_lay_draw = round(1.0 / prob_lay_draw, 2) if prob_lay_draw > 0 else 99.0
@@ -625,7 +628,9 @@ def predict_matchup(req: PredictRequest):
                 'lay_cs_11': round(prob_lay_cs_11 * 100, 1),
                 'lay_cs_01': round(prob_lay_cs_01 * 100, 1),
                 'lay_cs_02': round(prob_lay_cs_02 * 100, 1),
-                'lay_cs_12': round(prob_lay_cs_12 * 100, 1)
+                'lay_cs_12': round(prob_lay_cs_12 * 100, 1),
+                'dnb_h': round(prob_dnb_h * 100, 1),
+                'dnb_a': round(prob_dnb_a * 100, 1)
             },
             'fair_odds': {
                 'home': fair_h,
@@ -660,7 +665,9 @@ def predict_matchup(req: PredictRequest):
                 'lay_cs_11': fair_lay_cs_11,
                 'lay_cs_01': fair_lay_cs_01,
                 'lay_cs_02': fair_lay_cs_02,
-                'lay_cs_12': fair_lay_cs_12
+                'lay_cs_12': fair_lay_cs_12,
+                'dnb_h': round(1.0 / prob_dnb_h, 2) if prob_dnb_h > 0 else 99.0,
+                'dnb_a': round(1.0 / prob_dnb_a, 2) if prob_dnb_a > 0 else 99.0
             },
             'fair_ah_home': pred.get('fair_ah_home', {}),
             'fair_ah_away': pred.get('fair_ah_away', {}),
@@ -1178,6 +1185,14 @@ def get_upcoming_predicted_matches(
                     market_prob = pred['prob_home'] + pred['prob_away']
                     bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_a) if (odds_h > 1.0 and odds_a > 1.0) else np.nan
                     market_label = "Contra Empate (12)"
+                elif m_key == 'dnb_h':
+                    market_prob = pred['prob_home'] / (pred['prob_home'] + pred['prob_away']) if (pred['prob_home'] + pred['prob_away']) > 0 else 0.5
+                    bookie_odds = odds_h * (odds_d - 1.0) / odds_d if (odds_h and odds_d and odds_d > 1.0) else np.nan
+                    market_label = "DNB Mandante"
+                elif m_key == 'dnb_a':
+                    market_prob = pred['prob_away'] / (pred['prob_home'] + pred['prob_away']) if (pred['prob_home'] + pred['prob_away']) > 0 else 0.5
+                    bookie_odds = odds_a * (odds_d - 1.0) / odds_d if (odds_a and odds_d and odds_d > 1.0) else np.nan
+                    market_label = "DNB Visitante"
                 elif m_key == 'btts_yes':
                     market_prob = pred['prob_btts_yes']
                     bookie_odds = est_odds.get('bookie_btts_yes', np.nan)
@@ -1462,6 +1477,8 @@ def get_autopilot_predictions(source: str = 'api'):
                     elif s_m == 'lay_home': market_prob = pred['prob_draw'] + pred['prob_away']; bookie_odds = 1.0 / (1.0/odds_d + 1.0/odds_a) if (odds_d > 1.0 and odds_a > 1.0) else np.nan; market_label = "Contra Mandante (X2)"
                     elif s_m == 'lay_away': market_prob = pred['prob_home'] + pred['prob_draw']; bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_d) if (odds_h > 1.0 and odds_d > 1.0) else np.nan; market_label = "Contra Visitante (1X)"
                     elif s_m == 'lay_draw': market_prob = pred['prob_home'] + pred['prob_away']; bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_a) if (odds_h > 1.0 and odds_a > 1.0) else np.nan; market_label = "Contra Empate (12)"
+                    elif s_m == 'dnb_h': market_prob = pred['prob_home'] / (pred['prob_home'] + pred['prob_away']) if (pred['prob_home'] + pred['prob_away']) > 0 else 0.5; bookie_odds = odds_h * (odds_d - 1.0) / odds_d if (odds_h and odds_d and odds_d > 1.0) else np.nan; market_label = "DNB Mandante"
+                    elif s_m == 'dnb_a': market_prob = pred['prob_away'] / (pred['prob_home'] + pred['prob_away']) if (pred['prob_home'] + pred['prob_away']) > 0 else 0.5; bookie_odds = odds_a * (odds_d - 1.0) / odds_d if (odds_a and odds_d and odds_d > 1.0) else np.nan; market_label = "DNB Visitante"
 
                     if pd.isna(bookie_odds) or bookie_odds <= 1.0:
                         continue

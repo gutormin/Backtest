@@ -3785,6 +3785,10 @@ async function showMatchDetails(bet) {
 
             { key: 'btts_no', name: 'Ambas Marcam (Não)', label: 'BTTS Não' },
 
+            { key: 'dnb_h', name: 'DNB Mandante', label: 'DNB Mandante' },
+
+            { key: 'dnb_a', name: 'DNB Visitante', label: 'DNB Visitante' },
+
             { key: 'cs_10', name: 'Placar Exato 1-0', label: 'Placar Exato 1-0' },
 
             { key: 'cs_20', name: 'Placar Exato 2-0', label: 'Placar Exato 2-0' },
