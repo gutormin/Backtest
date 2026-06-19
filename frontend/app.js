@@ -2922,6 +2922,7 @@ function applyOddsSuggestion(rangeName) {
     }
     
     showToast(`Filtro de Odds otimizado para excluir ${rangeName}. Rodando simulação...`, "success");
+    appliedOptimizationSuggestions.add(rangeName);
     runBacktest();
 }
 
