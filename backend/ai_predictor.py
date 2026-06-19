@@ -443,9 +443,9 @@ def optimize_strategy_parameters(bets_record, current_val_threshold, initial_ban
             if 'Super Favoritos' in r_name:
                 sub = df[df['odds'] > 1.50]
             elif 'Favoritos (1.50-2.00)' in r_name:
-                sub = df[(df['odds'] <= 1.50) | (df['odds'] > 2.00)]
+                sub = df[df['odds'] >= 2.00]
             elif 'Médios' in r_name:
-                sub = df[(df['odds'] <= 2.00) | (df['odds'] > 3.00)]
+                sub = df[df['odds'] <= 2.00]
             elif 'Zebras' in r_name:
                 sub = df[df['odds'] <= 3.00]
             else:
@@ -498,6 +498,31 @@ def optimize_strategy_parameters(bets_record, current_val_threshold, initial_ban
         })
     ]
 
+    linear_exclude_mappers = {
+        # Mandante
+        ('odds_h', 'Super Favoritos (<=1.50)'): lambda df: df[df['odds_h'] > 1.50],
+        ('odds_h', 'Favoritos (1.50-2.00)'): lambda df: df[df['odds_h'] > 2.00],
+        ('odds_h', 'Médios (2.00-3.00)'): lambda df: df[df['odds_h'] <= 2.00],
+        ('odds_h', 'Zebras (>3.00)'): lambda df: df[df['odds_h'] <= 3.00],
+        # Empate
+        ('odds_d', 'Baixo (<=3.00)'): lambda df: df[df['odds_d'] > 3.00],
+        ('odds_d', 'Médio (3.00-3.80)'): lambda df: df[df['odds_d'] <= 3.00],
+        ('odds_d', 'Alto (>3.80)'): lambda df: df[df['odds_d'] <= 3.80],
+        # Visitante
+        ('odds_a', 'Super Favoritos (<=1.50)'): lambda df: df[df['odds_a'] > 1.50],
+        ('odds_a', 'Favoritos (1.50-2.00)'): lambda df: df[df['odds_a'] > 2.00],
+        ('odds_a', 'Médios (2.00-3.00)'): lambda df: df[df['odds_a'] <= 2.00],
+        ('odds_a', 'Zebras (>3.00)'): lambda df: df[df['odds_a'] <= 3.00],
+        # Over 2.5
+        ('odds_over25', 'Favorito (<=1.70)'): lambda df: df[df['odds_over25'] > 1.70],
+        ('odds_over25', 'Equilibrado (1.70-2.20)'): lambda df: df[df['odds_over25'] > 2.20],
+        ('odds_over25', 'Zebra (>2.20)'): lambda df: df[df['odds_over25'] <= 2.20],
+        # Under 2.5
+        ('odds_under25', 'Favorito (<=1.70)'): lambda df: df[df['odds_under25'] > 1.70],
+        ('odds_under25', 'Equilibrado (1.70-2.20)'): lambda df: df[df['odds_under25'] > 2.20],
+        ('odds_under25', 'Zebra (>2.20)'): lambda df: df[df['odds_under25'] <= 2.20],
+    }
+
     for field, mkt_name, ranges in cross_markets:
         if field not in df.columns:
             continue
@@ -508,8 +533,13 @@ def optimize_strategy_parameters(bets_record, current_val_threshold, initial_ban
             if len(sub_in_range) > 0:
                 r_profit = sub_in_range['profit'].sum()
                 if r_profit < -15.0:
-                    # Simulate excluding this range
-                    sub_exclude = df[~mask]
+                    # Simulate excluding this range using the exact linear filter from frontend
+                    exclude_fn = linear_exclude_mappers.get((field, r_name))
+                    if exclude_fn:
+                        sub_exclude = exclude_fn(df)
+                    else:
+                        sub_exclude = df[~mask]
+                        
                     if len(sub_exclude) >= 15:
                         opt_res = recalculate_sub_backtest(sub_exclude, initial_bankroll, staking_rule, stake_value)
                         if opt_res:

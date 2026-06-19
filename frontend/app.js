@@ -6963,17 +6963,27 @@ function renderEqsResults(results, scanType, requestData) {
 
 
 window.runSpecificEqsBacktest = function(scanType, code, optRange) {
-
     if (!window.lastEqsScanParams) return;
-
     
-
     switchTab('tab-laboratory');
-
     
+    // Limpar filtros avançados de odds residuais para não interferir no resultado
+    const advancedOddsFields = [
+        'min-odds-h', 'max-odds-h',
+        'min-odds-d', 'max-odds-d',
+        'min-odds-a', 'max-odds-a',
+        'min-odds-over25', 'max-odds-over25',
+        'min-odds-under25', 'max-odds-under25'
+    ];
+    advancedOddsFields.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.value = '';
+            el.dispatchEvent(new Event('change'));
+        }
+    });
 
     document.getElementById('start-date').value = window.lastEqsScanParams.startDate;
-
     document.getElementById('end-date').value = window.lastEqsScanParams.endDate;
 
     
@@ -7010,7 +7020,12 @@ window.runSpecificEqsBacktest = function(scanType, code, optRange) {
 
         else if (optRange.includes('> 1.50') && !optRange.includes('<=')) { minOdd = 1.50; maxOdd = 50.0; }
 
+    } else {
+        document.getElementById('val-threshold').value = window.lastEqsScanParams.valueThreshold || '1.05';
     }
+    
+    document.getElementById('val-threshold').dispatchEvent(new Event('change'));
+
 
     
 
@@ -7021,103 +7036,89 @@ window.runSpecificEqsBacktest = function(scanType, code, optRange) {
     
 
     if (scanType === 'markets') {
-
         // Seleciona todas as ligas do scan original
-
         const scanLeagues = window.lastEqsScanParams.leagues || [];
-
         document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]').forEach(cb => {
-
-            cb.checked = scanLeagues.includes(cb.value);
-
-        });
-
-        
-
-        // Seleciona apenas o mercado clicado
-
-        document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]').forEach(cb => {
-
-            cb.checked = (cb.value === code || cb.value === code.replace('1x2_', ''));
-
-        });
-
-    } else if (scanType === 'leagues') {
-
-        // Seleciona apenas a liga clicada
-
-        document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]').forEach(cb => {
-
-            cb.checked = (cb.value === code);
-
-        });
-
-        
-
-        // Seleciona todos os mercados originais
-
-        const scanMarkets = window.lastEqsScanParams.market || [];
-
-        document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]').forEach(cb => {
-
-            if (scanMarkets.length > 0) {
-
-                cb.checked = scanMarkets.includes(cb.value) || scanMarkets.includes(cb.value.replace('1x2_', ''));
-
-            } else {
-
-                cb.checked = true;
-
+            const shouldBeChecked = scanLeagues.includes(cb.value);
+            if (cb.checked !== shouldBeChecked) {
+                cb.checked = shouldBeChecked;
+                cb.dispatchEvent(new Event('change'));
             }
-
         });
-
+        
+        // Seleciona apenas o mercado clicado
+        document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]').forEach(cb => {
+            const shouldBeChecked = (cb.value === code || cb.value === code.replace('1x2_', ''));
+            if (cb.checked !== shouldBeChecked) {
+                cb.checked = shouldBeChecked;
+                cb.dispatchEvent(new Event('change'));
+            }
+        });
+    } else if (scanType === 'leagues') {
+        // Seleciona apenas a liga clicada
+        document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]').forEach(cb => {
+            const shouldBeChecked = (cb.value === code);
+            if (cb.checked !== shouldBeChecked) {
+                cb.checked = shouldBeChecked;
+                cb.dispatchEvent(new Event('change'));
+            }
+        });
+        
+        // Seleciona todos os mercados originais
+        const scanMarkets = window.lastEqsScanParams.market || [];
+        document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]').forEach(cb => {
+            let shouldBeChecked = false;
+            if (scanMarkets.length > 0) {
+                shouldBeChecked = scanMarkets.includes(cb.value) || scanMarkets.includes(cb.value.replace('1x2_', ''));
+            } else {
+                shouldBeChecked = true;
+            }
+            if (cb.checked !== shouldBeChecked) {
+                cb.checked = shouldBeChecked;
+                cb.dispatchEvent(new Event('change'));
+            }
+        });
     } else if (scanType === 'combinations') {
-
         const parts = code.split('|');
-
         if (parts.length === 2) {
-
             const leagueCode = parts[0];
-
             const marketCode = parts[1];
-
             
-
             document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]').forEach(cb => {
-
-                cb.checked = (cb.value === leagueCode);
-
+                const shouldBeChecked = (cb.value === leagueCode);
+                if (cb.checked !== shouldBeChecked) {
+                    cb.checked = shouldBeChecked;
+                    cb.dispatchEvent(new Event('change'));
+                }
             });
-
             document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]').forEach(cb => {
-
-                cb.checked = (cb.value === marketCode || cb.value === marketCode.replace('1x2_', ''));
-
+                const shouldBeChecked = (cb.value === marketCode || cb.value === marketCode.replace('1x2_', ''));
+                if (cb.checked !== shouldBeChecked) {
+                    cb.checked = shouldBeChecked;
+                    cb.dispatchEvent(new Event('change'));
+                }
             });
-
         }
-
     }
 
+    // Força a validação visual do label do multiselect de mercados
+    if (typeof onMarketSelectionChange === 'function') {
+        onMarketSelectionChange();
+    }
     
-
     // Força a validação OOS (Out-of-Sample) para garantir que o Score de EQS seja o mesmo do Scanner
-
     const oosToggle = document.getElementById('oos-toggle');
-
-    if (oosToggle) oosToggle.checked = true;
-
+    if (oosToggle && !oosToggle.checked) {
+        oosToggle.checked = true;
+        oosToggle.dispatchEvent(new Event('change'));
+    }
     
-
-    // Rodar backtest principal
-
-    runBacktest();
-
+    // Rodar backtest principal com um pequeno delay para que os eventos no DOM tenham terminado de propagar
+    setTimeout(() => {
+        runBacktest();
+    }, 150);
     
-
     // Scroll para o topo
-
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
 };
