@@ -1740,6 +1740,13 @@ class ChronologicalBacktester:
             ftag = row['FTAG']
             ftr = row['FTR']
             
+            # HT Goals extraction
+            hthg = row.get('HTHG')
+            htag = row.get('HTAG')
+            if pd.isna(hthg) or pd.isna(htag):
+                hthg = fthg * 0.45
+                htag = ftag * 0.45
+            
             if pd.isna(fthg) or pd.isna(ftag):
                 continue
                 
