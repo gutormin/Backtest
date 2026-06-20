@@ -51,6 +51,9 @@ async def startup_event():
     asyncio.create_task(run_scheduler_loop())
     asyncio.create_task(run_arbitrage_scheduler_loop())
     asyncio.create_task(run_live_odds_tracker_loop())
+    
+    from .cluster_ai_tracker import run_cluster_ai_alerts_loop
+    asyncio.create_task(run_cluster_ai_alerts_loop())
 
 # Request schema for Backtest
 class BacktestRequest(BaseModel):
@@ -1585,6 +1588,23 @@ if os.path.exists(frontend_dir):
     app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 
+
+from .cluster_ai_tracker import get_cluster_ai_config, save_cluster_ai_config
+
+class ClusterAIConfigReq(BaseModel):
+    enabled: bool
+    pure_blood_enabled: bool
+    contrarian_enabled: bool
+    dna_shift_enabled: bool
+
+@app.get("/api/telegram/cluster_ai_config")
+def get_cluster_ai_conf():
+    return get_cluster_ai_config()
+
+@app.post("/api/telegram/cluster_ai_config")
+def set_cluster_ai_conf(req: ClusterAIConfigReq):
+    save_cluster_ai_config(req.dict())
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn

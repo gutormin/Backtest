@@ -539,6 +539,48 @@
                     </div>
                 </div>
             </div>
+            
+            <div class="glassmorphism" style="margin-top: 20px; padding: 20px; border-left: 4px solid #8b5cf6;">
+                <h4 style="margin-top: 0; color: #8b5cf6; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-brands fa-telegram"></i> Alertas Inteligentes (Telegram)
+                </h4>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 15px;">A Inteligência Artificial trabalha 24h em background cruzando os dados do Scanner com o DNA dos Clusters. Escolha quais alertas você deseja receber diretamente no seu Telegram (EV+ garantido).</p>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                    <div class="toggle-container" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-tg-pure-blood" onchange="saveClusterAiConfig()">
+                            <span class="slider"></span>
+                        </label>
+                        <div class="toggle-label" style="display: inline-block; vertical-align: top; margin-left: 10px;">
+                            <strong style="color: #10b981;">Edge Puro-Sangue</strong><br>
+                            <span style="font-size: 11px; color: #9ca3af;">Oportunidade alinhada com o DNA do Cluster.</span>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-container" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-tg-contrarian" onchange="saveClusterAiConfig()">
+                            <span class="slider"></span>
+                        </label>
+                        <div class="toggle-label" style="display: inline-block; vertical-align: top; margin-left: 10px;">
+                            <strong style="color: #ef4444;">Anomalia de Odds</strong><br>
+                            <span style="font-size: 11px; color: #9ca3af;">Casa de apostas contradizendo a matemática.</span>
+                        </div>
+                    </div>
+                    
+                    <div class="toggle-container" style="background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="toggle-tg-dna-shift" onchange="saveClusterAiConfig()">
+                            <span class="slider"></span>
+                        </label>
+                        <div class="toggle-label" style="display: inline-block; vertical-align: top; margin-left: 10px;">
+                            <strong style="color: #f59e0b;">Mudança Sazonal (DNA Shift)</strong><br>
+                            <span style="font-size: 11px; color: #9ca3af;">Aviso se uma liga mudar de perfil.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 </div>

@@ -8655,6 +8655,55 @@ function copyClusterLeagues(leaguesStr) {
             cb.checked = true;
         }
     });
-    
-    showToast(`As ${leagues.length} ligas do grupo foram selecionadas no menu principal!`, "success");
+    showToast(`${leagues.length} ligas do cluster selecionadas!`, "success");
 }
+
+// Cluster AI Alerts Config
+async function loadClusterAiConfig() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/telegram/cluster_ai_config`);
+        if (res.ok) {
+            const config = await res.json();
+            const el1 = document.getElementById("toggle-tg-pure-blood");
+            const el2 = document.getElementById("toggle-tg-contrarian");
+            const el3 = document.getElementById("toggle-tg-dna-shift");
+            
+            if (el1) el1.checked = config.pure_blood_enabled !== false;
+            if (el2) el2.checked = config.contrarian_enabled !== false;
+            if (el3) el3.checked = config.dna_shift_enabled !== false;
+        }
+    } catch (e) {
+        console.error("Error loading cluster AI config:", e);
+    }
+}
+
+async function saveClusterAiConfig() {
+    const el1 = document.getElementById("toggle-tg-pure-blood");
+    const el2 = document.getElementById("toggle-tg-contrarian");
+    const el3 = document.getElementById("toggle-tg-dna-shift");
+    
+    if (!el1 || !el2 || !el3) return;
+    
+    const config = {
+        enabled: el1.checked || el2.checked || el3.checked,
+        pure_blood_enabled: el1.checked,
+        contrarian_enabled: el2.checked,
+        dna_shift_enabled: el3.checked
+    };
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/telegram/cluster_ai_config`, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(config)
+        });
+        if (res.ok) {
+            showToast("Configuração de Alertas IA salva com sucesso!", "success");
+        }
+    } catch (e) {
+        console.error("Error saving cluster AI config:", e);
+    }
+}
+
+// Call load config on startup
+setTimeout(loadClusterAiConfig, 2000);

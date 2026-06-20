@@ -126,5 +126,69 @@
         "profit_margin": 1.16,
         "status": "Pendente",
         "created_at": "2026-06-19 07:34:47"
+    },
+    {
+        "id": "e1bead25-87a4-4fa3-a079-e2a122a229bd",
+        "match": "USA vs Australia",
+        "date": "19/06/2026 19:00",
+        "profit_margin": 1.82,
+        "status": "Pendente",
+        "created_at": "2026-06-19 15:34:56"
+    },
+    {
+        "id": "345e0236-67c8-489b-8112-e98ced033d7f",
+        "match": "Tokyo Yakult Swallows vs Hiroshima Toyo Carp",
+        "date": "20/06/2026 05:00",
+        "profit_margin": 1.98,
+        "status": "Pendente",
+        "created_at": "2026-06-20 01:35:07"
+    },
+    {
+        "id": "7e3f74b6-9763-4548-a976-1d4f51b04903",
+        "match": "Yomiuri Giants vs Chunichi Dragons",
+        "date": "20/06/2026 05:00",
+        "profit_margin": 0.61,
+        "status": "Pendente",
+        "created_at": "2026-06-20 01:35:08"
+    },
+    {
+        "id": "0e916c33-51f3-4710-8cf7-6109c41fcffa",
+        "match": "Collingwood Magpies vs Port Adelaide Power",
+        "date": "20/06/2026 09:36",
+        "profit_margin": 1.59,
+        "status": "Pendente",
+        "created_at": "2026-06-20 06:35:14"
+    },
+    {
+        "id": "c0d9ea0a-de98-48f0-b13f-d8a697a68736",
+        "match": "Londrina vs Athletic Club (MG)",
+        "date": "20/06/2026 14:00",
+        "profit_margin": 0.56,
+        "status": "Pendente",
+        "created_at": "2026-06-20 10:35:19"
+    },
+    {
+        "id": "e51e7e4f-d2b0-4346-aed8-7b87eeb5453d",
+        "match": "Mitch Raposo vs Allan Nascimento",
+        "date": "20/06/2026 23:15",
+        "profit_margin": 0.63,
+        "status": "Pendente",
+        "created_at": "2026-06-20 19:35:29"
+    },
+    {
+        "id": "2c873d28-827f-4d60-8410-607187515903",
+        "match": "Ecuador vs Curaçao",
+        "date": "21/06/2026 00:00",
+        "profit_margin": 1.22,
+        "status": "Pendente",
+        "created_at": "2026-06-20 20:35:31"
+    },
+    {
+        "id": "d04e20e0-4449-4d45-8372-e1514057e31f",
+        "match": "Andre Lima vs Kevin Borjas",
+        "date": "20/06/2026 23:40",
+        "profit_margin": 1.18,
+        "status": "Pendente",
+        "created_at": "2026-06-20 20:35:33"
     }
 ]
