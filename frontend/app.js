@@ -8443,7 +8443,7 @@ window.toggleGroup = function(groupEl) {
 let clusterChartInstance = null;
 
 async function runClustering() {
-    const leagues = getSelectedLeagues();
+    const leagues = Array.from(document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]:checked')).map(cb => cb.value);
     if (leagues.length < 3) {
         showToast("Selecione pelo menos 3 ligas para rodar a clusterização.", "warning");
         return;
