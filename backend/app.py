@@ -8,7 +8,7 @@ from typing import List, Optional, Union, Dict, Any
 
 from .data_loader import (
     sync_data, get_all_available_leagues, load_league_data, DATA_DIR, sync_fixtures,
-    get_api_token, load_upcoming_from_api, fetch_football_data_co_uk, fetch_futpython_data
+    get_api_token, load_upcoming_from_api
 )
 from .backtester import ChronologicalBacktester
 from .smart_money import SmartMoneyBacktester
@@ -94,10 +94,7 @@ def api_cluster_leagues(req: ClusterRequest):
     try:
         features_list = []
         for league in req.leagues:
-            if req.data_source == 'futpython':
-                df = fetch_futpython_data(league, req.startDate, req.futpython_api_key)
-            else:
-                df = fetch_football_data_co_uk(league, req.startDate, req.endDate)
+            df = load_league_data(league, start_date=req.startDate, data_source=req.data_source, api_key=req.futpython_api_key)
                 
             features = extract_league_features(league, df)
             if features:
