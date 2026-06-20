@@ -8439,3 +8439,199 @@ window.toggleGroup = function(groupEl) {
         }
     }
 };
+
+let clusterChartInstance = null;
+
+async function runClustering() {
+    const leagues = getSelectedLeagues();
+    if (leagues.length < 3) {
+        showToast("Selecione pelo menos 3 ligas para rodar a clusterização.", "warning");
+        return;
+    }
+    
+    const startDate = document.getElementById("start-date").value;
+    const endDate = document.getElementById("end-date").value;
+    const dataSource = document.getElementById("data-source-select").value;
+    const futpythonKey = document.getElementById("futpython-api-key") ? document.getElementById("futpython-api-key").value : "";
+    let nClusters = document.getElementById("cluster-count").value;
+    nClusters = nClusters === "auto" ? null : parseInt(nClusters);
+    
+    document.getElementById("clustering-loading").style.display = "block";
+    document.getElementById("clustering-results").style.display = "none";
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/cluster_leagues`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                leagues: leagues,
+                startDate: startDate,
+                endDate: endDate,
+                data_source: dataSource,
+                futpython_api_key: futpythonKey,
+                n_clusters: nClusters
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.detail || "Erro ao executar clusterização.");
+        }
+        
+        renderClusterChart(data.points, data.clusters);
+        renderClusterList(data.clusters);
+        
+        document.getElementById("clustering-loading").style.display = "none";
+        document.getElementById("clustering-results").style.display = "block";
+        
+    } catch (error) {
+        console.error(error);
+        showToast(error.message, "error");
+        document.getElementById("clustering-loading").style.display = "none";
+    }
+}
+
+function renderClusterChart(points, clusters) {
+    const ctx = document.getElementById('clusterChart').getContext('2d');
+    
+    if (clusterChartInstance) {
+        clusterChartInstance.destroy();
+    }
+    
+    // Paleta de cores premium
+    const colors = [
+        '#3b82f6', // Azul
+        '#10b981', // Verde
+        '#f59e0b', // Amarelo
+        '#ef4444', // Vermelho
+        '#8b5cf6', // Roxo
+        '#ec4899', // Rosa
+        '#06b6d4', // Ciano
+    ];
+    
+    const datasets = clusters.map((c, i) => {
+        const clusterPoints = points.filter(p => p.cluster === c.cluster_id);
+        const color = colors[i % colors.length];
+        
+        return {
+            label: `Grupo ${c.cluster_id + 1}`,
+            data: clusterPoints.map(p => ({
+                x: p.pca_x,
+                y: p.pca_y,
+                league: p.league,
+                avg_goals: p.avg_goals,
+                btts: p.btts_pct,
+                win: p.home_win_pct
+            })),
+            backgroundColor: color,
+            borderColor: color,
+            borderWidth: 1,
+            pointRadius: 6,
+            pointHoverRadius: 9,
+        };
+    });
+    
+    clusterChartInstance = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+            datasets: datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                    labels: { color: '#e5e7eb', font: { family: 'Inter', size: 12 } }
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(11, 14, 20, 0.95)',
+                    titleColor: '#34d399',
+                    bodyColor: '#e5e7eb',
+                    borderColor: 'rgba(52, 211, 153, 0.2)',
+                    borderWidth: 1,
+                    padding: 12,
+                    callbacks: {
+                        label: function(context) {
+                            const p = context.raw;
+                            return [
+                                `Liga: ${p.league}`,
+                                `Gols/Jogo: ${p.avg_goals.toFixed(2)}`,
+                                `Vitória Mandante: ${(p.win * 100).toFixed(1)}%`,
+                                `Ambas Marcam: ${(p.btts * 100).toFixed(1)}%`
+                            ];
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#9ca3af' },
+                    title: { display: true, text: 'Componente Principal 1', color: '#6b7280' }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { color: '#9ca3af' },
+                    title: { display: true, text: 'Componente Principal 2', color: '#6b7280' }
+                }
+            }
+        }
+    });
+}
+
+function renderClusterList(clusters) {
+    const container = document.getElementById('cluster-list-container');
+    container.innerHTML = '';
+    
+    const colors = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
+    
+    clusters.forEach((c, i) => {
+        const color = colors[i % colors.length];
+        
+        const card = document.createElement('div');
+        card.className = 'glassmorphism';
+        card.style.padding = '15px';
+        card.style.borderLeft = `4px solid ${color}`;
+        
+        const leaguesList = c.leagues.map(l => `<span style="display:inline-block; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; margin:2px; font-size:11px;">${l}</span>`).join('');
+        
+        card.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h4 style="margin: 0; color: ${color}; font-size: 14px;">Grupo ${c.cluster_id + 1} (${c.count} ligas)</h4>
+                <button type="button" onclick="copyClusterLeagues('${c.leagues.join(',')}')" class="btn-secondary" style="padding: 4px 8px; font-size: 10px;">
+                    <i class="fa-solid fa-copy"></i> Copiar Ligas
+                </button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; margin-bottom: 10px; font-size: 11px; color: #9ca3af;">
+                <div><i class="fa-solid fa-futbol"></i> Gols: ${c.avg_goals.toFixed(2)}</div>
+                <div><i class="fa-solid fa-arrow-up"></i> Over 2.5: ${(c.over25_pct * 100).toFixed(0)}%</div>
+                <div><i class="fa-solid fa-house"></i> Home Win: ${(c.home_win_pct * 100).toFixed(0)}%</div>
+            </div>
+            <div style="max-height: 100px; overflow-y: auto;">
+                ${leaguesList}
+            </div>
+        `;
+        
+        container.appendChild(card);
+    });
+}
+
+function copyClusterLeagues(leaguesStr) {
+    const leagues = leaguesStr.split(',');
+    
+    // Uncheck all
+    document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]').forEach(cb => {
+        cb.checked = false;
+    });
+    
+    // Check the ones in the cluster
+    document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]').forEach(cb => {
+        if (leagues.includes(cb.value)) {
+            cb.checked = true;
+        }
+    });
+    
+    showToast(`As ${leagues.length} ligas do grupo foram selecionadas no menu principal!`, "success");
+}

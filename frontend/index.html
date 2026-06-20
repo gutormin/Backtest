@@ -445,6 +445,7 @@
 <div class="tabs-container" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0;">
     <button class="tab-btn active" id="tab-btn-scanner" onclick="switchTab('tab-scanner')" style="background: none; border: none; color: var(--text-primary); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid var(--primary); transition: all 0.3s ease;"><i class="fa-solid fa-globe"></i> Scanner Institucional</button>
     <button class="tab-btn" id="tab-btn-laboratory" onclick="switchTab('tab-laboratory')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-microscope"></i> Laboratório Estatístico</button>
+    <button class="tab-btn" id="tab-btn-clustering" onclick="switchTab('tab-clustering')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-network-wired"></i> Clusterização (IA)</button>
     <button class="tab-btn" id="tab-btn-radar" onclick="switchTab('tab-radar')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-satellite-dish"></i> Radar Smart Money</button>
     <button class="tab-btn" id="tab-btn-arbitrage" onclick="switchTab('tab-arbitrage')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-scale-balanced"></i> Arbitragem</button>
     <button class="tab-btn" id="tab-btn-operations" onclick="switchTab('tab-operations')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-bolt"></i> Operação Diária</button>
@@ -494,6 +495,53 @@
             <!-- EQS Table Container -->
             <div id="eqs-table-container" style="margin-top: 20px;"></div>
             </div>
+
+<!-- Tab: Clusterização (IA) -->
+<div class="tab-pane" id="tab-clustering" style="display: none;">
+    <section class="scanner-section">
+        <div class="scanner-card">
+            <div class="scanner-header-wrapper">
+                <div class="scanner-title">
+                    <h3><i class="fa-solid fa-network-wired text-glow"></i> Clusterização de Ligas (K-Means)</h3>
+                    <p>Agrupe ligas com comportamentos estatísticos semelhantes usando Inteligência Artificial (Machine Learning).</p>
+                </div>
+                <div class="scanner-buttons" style="display: flex; gap: 10px; align-items: center;">
+                    <div class="form-group" style="margin-bottom: 0;">
+                        <label for="cluster-count" style="display:none;">Qtd. de Grupos:</label>
+                        <select id="cluster-count" style="background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 4px; height: 38px;">
+                            <option value="auto">Grupos: Automático</option>
+                            <option value="2">2 Grupos</option>
+                            <option value="3">3 Grupos</option>
+                            <option value="4">4 Grupos</option>
+                            <option value="5">5 Grupos</option>
+                            <option value="6">6 Grupos</option>
+                            <option value="7">7 Grupos</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn-scanner" id="btn-run-clustering" onclick="runClustering()" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);">
+                        <i class="fa-solid fa-brain"></i> Agrupar Ligas
+                    </button>
+                </div>
+            </div>
+            
+            <div id="clustering-loading" style="display: none; padding: 40px; text-align: center;">
+                <div class="loading-spinner" style="margin: 0 auto 15px auto;"></div>
+                <p style="color: var(--text-muted);">Analisando características estatísticas de todas as ligas selecionadas...</p>
+            </div>
+            
+            <div id="clustering-results" style="display: none; margin-top: 20px;">
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px;">
+                    <div class="glassmorphism" style="padding: 15px; position: relative; height: 500px;">
+                        <canvas id="clusterChart"></canvas>
+                    </div>
+                    <div id="cluster-list-container" style="display: flex; flex-direction: column; gap: 15px; max-height: 500px; overflow-y: auto; padding-right: 5px;">
+                        <!-- Injected by JS -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
 
 <!-- Tab: Radar Smart Money -->
 <div class="tab-pane" id="tab-radar" style="display: none;">

@@ -4,11 +4,11 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Optional, Union
+from typing import List, Optional, Union, Dict, Any
 
 from .data_loader import (
     sync_data, get_all_available_leagues, load_league_data, DATA_DIR, sync_fixtures,
-    get_api_token, load_upcoming_from_api
+    get_api_token, load_upcoming_from_api, fetch_football_data_co_uk, fetch_futpython_data
 )
 from .backtester import ChronologicalBacktester
 from .smart_money import SmartMoneyBacktester
@@ -27,6 +27,7 @@ from .scheduler import (
     run_live_odds_tracker_loop
 )
 from .ai_predictor import apply_fdr_correction, compute_edge_quality_score
+from .ml_clustering import extract_league_features, cluster_leagues
 import math
 import json
 import numpy as np
@@ -79,6 +80,42 @@ class BacktestRequest(BaseModel):
     maxOddsOver25: Optional[float] = None
     minOddsUnder25: Optional[float] = None
     maxOddsUnder25: Optional[float] = None
+
+class ClusterRequest(BaseModel):
+    leagues: List[str]
+    startDate: str
+    endDate: str
+    data_source: str = "football-data"
+    futpython_api_key: str = ""
+    n_clusters: Optional[int] = None
+
+@app.post("/api/cluster_leagues")
+def api_cluster_leagues(req: ClusterRequest):
+    try:
+        features_list = []
+        for league in req.leagues:
+            if req.data_source == 'futpython':
+                df = fetch_futpython_data(league, req.startDate, req.futpython_api_key)
+            else:
+                df = fetch_football_data_co_uk(league, req.startDate, req.endDate)
+                
+            features = extract_league_features(league, df)
+            if features:
+                features_list.append(features)
+                
+        if not features_list:
+            raise ValueError("Não foi possível extrair dados para nenhuma das ligas selecionadas.")
+            
+        cluster_results = cluster_leagues(features_list, req.n_clusters)
+        if 'error' in cluster_results:
+            raise ValueError(cluster_results['error'])
+            
+        return cluster_results
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/leagues")
 def list_leagues(source: str = "footballdata"):
@@ -155,9 +192,6 @@ def run_backtest(req: BacktestRequest):
             
         summary = results.get('summary', {})
         results['edge_quality'] = compute_edge_quality_score(summary, summary.get('oos_summary'))
-        
-        # If user explicitly requested OOS logic in frontend, it is now seamlessly
-        # handled by the backtester's internal oos_summary without breaking the Elo timeline.
         
         return results
     except Exception as e:
