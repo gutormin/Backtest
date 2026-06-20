@@ -8595,11 +8595,31 @@ function renderClusterList(clusters) {
         card.style.padding = '15px';
         card.style.borderLeft = `4px solid ${color}`;
         
+        let suggestedMarkets = "";
+        let clusterProfile = "";
+        
+        if (c.avg_goals >= 2.75 || c.over25_pct >= 0.52) {
+            clusterProfile = "Ligas de Gols (Over)";
+            suggestedMarkets = "Over 2.5, Ambas Marcam (Sim), Over 0.5 HT";
+        } else if (c.avg_goals <= 2.55 || c.over25_pct <= 0.46) {
+            clusterProfile = "Ligas Truncadas (Under)";
+            suggestedMarkets = "Under 2.5, Under 0.5 HT, Empate HT";
+        } else {
+            clusterProfile = "Ligas Equilibradas";
+            suggestedMarkets = "Match Odds (Mandante/Visitante), Handicap Asiático";
+        }
+        
+        if (c.home_win_pct >= 0.47) {
+            suggestedMarkets += ", Back Mandante";
+        } else if (c.home_win_pct <= 0.38) {
+            suggestedMarkets += ", Dupla Chance Visitante";
+        }
+
         const leaguesList = c.leagues.map(l => `<span style="display:inline-block; background:rgba(255,255,255,0.05); padding:2px 6px; border-radius:4px; margin:2px; font-size:11px;">${l}</span>`).join('');
         
         card.innerHTML = `
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h4 style="margin: 0; color: ${color}; font-size: 14px;">Grupo ${c.cluster_id + 1} (${c.count} ligas)</h4>
+                <h4 style="margin: 0; color: ${color}; font-size: 14px;">Grupo ${c.cluster_id + 1} (${c.count} ligas) - ${clusterProfile}</h4>
                 <button type="button" onclick="copyClusterLeagues('${c.leagues.join(',')}')" class="btn-secondary" style="padding: 4px 8px; font-size: 10px;">
                     <i class="fa-solid fa-copy"></i> Copiar Ligas
                 </button>
@@ -8608,6 +8628,9 @@ function renderClusterList(clusters) {
                 <div><i class="fa-solid fa-futbol"></i> Gols: ${c.avg_goals.toFixed(2)}</div>
                 <div><i class="fa-solid fa-arrow-up"></i> Over 2.5: ${(c.over25_pct * 100).toFixed(0)}%</div>
                 <div><i class="fa-solid fa-house"></i> Home Win: ${(c.home_win_pct * 100).toFixed(0)}%</div>
+            </div>
+            <div style="margin-bottom: 10px; padding: 6px; background: rgba(255, 255, 255, 0.05); border-left: 2px solid ${color}; font-size: 11px; color: #d1d5db; border-radius: 4px;">
+                <strong style="color: ${color};"><i class="fa-solid fa-lightbulb"></i> Mercados Sugeridos para o Scanner:</strong> ${suggestedMarkets}
             </div>
             <div style="max-height: 100px; overflow-y: auto;">
                 ${leaguesList}
