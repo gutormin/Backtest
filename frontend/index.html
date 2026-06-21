@@ -1113,10 +1113,17 @@
 <!-- Portfolio Results Panel -->
 <section id="portfolio-results-panel" style="display: none; margin-bottom: 24px;">
     <div style="background: rgba(139, 92, 246, 0.1); border-left: 4px solid var(--primary); padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-        <h3 style="margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 10px;">
-            <i class="fa-solid fa-layer-group"></i> Resultados do Portfólio Combinado
-        </h3>
-        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 0;">Backtest simultâneo de múltiplas estratégias operando a mesma banca.</p>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <h3 style="margin-top: 0; color: var(--primary); display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-layer-group"></i> Resultados do Portfólio Combinado
+                </h3>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 0;">Backtest simultâneo de múltiplas estratégias operando a mesma banca.</p>
+            </div>
+            <button class="btn-scanner" id="btn-save-portfolio" onclick="savePortfolio()" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-color: #8b5cf6; color: white; padding: 8px 15px; margin-top: 0;" title="Salvar este portfólio no histórico">
+                <i class="fa-solid fa-star"></i> Salvar Combinação
+            </button>
+        </div>
     </div>
     
     <div class="metrics-grid" id="portfolio-metrics-grid" style="margin-bottom: 20px;">

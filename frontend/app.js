@@ -7165,15 +7165,59 @@ async function loadHistoryTab() {
 
             card.className = 'eval-card glassmorphism';
 
-            card.style.borderLeft = '4px solid var(--primary)';
-
             card.style.display = 'flex';
 
             card.style.flexDirection = 'column';
 
             card.style.justifyContent = 'space-between';
 
+            if (item.type === 'portfolio') {
+                // Portfolio Card
+                card.style.borderLeft = '4px solid #8b5cf6';
+                card.innerHTML = `
+                    <div>
+                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <i class="fa-solid fa-layer-group" style="color: #8b5cf6; font-size: 18px;"></i>
+                                <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
+                            </div>
+                            <span style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">${dateStr}</span>
+                        </div>
+                        
+                        <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">
+                            <div style="margin-bottom: 4px;"><strong>Tipo:</strong> <span style="color:#8b5cf6;">Portfólio Combinado</span></div>
+                            <div style="margin-bottom: 4px;"><strong>Estratégias:</strong> ${p.strategy_ids ? p.strategy_ids.length : 0} combinadas</div>
+                        </div>
+                        
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                            <div>
+                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Win Rate</div>
+                                <div style="font-size: 15px; font-weight: 700; color: ${s.win_rate > 50 ? 'var(--success)' : 'var(--text-primary)'};">${s.win_rate}%</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Lucro</div>
+                                <div style="font-size: 15px; font-weight: 700; color: ${s.net_profit > 0 ? 'var(--success)' : 'var(--danger)'};">$${s.net_profit}</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">ROI</div>
+                                <div style="font-size: 15px; font-weight: 700; color: ${s.roi > 0 ? 'var(--success)' : 'var(--danger)'};">${s.roi}%</div>
+                            </div>
+                            <div>
+                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Drawdown</div>
+                                <div style="font-size: 15px; font-weight: 700; color: var(--danger);">${s.max_drawdown}%</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                        <button class="btn-clear" onclick="deleteHistoryStrategy('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; color: var(--danger);"><i class="fa-solid fa-trash"></i> Excluir</button>
+                        <button class="btn-scanner" onclick="loadPortfolio('${item.id}')" style="flex: 2; padding: 6px; font-size: 13px; margin: 0; background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #fff;"><i class="fa-solid fa-check-square"></i> Selecionar Estratégias</button>
+                    </div>
+                `;
+                grid.appendChild(card);
+                return; // next iteration
+            }
             
+            card.style.borderLeft = '4px solid var(--primary)';
 
             // Leagues format
 
@@ -8777,4 +8821,103 @@ function renderPortfolioChart(equityCurve) {
             }
         }
     });
+}
+
+async function loadPortfolio(id) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/history`);
+        const history = await res.json();
+        const portfolio = history.find(h => h.id === id);
+        if (!portfolio || portfolio.type !== 'portfolio') {
+            showToast('Portfólio não encontrado.', 'error');
+            return;
+        }
+        
+        document.querySelectorAll('.portfolio-checkbox').forEach(cb => cb.checked = false);
+        
+        if (portfolio.params && portfolio.params.strategy_ids) {
+            let foundCount = 0;
+            portfolio.params.strategy_ids.forEach(sid => {
+                const cb = document.querySelector(`.portfolio-checkbox[value="${sid}"]`);
+                if (cb) {
+                    cb.checked = true;
+                    foundCount++;
+                }
+            });
+            
+            if (portfolio.params.risk_method) {
+                const rm = document.getElementById('portfolio-risk-method');
+                if (rm) rm.value = portfolio.params.risk_method;
+            }
+            if (portfolio.params.initial_bankroll) {
+                const bk = document.getElementById('portfolio-bankroll-input');
+                if (bk) bk.value = portfolio.params.initial_bankroll;
+            }
+            
+            showToast(`${foundCount} estratégias do portfólio selecionadas com sucesso.`, 'success');
+            const rm = document.getElementById('portfolio-risk-method');
+            if(rm) rm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Erro ao carregar portfólio.', 'error');
+    }
+}
+
+async function savePortfolio() {
+    const checkboxes = document.querySelectorAll('.portfolio-checkbox:checked');
+    const strategyIds = Array.from(checkboxes).map(cb => cb.value);
+    
+    if (strategyIds.length === 0) {
+        showToast('Selecione pelo menos uma estratégia para salvar no portfólio.', 'warning');
+        return;
+    }
+    
+    const profitEl = document.getElementById('port-metric-profit');
+    if (!profitEl || profitEl.innerText.includes('$0.00')) {
+        showToast('Rode o portfólio primeiro para salvar seus resultados!', 'warning');
+        return;
+    }
+    
+    const name = prompt("Digite um nome para este Portfólio Combinado:");
+    if (!name || name.trim() === '') return;
+    
+    const profitText = document.getElementById('port-metric-profit')?.innerText || '0';
+    const roiText = document.getElementById('port-metric-roi')?.innerText || '0';
+    const winrateText = document.getElementById('port-metric-winrate')?.innerText || '0';
+    const betsText = document.getElementById('port-metric-bets')?.innerText || '0';
+    const drawdownText = document.getElementById('port-metric-drawdown')?.innerText || '0';
+    
+    const portfolioObj = {
+        name: name,
+        type: 'portfolio',
+        params: {
+            strategy_ids: strategyIds,
+            risk_method: document.getElementById('portfolio-risk-method')?.value || 'kelly_quarter',
+            initial_bankroll: parseFloat(document.getElementById('portfolio-bankroll-input')?.value || 1000)
+        },
+        summary: {
+            net_profit: parseFloat(profitText.replace(/[^\d.-]/g, '')) || 0,
+            roi: parseFloat(roiText.replace(/[^\d.-]/g, '')) || 0,
+            win_rate: parseFloat(winrateText.replace(/[^\d.-]/g, '')) || 0,
+            total_bets: parseInt(betsText.replace(/[^\d.-]/g, '')) || 0,
+            max_drawdown: parseFloat(drawdownText.replace(/[^\d.-]/g, '')) || 0
+        }
+    };
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/history`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(portfolioObj)
+        });
+        
+        if (res.ok) {
+            showToast('Portfólio salvo com sucesso no Histórico!', 'success');
+        } else {
+            showToast('Falha ao salvar portfólio.', 'error');
+        }
+    } catch (e) {
+        showToast('Erro ao salvar.', 'error');
+    }
 }

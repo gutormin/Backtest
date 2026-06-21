@@ -260,14 +260,32 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     win_rate = (wins / total_bets_placed * 100) if total_bets_placed > 0 else 0.0
     avg_odds = float(np.mean([b['odds'] for b in all_bets])) if all_bets else 0.0
 
-    returns = [b['profit'] / b['stake'] for b in all_bets if b.get('stake', 0) > 0]
-    avg_return = np.mean(returns) if returns else 0.0
-    std_return = np.std(returns) if returns else 0.0
-    sharpe_ratio = (avg_return / std_return * math.sqrt(250)) if std_return > 0 else 0.0
-    downside_returns = [r for r in returns if r < 0]
-    downside_std = np.std(downside_returns) if downside_returns else 0.0
-    sortino_ratio = (avg_return / downside_std * math.sqrt(250)) if downside_std > 0 else 0.0
-    skewness = float(stats.skew(returns)) if len(returns) > 2 else 0.0
+    # Calculate Daily Returns for accurate Sharpe and Sortino
+    if all_bets:
+        daily_df = pd.DataFrame(all_bets)
+        daily_df['date'] = pd.to_datetime(daily_df['date'])
+        daily_profit = daily_df.groupby(daily_df['date'].dt.date)['profit'].sum()
+        daily_staked = daily_df.groupby(daily_df['date'].dt.date)['stake'].sum()
+        daily_returns = []
+        for dt, p in daily_profit.items():
+            s = daily_staked.get(dt, 0)
+            if s > 0:
+                daily_returns.append(p / s)
+        
+        if len(daily_returns) > 1:
+            avg_return = float(np.mean(daily_returns))
+            std_return = float(np.std(daily_returns))
+            sharpe_ratio = (avg_return / std_return * math.sqrt(252)) if std_return > 0 else 0.0
+            
+            downside_returns = [r for r in daily_returns if r < 0]
+            downside_dev = math.sqrt(np.mean([r**2 for r in downside_returns])) if downside_returns else 0.0
+            sortino_ratio = (avg_return / downside_dev * math.sqrt(252)) if downside_dev > 0 else 0.0
+            
+            skewness = float(stats.skew(daily_returns)) if len(daily_returns) > 2 else 0.0
+        else:
+            sharpe_ratio, sortino_ratio, skewness = 0.0, 0.0, 0.0
+    else:
+        sharpe_ratio, sortino_ratio, skewness = 0.0, 0.0, 0.0
 
     max_consec_wins, max_consec_losses = 0, 0
     curr_wins, curr_losses = 0, 0
