@@ -199,13 +199,8 @@ class ChronologicalBacktester:
             ftag = row['FTAG']
             ftr = row['FTR']
             
-            # HT Goals extraction
             hthg = row.get('HTHG')
             htag = row.get('HTAG')
-            if pd.isna(hthg) or pd.isna(htag):
-                # Fallback to 45% of full-time goals if HT data is completely missing
-                hthg = fthg * 0.45 if not pd.isna(fthg) else 0.0
-                htag = ftag * 0.45 if not pd.isna(ftag) else 0.0
             
             # Skip matches that haven't been played yet (missing scores)
             if pd.isna(fthg) or pd.isna(ftag):
@@ -600,6 +595,9 @@ class ChronologicalBacktester:
                 bet_won = False
                 market_label = ""
                 result_factor = -1.0
+
+                if mkt.startswith('ht_') and (pd.isna(hthg) or pd.isna(htag)):
+                    continue
 
                 if mkt in ('home', '1x2_home'):
                     model_prob = prob_h
@@ -1801,12 +1799,8 @@ class ChronologicalBacktester:
             ftag = row['FTAG']
             ftr = row['FTR']
             
-            # HT Goals extraction
             hthg = row.get('HTHG')
             htag = row.get('HTAG')
-            if pd.isna(hthg) or pd.isna(htag):
-                hthg = fthg * 0.45
-                htag = ftag * 0.45
             
             if pd.isna(fthg) or pd.isna(ftag):
                 continue
