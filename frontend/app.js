@@ -637,7 +637,9 @@ gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
 
     
 
-    const ranges = oddsStats.map(item => item.range);
+    // Backend returns 'odds_band' for portfolio and 'range' for individual backtest
+
+    const ranges = oddsStats.map(item => item.odds_band || item.range || item.label || 'N/A');
 
     const oddsProfits = oddsStats.map(item => item.profit);
 
@@ -8783,7 +8785,7 @@ async function runPortfolioBacktest() {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 strategy_ids: strategyIds,
-                initial_bankroll: 1000.0,
+                initial_bankroll: parseFloat(document.getElementById('portfolio-bankroll-input')?.value || 1000),
                 risk_method: riskMethod
             })
         });
@@ -8818,7 +8820,7 @@ async function runPortfolioBacktest() {
         // Show Portfolio Panel
         document.getElementById('portfolio-results-panel').style.display = 'block';
         
-        // Update Metrics
+        // Update top-level Metrics
         document.getElementById('port-metric-bankroll').innerText = `$${data.final_bankroll.toFixed(2)}`;
         document.getElementById('port-metric-profit').innerText = `$${data.net_profit.toFixed(2)}`;
         
@@ -8827,6 +8829,21 @@ async function runPortfolioBacktest() {
         roiEl.style.color = data.total_roi > 0 ? '#10b981' : '#ef4444';
         
         document.getElementById('port-metric-dd').innerText = `${data.max_drawdown.toFixed(2)}%`;
+
+        // Populate extra portfolio summary metrics (same fields as individual backtest)
+        const s = data.summary || {};
+        const setEl = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+        setEl('port-metric-bets',    s.total_bets ?? data.total_bets ?? '-');
+        setEl('port-metric-wins',    s.wins ?? '-');
+        setEl('port-metric-losses',  s.losses ?? '-');
+        setEl('port-metric-winrate', s.win_rate != null ? `${s.win_rate.toFixed(1)}%` : '-');
+        setEl('port-metric-avgodd',  s.avg_odds != null ? s.avg_odds.toFixed(2) : '-');
+        setEl('port-metric-sharpe',  s.sharpe_ratio != null ? s.sharpe_ratio.toFixed(2) : '-');
+        setEl('port-metric-sortino', s.sortino_ratio != null ? s.sortino_ratio.toFixed(2) : '-');
+        setEl('port-metric-staked',  s.total_staked != null ? `$${s.total_staked.toFixed(2)}` : '-');
+        setEl('port-metric-pvalue',  s.p_value != null ? (s.p_value < 0.001 ? '< 0.001' : s.p_value.toFixed(3)) : '-');
+        setEl('port-metric-consec-wins',   s.max_consec_wins ?? '-');
+        setEl('port-metric-consec-losses', s.max_consec_losses ?? '-');
         
         // Render Chart
         renderPortfolioChart(data.equity_curve);

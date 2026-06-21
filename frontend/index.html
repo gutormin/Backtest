@@ -1137,8 +1137,57 @@
             <div class="metric-icon"><i class="fa-solid fa-arrow-trend-down" style="color: #ef4444;"></i></div>
         </div>
     </div>
-    
+
+    <!-- Extra stats row (same as individual backtest laboratory) -->
+    <div style="display: grid; grid-template-columns: repeat(6, 1fr); gap: 10px; margin-bottom: 20px;">
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Total Apostas</span>
+            <h3 id="port-metric-bets" style="margin:4px 0 0 0; font-size:1.3rem;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Vitórias</span>
+            <h3 id="port-metric-wins" style="margin:4px 0 0 0; font-size:1.3rem; color:#10b981;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Derrotas</span>
+            <h3 id="port-metric-losses" style="margin:4px 0 0 0; font-size:1.3rem; color:#ef4444;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Win Rate</span>
+            <h3 id="port-metric-winrate" style="margin:4px 0 0 0; font-size:1.3rem;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Odd Média</span>
+            <h3 id="port-metric-avgodd" style="margin:4px 0 0 0; font-size:1.3rem;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Total Apostado</span>
+            <h3 id="port-metric-staked" style="margin:4px 0 0 0; font-size:1.3rem;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Sharpe Ratio</span>
+            <h3 id="port-metric-sharpe" style="margin:4px 0 0 0; font-size:1.3rem;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Sortino Ratio</span>
+            <h3 id="port-metric-sortino" style="margin:4px 0 0 0; font-size:1.3rem;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">P-Valor</span>
+            <h3 id="port-metric-pvalue" style="margin:4px 0 0 0; font-size:1.3rem;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Seq. Vitórias</span>
+            <h3 id="port-metric-consec-wins" style="margin:4px 0 0 0; font-size:1.3rem; color:#10b981;">-</h3>
+        </div>
+        <div class="metric-card" style="padding: 12px 14px;">
+            <span class="metric-label" style="font-size:10px; display:block;">Seq. Derrotas</span>
+            <h3 id="port-metric-consec-losses" style="margin:4px 0 0 0; font-size:1.3rem; color:#ef4444;">-</h3>
+        </div>
+    </div>
+
     <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 20px; align-items: start;">
+
         <div class="chart-card glassmorphism">
             <h3><i class="fa-solid fa-chart-area text-glow"></i> Curva de Capital (Banca)</h3>
             <div class="chart-container" style="position: relative; height: 300px;">
@@ -2344,6 +2393,11 @@
                     <p>Acesse e recarregue backtests que você salvou anteriormente.</p>
                 </div>
                 <div class="scanner-buttons" style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <div style="display:flex; flex-direction:column; gap:2px;">
+                        <label style="font-size:10px; color:var(--text-secondary); margin:0;">Banca Atual ($)</label>
+                        <input id="portfolio-bankroll-input" type="number" min="10" value="1000" step="50"
+                            style="width:110px; background:var(--bg-darker); border:1px solid var(--border-color); color:var(--text-primary); border-radius:var(--border-radius-sm); padding:6px 10px; font-size:14px; font-weight:600; height:38px;" />
+                    </div>
                     <select id="portfolio-risk-method" style="background-color: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); padding: 8px; font-size: 13px; height: 38px;">
                         <option value="kelly_quarter">Gestão: Quarter Kelly (Dinâmico)</option>
                         <option value="fixed_1">Gestão: Fixo 1% da Banca</option>
@@ -2352,6 +2406,7 @@
                     <button class="btn-scanner" onclick="runPortfolioBacktest()" style="background: var(--primary); border-color: var(--primary); color: white; padding: 8px 15px; margin-top: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado</button>
                     <button class="btn-clear" onclick="loadHistoryTab()" style="padding: 8px 15px;"><i class="fa-solid fa-rotate-right"></i> Atualizar</button>
                 </div>
+
             </div>
 
             <div id="history-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
