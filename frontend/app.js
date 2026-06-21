@@ -8792,17 +8792,10 @@ async function runPortfolioBacktest() {
         if (resultsTableSection) resultsTableSection.style.display = 'none';
         
         // Find other generic grid wrappers around charts
-        const chartCards = document.querySelectorAll('.chart-card');
-        chartCards.forEach(c => {
-            if(c.parentElement && c.parentElement.style.display !== 'none' && c.parentElement.id !== 'portfolio-results-panel') {
-                // If it's part of a generic layout, we just hide the parent
-                if (c.parentElement.tagName === 'DIV' && c.parentElement.className === 'metrics-grid') {
-                    // ignore, handled
-                } else if (!c.closest('#portfolio-results-panel')) {
-                     c.closest('div[style*="display: grid"]').style.display = 'none';
-                }
-            }
-        });
+        const chartsGrid = document.querySelector('.charts-grid');
+        if (chartsGrid) chartsGrid.style.display = 'none';
+        const stakingSection = document.querySelector('.staking-comparison-section');
+        if (stakingSection) stakingSection.style.display = 'none';
 
         // Show Portfolio Panel
         document.getElementById('portfolio-results-panel').style.display = 'block';
