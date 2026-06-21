@@ -1680,7 +1680,7 @@ class ChronologicalBacktester:
             'equity_curve_fixed': equity_curve_fixed,
             'equity_curve_proportional': equity_curve_proportional,
             'equity_curve_kelly': equity_curve_kelly,
-            'bets': bets_record[-1000:], # Limit bets sent to client to last 1000 for performance
+            'bets': bets_record, # Send all bets, pagination is handled by frontend
             'ai_analysis': ai_res,
             'quartiles': quartiles,
             'portfolio_optimization': portfolio_opt

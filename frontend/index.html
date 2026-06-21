@@ -1974,7 +1974,7 @@
 <section class="results-table-section">
 <div class="table-card">
 <div class="table-header">
-<h3><i class="fa-solid fa-clipboard-list"></i> Histórico de Apostas Efetuadas (Últimas 1000)</h3>
+<h3><i class="fa-solid fa-clipboard-list"></i> Histórico de Apostas Efetuadas</h3>
 <div class="table-actions">
 <input id="table-search" onkeyup="filterTable()" placeholder="Filtrar por time..." type="text"/>
 </div>
@@ -2003,6 +2003,11 @@
 </tr>
 </tbody>
 </table>
+<div id="pagination-controls" style="display: none; justify-content: space-between; align-items: center; margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 8px;">
+    <button id="prev-page-btn" onclick="prevPage()" class="secondary-btn" style="padding: 6px 12px; font-size: 12px;"><i class="fa-solid fa-chevron-left"></i> Anterior</button>
+    <span id="page-indicator" style="font-size: 13px; color: var(--text-secondary);">Página 1</span>
+    <button id="next-page-btn" onclick="nextPage()" class="secondary-btn" style="padding: 6px 12px; font-size: 12px;">Próxima <i class="fa-solid fa-chevron-right"></i></button>
+</div>
 </div>
 </div>
 </section>

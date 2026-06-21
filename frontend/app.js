@@ -951,86 +951,88 @@ function renderProbValue(prob, barType) {
 
 // Populate bets table
 
+let currentBetsForPagination = [];
+let currentPage = 1;
+const rowsPerPage = 500;
+
 function populateBetsTable(bets) {
+    currentBetsForPagination = bets.slice().reverse();
+    currentPage = 1;
+    renderBetsPage();
+}
 
+function renderBetsPage() {
     const tbody = document.getElementById('bets-table-body');
-
     tbody.innerHTML = '';
 
-    
-
-    if (bets.length === 0) {
-
+    if (currentBetsForPagination.length === 0) {
         tbody.innerHTML = `
-
             <tr>
-
                 <td colspan="10" class="text-center empty-state">
-
                     <i class="fa-solid fa-face-frown"></i> Nenhuma aposta realizada nesta simulação. Tente ajustar o gatilho de valor EV ou as ligas.
-
                 </td>
-
             </tr>
-
         `;
-
+        document.getElementById('pagination-controls').style.display = 'none';
         return;
-
     }
 
-    
+    const totalPages = Math.ceil(currentBetsForPagination.length / rowsPerPage);
+    const start = (currentPage - 1) * rowsPerPage;
+    const end = start + rowsPerPage;
+    const pageBets = currentBetsForPagination.slice(start, end);
 
-    // Render bets in reverse chronological order (latest first)
-
-    bets.slice().reverse().forEach(bet => {
-
+    pageBets.forEach(bet => {
         const tr = document.createElement('tr');
-
         const profitClass = bet.profit >= 0 ? 'text-profit' : 'text-loss';
-
         const winBadge = bet.profit >= 0 ? '<span class="badge-row-win">Green</span>' : '<span class="badge-row-loss">Red</span>';
-
         
-
         tr.innerHTML = `
-
             <td>${bet.date}</td>
             <td>
                 ${bet.strategy_name ? `<span style="font-size:10px; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px;">${bet.strategy_name}</span><br>` : ''}
                 <strong>${bet.league}</strong>
             </td>
-
             <td>${bet.home_team} vs ${bet.away_team}</td>
-
             <td>${bet.market}</td>
-
             <td>${bet.odds.toFixed(2)}</td>
-
             <td>${bet.prob}%</td>
-
             <td>${bet.ev.toFixed(2)}</td>
-
             <td>$${bet.stake.toFixed(2)}</td>
-
             <td class="${profitClass}">${bet.profit >= 0 ? '+' : ''}$${bet.profit.toFixed(2)} ${winBadge}</td>
-
             <td>$${bet.bankroll.toFixed(2)}</td>
-
         `;
-
         
-
         tr.style.cursor = 'pointer';
-
         tr.onclick = () => showMatchDetails(bet);
-
         
-
         tbody.appendChild(tr);
-
     });
 
+    // Update pagination UI
+    if (totalPages > 1) {
+        document.getElementById('pagination-controls').style.display = 'flex';
+        document.getElementById('page-indicator').innerText = `Página ${currentPage} de ${totalPages}`;
+        document.getElementById('prev-page-btn').disabled = currentPage === 1;
+        document.getElementById('next-page-btn').disabled = currentPage === totalPages;
+    } else {
+        document.getElementById('pagination-controls').style.display = 'none';
+    }
+}
+
+function prevPage() {
+    if (currentPage > 1) {
+        currentPage--;
+        renderBetsPage();
+    }
+}
+
+function nextPage() {
+    const totalPages = Math.ceil(currentBetsForPagination.length / rowsPerPage);
+    if (currentPage < totalPages) {
+        currentPage++;
+        renderBetsPage();
+    }
 }
 
 
