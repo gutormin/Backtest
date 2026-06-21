@@ -7464,8 +7464,7 @@ function reloadStrategy(params) {
     
 
     if (params.minOdds) document.getElementById('min-odds').value = params.minOdds;
-
-    if (params.maxOdds) document.getElementById('max-odds').value = params.maxOdds;
+    if (params.maxOdds) document.getElementById('max-odds').value = Math.min(parseFloat(params.maxOdds), 2.50);
 
     
 
@@ -8749,6 +8748,16 @@ async function runPortfolioBacktest() {
     showToast('Rodando Portfólio. Isso pode levar de 30 a 60 segundos...', 'info', 60000);
     
     try {
+        // Switch to Laboratory Tab
+        switchTab('tab-laboratory');
+        
+        // Hide standard Laboratory panels early so we don't see 0s
+        const stdGrid = document.getElementById('standard-metrics-grid');
+        if (stdGrid) stdGrid.style.display = 'none';
+        
+        const mainCharts = document.querySelector('.main-charts');
+        if (mainCharts) mainCharts.style.display = 'none';
+
         const res = await fetch(`${API_BASE_URL}/api/portfolio_backtest`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -8761,30 +8770,18 @@ async function runPortfolioBacktest() {
         
         const data = await res.json();
         
-        if (!res.ok) {
+        if (!res.ok || data.error) {
             showToast(data.detail || data.error || 'Erro desconhecido do servidor.', 'error');
             if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
+            document.getElementById('portfolio-results-panel').style.display = 'block';
+            document.getElementById('port-metric-bankroll').innerText = `$0.00`;
+            document.getElementById('port-metric-profit').innerText = `$0.00`;
+            document.getElementById('port-metric-roi').innerText = `0.00%`;
+            document.getElementById('port-metric-dd').innerText = `0.00%`;
+            const tbody = document.getElementById('portfolio-bets-body');
+            if(tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">Nenhuma aposta atendeu aos critérios (odds > 2.50 foram removidas).</td></tr>`;
             return;
         }
-        
-        if (data.error) {
-            showToast(data.error, 'error');
-            if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
-            return;
-        }
-        
-        showToast('Portfólio calculado com sucesso!', 'success');
-        if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
-        
-        // Switch to Laboratory Tab
-        switchTab('tab-laboratory');
-        
-        // Hide standard Laboratory panels
-        document.getElementById('standard-metrics-grid').style.display = 'none';
-        
-        // Find other major containers and hide them if they exist
-        const mainCharts = document.querySelector('.main-charts');
-        if (mainCharts) mainCharts.style.display = 'none';
         
         // Show Portfolio Panel
         document.getElementById('portfolio-results-panel').style.display = 'block';

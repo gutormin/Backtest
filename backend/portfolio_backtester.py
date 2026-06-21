@@ -87,7 +87,7 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
                 stake_value=10.0,
                 odds_source=p.get('oddsSource', p.get('odds_source', 'B365')),
                 min_odds=p.get('minOdds', 1.0),
-                max_odds=p.get('maxOdds', 50.0),
+                max_odds=2.50, # Força máximo de 2.50 mesmo se a estratégia foi salva com valor maior
                 data_source=p.get('data_source', 'football-data'),
                 use_ml=p.get('use_ml', False),
                 futpython_api_key=p.get('futpython_api_key', ''),

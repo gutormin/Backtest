@@ -171,7 +171,7 @@ def run_backtest(req: BacktestRequest):
             stake_value=req.stakeValue,
             odds_source=req.oddsSource,
             min_odds=req.minOdds or 1.0,
-            max_odds=req.maxOdds or 50.0,
+            max_odds=req.maxOdds or 2.50,
             exchange_commission=req.exchange_commission,
             use_ml=req.use_ml,
             data_source=req.data_source,
