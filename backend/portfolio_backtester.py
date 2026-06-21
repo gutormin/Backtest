@@ -11,15 +11,51 @@ from .ai_predictor import (predict_strategy_sustainability, compute_brier_score,
                            compute_pvalue_binomial, compute_edge_quality_score)
 
 
+def _get_stake(risk_method, initial_bankroll, current_bankroll, prob, odds):
+    """
+    Calculate stake for a bet.
+
+    For the HISTORICAL simulation, we use the initial_bankroll as the base
+    for proportional/Kelly calculations to prevent compounding explosion.
+    The current_bankroll is only used to ensure we don't bet more than available.
+
+    This gives realistic results while still showing meaningful differences
+    between risk methods.
+    """
+    if risk_method == 'fixed_1':
+        stake = initial_bankroll * 0.01      # 1% of initial (e.g. $10 from $1000)
+    elif risk_method == 'fixed_2':
+        stake = initial_bankroll * 0.02      # 2% of initial (e.g. $20 from $1000)
+    elif risk_method == 'kelly_quarter':
+        # Kelly fraction calculated per-bet using prob/odds, but applied to initial_bankroll
+        # This shows realistic per-bet Kelly stakes without compounding explosion
+        if odds > 1.0:
+            k_fraction = ((prob * odds) - 1.0) / (odds - 1.0)
+            k_fraction = max(0.0, min(k_fraction, 0.20))   # cap at 20% full Kelly
+            stake = initial_bankroll * (k_fraction / 4.0)  # Quarter-Kelly on initial
+        else:
+            stake = initial_bankroll * 0.01
+    else:
+        stake = initial_bankroll * 0.01
+
+    # Minimum $1, maximum 10% of current available bankroll
+    stake = max(1.0, stake)
+    stake = min(stake, current_bankroll * 0.10)
+    return stake
+
+
 def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     """
     Runs a combined portfolio backtest across multiple saved strategies.
 
-    Historical simulation ALWAYS uses fixed $10 stake per bet (same as individual backtests),
-    so results are directly comparable and not distorted by compounding effects.
-
-    The risk_method only affects the recommended next-bet stake ('Apostar' column),
-    which is applied to the user's current bankroll.
+    HOW IT WORKS:
+    - Historical simulation: stakes are calculated using your chosen risk method
+      applied to your INITIAL bankroll (not compounding). This shows realistic
+      P/L without exponential distortion.
+      Example: $1000 bankroll, 2% fixed => every bet = $20.
+      Example: $1000 bankroll, Kelly 1/4 => each bet = Kelly_fraction × $250.
+    - 'Apostar' column: recommended stake for your NEXT real bet, using Kelly
+      applied to the current (post-simulation) bankroll.
     """
     history = load_history()
     selected_strategies = [s for s in history if s['id'] in strategy_ids]
@@ -28,7 +64,6 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         return {"error": "Nenhuma estratégia válida selecionada."}
 
     all_bets = []
-    FIXED_STAKE = 10.0  # Same as individual backtests — no compounding distortion
 
     print(f"[Portfolio] Rodando backtests individuais para {len(selected_strategies)} estratégias...")
     for s in selected_strategies:
@@ -42,7 +77,7 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
             value_threshold=p.get('valueThreshold', p.get('value_threshold', 1.05)),
             initial_bankroll=1000.0,
             staking_rule='fixed',
-            stake_value=FIXED_STAKE,
+            stake_value=10.0,  # Individual backtest with $10; we recalculate below
             odds_source=p.get('oddsSource', p.get('odds_source', 'B365')),
             min_odds=p.get('minOdds', 1.0),
             max_odds=p.get('maxOdds', 50.0),
@@ -60,7 +95,6 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
             for b in res['bets']:
                 b['strategy_id'] = s['id']
                 b['strategy_name'] = s['name']
-                # Keep original fixed-stake profit/won fields as-is from the backtester
                 all_bets.append(b)
 
     if not all_bets:
@@ -69,9 +103,10 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     all_bets.sort(key=lambda x: x['date'])
 
     # ---------------------------------------------------------------
-    # SIMULATION: Fixed-stake combined portfolio
-    # We add all bets chronologically, recalculating bankroll from initial.
-    # Stake is always FIXED_STAKE ($10). Profit uses actual won + odds.
+    # HISTORICAL SIMULATION
+    # Stakes use chosen risk method applied to INITIAL bankroll.
+    # This is realistic: Kelly/proportional differences ARE visible,
+    # but the base never explodes because it's always anchored to initial_bankroll.
     # ---------------------------------------------------------------
     bankroll = initial_bankroll
     peak_bankroll = initial_bankroll
@@ -107,23 +142,29 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
             current_date = b_date
 
         bet_odds = float(b.get('odds', 2.0))
-        # Use the 'won' boolean from the original backtester — 100% reliable
+        prob = float(b.get('prob', 50.0)) / 100.0
         bet_won = bool(b.get('won', False))
-        stake = FIXED_STAKE
 
-        # Recalculate profit correctly from outcome + odds
+        # Stake uses initial_bankroll as base to prevent compounding explosion
+        stake = _get_stake(risk_method, initial_bankroll, bankroll, prob, bet_odds)
+
+        if bankroll < stake or bankroll < 1.0:
+            b['stake'] = 0.0
+            b['profit'] = 0.0
+            continue
+
+        # Correct profit calculation: outcome × odds
         if bet_won:
             profit = stake * (bet_odds - 1.0)
         else:
             profit = -stake
 
-        # Update the bet record for the table display
         b['stake'] = round(stake, 2)
         b['profit'] = round(profit, 2)
         b['bankroll'] = round(bankroll + profit, 2)
         bankroll += profit
 
-        # Drawdown tracking
+        # Drawdown
         if bankroll > peak_bankroll:
             peak_bankroll = bankroll
             current_dd_duration = 0
@@ -159,27 +200,27 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         odds_stats[odds_band]['bets'] += 1
         odds_stats[odds_band]['profit'] += profit
 
-    # Final equity point
     equity_curve.append({'date': current_date, 'bankroll': round(bankroll, 2)})
 
     # ---------------------------------------------------------------
-    # RECOMMENDED STAKE: Apply the selected risk method to
-    # the user's CURRENT portfolio bankroll (final_bankroll)
-    # This is the ONLY place where risk_method matters.
+    # RECOMMENDED STAKE ('Apostar' column)
+    # This IS the forward-looking Kelly / proportional recommendation.
+    # Applied to the CURRENT portfolio bankroll (after simulation).
+    # This is what the user should actually bet NOW.
     # ---------------------------------------------------------------
     for sid, st in strategy_stats.items():
         st['win_rate'] = round((st['wins'] / st['bets'] * 100) if st['bets'] > 0 else 0, 1)
         st['roi'] = round((st['profit'] / st['staked'] * 100) if st['staked'] > 0 else 0, 2)
 
-        # Recommended stake = Kelly/proportional applied to CURRENT (realistic) bankroll
+        s_bets_for_kelly = [b for b in all_bets if b.get('strategy_id') == sid]
+        avg_odds_s = sum(b['odds'] for b in s_bets_for_kelly) / len(s_bets_for_kelly) if s_bets_for_kelly else 2.0
+        prob_s = st['win_rate'] / 100.0
+
         if risk_method == 'fixed_1':
             st['recommended_stake'] = round(bankroll * 0.01, 2)
         elif risk_method == 'fixed_2':
             st['recommended_stake'] = round(bankroll * 0.02, 2)
         elif risk_method == 'kelly_quarter':
-            s_bets = [b for b in all_bets if b['strategy_id'] == sid]
-            avg_odds_s = sum(b['odds'] for b in s_bets) / len(s_bets) if s_bets else 2.0
-            prob_s = st['win_rate'] / 100.0
             if avg_odds_s > 1.0:
                 k_fraction = ((prob_s * avg_odds_s) - 1) / (avg_odds_s - 1)
                 k_fraction = max(0.0, min(k_fraction, 0.20))
@@ -197,7 +238,7 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     wins = sum(st['wins'] for st in strategy_stats.values())
     total_bets_placed = sum(st['bets'] for st in strategy_stats.values())
     win_rate = (wins / total_bets_placed * 100) if total_bets_placed > 0 else 0.0
-    avg_odds = np.mean([b['odds'] for b in all_bets]) if all_bets else 0.0
+    avg_odds = float(np.mean([b['odds'] for b in all_bets])) if all_bets else 0.0
 
     returns = [b['profit'] / b['stake'] for b in all_bets if b.get('stake', 0) > 0]
     avg_return = np.mean(returns) if returns else 0.0
@@ -218,11 +259,15 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
             curr_losses += 1; curr_wins = 0
             if curr_losses > max_consec_losses: max_consec_losses = curr_losses
 
+    # Profit in units of stake (normalized)
+    ref_stake = _get_stake(risk_method, initial_bankroll, initial_bankroll, 0.5, 2.0)
+    profit_in_units = round(net_profit / ref_stake, 2) if ref_stake > 0 else 0.0
+
     summary = {
         'initial_bankroll': round(initial_bankroll, 2),
         'final_bankroll': round(bankroll, 2),
         'net_profit': round(net_profit, 2),
-        'profit_in_stakes': round(net_profit / FIXED_STAKE, 2),
+        'profit_in_stakes': profit_in_units,
         'total_bets': total_bets_placed,
         'wins': wins,
         'losses': total_bets_placed - wins,
@@ -231,7 +276,7 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         'max_drawdown': round(max_drawdown, 2),
         'max_dd_duration': max_dd_duration,
         'total_staked': round(total_staked, 2),
-        'avg_odds': round(float(avg_odds), 2),
+        'avg_odds': round(avg_odds, 2),
         'sharpe_ratio': round(sharpe_ratio, 2),
         'sortino_ratio': round(sortino_ratio, 2),
         'skewness': round(skewness, 2),
@@ -242,58 +287,41 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     }
 
     if total_bets_placed >= 2:
-        summary['p_value'] = compute_pvalue_binomial(wins, total_bets_placed, float(avg_odds))
+        summary['p_value'] = compute_pvalue_binomial(wins, total_bets_placed, avg_odds)
         try:
             brier = compute_brier_score(all_bets)
-            summary['brier_score'] = brier['brier_score']
-            summary['brier_score_market'] = brier['brier_score_market']
-            summary['brier_improvement'] = brier['brier_improvement']
+            summary.update({'brier_score': brier['brier_score'], 'brier_score_market': brier['brier_score_market'], 'brier_improvement': brier['brier_improvement']})
         except: pass
         try:
             bootstrap = compute_bootstrap_ci(all_bets)
-            summary['bootstrap_roi_ci_lower'] = bootstrap['bootstrap_roi_ci_lower']
-            summary['bootstrap_roi_ci_upper'] = bootstrap['bootstrap_roi_ci_upper']
-            summary['bootstrap_roi_median'] = bootstrap['bootstrap_roi_median']
-            summary['prob_positive_roi'] = bootstrap['prob_positive_roi']
+            summary.update({'bootstrap_roi_ci_lower': bootstrap['bootstrap_roi_ci_lower'], 'bootstrap_roi_ci_upper': bootstrap['bootstrap_roi_ci_upper'], 'bootstrap_roi_median': bootstrap['bootstrap_roi_median'], 'prob_positive_roi': bootstrap['prob_positive_roi']})
         except: pass
         try:
-            power = compute_power_analysis(summary['roi'], float(avg_odds), total_bets_placed)
-            summary['min_sample_size'] = power['min_sample_size']
-            summary['sample_sufficient'] = power['sample_sufficient']
-            summary['power_ratio'] = power['power_ratio']
+            power = compute_power_analysis(summary['roi'], avg_odds, total_bets_placed)
+            summary.update({'min_sample_size': power['min_sample_size'], 'sample_sufficient': power['sample_sufficient'], 'power_ratio': power['power_ratio']})
         except: pass
         try:
             rolling = compute_rolling_roi(all_bets)
-            summary['rolling_roi'] = rolling['rolling_roi']
-            summary['edge_decay_pct'] = rolling['edge_decay_pct']
-            summary['edge_decay_alert'] = rolling['edge_decay_alert']
+            summary.update({'rolling_roi': rolling['rolling_roi'], 'edge_decay_pct': rolling['edge_decay_pct'], 'edge_decay_alert': rolling['edge_decay_alert']})
         except: pass
 
     oos_summary = None
     if total_bets_placed >= 20:
         n_oos = max(10, int(total_bets_placed * 0.2))
         oos_bets = all_bets[-n_oos:]
-        oos_staked = sum([b['stake'] for b in oos_bets])
-        oos_profit = sum([b['profit'] for b in oos_bets])
+        oos_staked = sum(b.get('stake', 0) for b in oos_bets)
+        oos_profit = sum(b.get('profit', 0) for b in oos_bets)
         oos_roi = (oos_profit / oos_staked * 100) if oos_staked > 0 else 0.0
-        oos_wins = sum([1 for b in oos_bets if b.get('won', False)])
+        oos_wins = sum(1 for b in oos_bets if b.get('won', False))
         oos_win_rate = (oos_wins / len(oos_bets) * 100) if oos_bets else 0.0
-        oos_summary = {
-            'net_profit': round(oos_profit, 2),
-            'roi': round(oos_roi, 2),
-            'win_rate': round(oos_win_rate, 1),
-            'total_bets': len(oos_bets)
-        }
+        oos_summary = {'net_profit': round(oos_profit, 2), 'roi': round(oos_roi, 2), 'win_rate': round(oos_win_rate, 1), 'total_bets': len(oos_bets)}
 
     eqs_data = compute_edge_quality_score(summary, oos_summary)
 
     ai_staking_rule = 'proportional'
     ai_stake_value = 1.0
-    if risk_method == 'fixed_2':
-        ai_stake_value = 2.0
-    elif risk_method == 'kelly_quarter':
-        ai_staking_rule = 'kelly'
-        ai_stake_value = 0.25
+    if risk_method == 'fixed_2': ai_stake_value = 2.0
+    elif risk_method == 'kelly_quarter': ai_staking_rule = 'kelly'; ai_stake_value = 0.25
 
     ai_res = predict_strategy_sustainability(all_bets, initial_bankroll, 1.05, ai_staking_rule, ai_stake_value, run_monte_carlo=True)
     if isinstance(ai_res, dict):
@@ -308,21 +336,13 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     if total_bets_placed >= 4:
         chunk_size = total_bets_placed // 4
         for i in range(4):
-            start_idx = i * chunk_size
-            end_idx = (i + 1) * chunk_size if i < 3 else len(all_bets)
-            chunk = all_bets[start_idx:end_idx]
-            c_profit = sum(b['profit'] for b in chunk)
-            c_staked = sum(b.get('stake', FIXED_STAKE) for b in chunk)
+            chunk = all_bets[i * chunk_size: (i + 1) * chunk_size if i < 3 else len(all_bets)]
+            c_profit = sum(b.get('profit', 0) for b in chunk)
+            c_staked = sum(b.get('stake', 0) for b in chunk)
             c_wins = sum(1 for b in chunk if b.get('won', False))
             c_win_rate = (c_wins / len(chunk) * 100) if chunk else 0.0
             c_roi = (c_profit / c_staked * 100) if c_staked > 0 else 0.0
-            quartiles.append({
-                'profit': round(c_profit, 2),
-                'stakes': round(c_staked, 2),
-                'roi': round(c_roi, 2),
-                'win_rate': round(c_win_rate, 1),
-                'total_bets': len(chunk)
-            })
+            quartiles.append({'profit': round(c_profit, 2), 'stakes': round(c_staked, 2), 'roi': round(c_roi, 2), 'win_rate': round(c_win_rate, 1), 'total_bets': len(chunk)})
 
     summary_fixed = summary.copy()
     summary_proportional = summary.copy()
@@ -331,6 +351,8 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     l_stats = [{'league': k, 'profit': round(v['profit'], 2), 'bets': v['bets'], 'win_rate': round(v['wins'] / v['bets'] * 100, 1) if v['bets'] > 0 else 0} for k, v in league_stats.items()]
     m_stats = [{'month': k, 'profit': round(v['profit'], 2), 'bets': v['bets']} for k, v in monthly_stats.items()]
     o_stats = [{'odds_band': k, 'profit': round(v['profit'], 2), 'bets': v['bets']} for k, v in odds_stats.items()]
+
+    eq_bankrolls = [p['bankroll'] for p in equity_curve]
 
     return {
         "status": "success",
@@ -341,9 +363,9 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         "max_drawdown": round(max_drawdown, 2),
         "total_bets": total_bets_placed,
         "equity_curve": equity_curve,
-        "equity_curve_fixed": [p['bankroll'] for p in equity_curve],
-        "equity_curve_proportional": [p['bankroll'] for p in equity_curve],
-        "equity_curve_kelly": [p['bankroll'] for p in equity_curve],
+        "equity_curve_fixed": eq_bankrolls,
+        "equity_curve_proportional": eq_bankrolls,
+        "equity_curve_kelly": eq_bankrolls,
         "league_stats": l_stats,
         "monthly_stats": m_stats,
         "odds_stats": o_stats,
