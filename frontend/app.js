@@ -8838,7 +8838,7 @@ async function runPortfolioBacktest() {
         
     } catch (e) {
         console.error(e);
-        showToast('Erro ao rodar Portfólio', 'error');
+        showToast('Erro: ' + e.message, 'error');
     }
 }
 
