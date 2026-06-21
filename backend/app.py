@@ -1606,6 +1606,26 @@ def set_cluster_ai_conf(req: ClusterAIConfigReq):
     save_cluster_ai_config(req.dict())
     return {"status": "ok"}
 
+from .portfolio_backtester import run_portfolio
+from typing import List
+
+class PortfolioRequest(BaseModel):
+    strategy_ids: List[str]
+    initial_bankroll: float = 1000.0
+    risk_method: str = "kelly_quarter"
+
+@app.post("/api/portfolio_backtest")
+def api_run_portfolio(req: PortfolioRequest):
+    try:
+        res = run_portfolio(req.strategy_ids, req.initial_bankroll, req.risk_method)
+        if "error" in res:
+            raise HTTPException(status_code=400, detail=res["error"])
+        return res
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
