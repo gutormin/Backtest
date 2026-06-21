@@ -583,11 +583,11 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
         model_prob = float(row['prob']) / 100.0
         profit = 0.0
         
-        # Staking rules logic mirroring backtester.py
+        # Staking rules: anchor to initial_bankroll to prevent compounding explosion
         if staking_rule == 'fixed':
             stake = stake_value
         elif staking_rule == 'proportional':
-            stake = bankroll * (stake_value / 100.0)
+            stake = initial_bankroll * (stake_value / 100.0)
         elif staking_rule.startswith('kelly'):
             mult_k = 1.0
             if staking_rule == 'kelly_half': mult_k = 0.5
@@ -599,9 +599,9 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
 
             if bookie_odds > 1.0:
                 f_star = (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
-                f_star = max(0.0, f_star)
-                stake = bankroll * f_star * mult_k
-                stake = min(stake, bankroll * 0.05) # Cap at 5% of bankroll to match backtester.py cap
+                f_star = max(0.0, min(f_star, 0.20))
+                stake = initial_bankroll * f_star * mult_k
+                stake = min(stake, initial_bankroll * 0.10)
             else:
                 stake = 0.0
         else:
@@ -681,23 +681,27 @@ def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rul
             model_prob = prob_arr[idx]
             won = won_arr[idx]
             
-            # Staking rules logic mirroring backtester.py
+            # Staking rules: ALWAYS anchor to initial_bankroll to prevent
+            # compounding explosion (which would give $163M projections).
+            # The Monte Carlo tests "what if you always bet X% of your starting
+            # bankroll" — not "what if you reinvest all gains every bet".
             if staking_rule == 'fixed':
                 stake = stake_value
             elif staking_rule == 'proportional':
-                stake = br * (stake_value / 100.0)
+                stake = initial_bankroll * (stake_value / 100.0)
             elif staking_rule == 'kelly':
-                mult_k = stake_value
-                
+                mult_k = stake_value  # e.g. 0.25 for quarter-Kelly
                 if bookie_odds > 1.0:
                     f_star = (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
-                    f_star = max(0.0, f_star)
-                    stake = br * f_star * mult_k
-                    stake = min(stake, br * 0.10)
+                    f_star = max(0.0, min(f_star, 0.20))
+                    stake = initial_bankroll * f_star * mult_k
                 else:
                     stake = 0.0
             else:
                 stake = 0.0
+            
+            # Hard cap: never bet more than 10% of initial bankroll per bet
+            stake = min(stake, initial_bankroll * 0.10)
                 
             if stake > 0.01 and br >= stake:
                 if won:
@@ -707,8 +711,10 @@ def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rul
                     profit = -stake
                     br += profit
             
+            # Stop early if ruined (below 10% of starting bankroll)
             if br < (initial_bankroll * 0.10):
                 ruined = True
+                break
             if br < (initial_bankroll * 0.50):
                 half_ruined = True
                 
@@ -720,6 +726,7 @@ def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rul
         final_bankrolls.append(br)
         if br > initial_bankroll:
             profitable_runs += 1
+
             
     final_bankrolls = np.array(final_bankrolls)
     
