@@ -670,64 +670,50 @@ def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rul
     prob_arr = df['prob'].values
     won_arr = df['won'].values
     
-    for _ in range(runs):
-        sampled_indices = np.random.choice(n_bets, size=n_bets, replace=True)
-        br = initial_bankroll
-        ruined = False
-        half_ruined = False
+    # Pre-calculate profit array for each bet since stake only depends on initial_bankroll
+    profits = np.zeros(n_bets)
+    for i in range(n_bets):
+        bookie_odds = odds_arr[i]
+        model_prob = prob_arr[i]
+        won = won_arr[i]
         
-        for idx in sampled_indices:
-            bookie_odds = odds_arr[idx]
-            model_prob = prob_arr[idx]
-            won = won_arr[idx]
-            
-            # Staking rules: ALWAYS anchor to initial_bankroll to prevent
-            # compounding explosion (which would give $163M projections).
-            # The Monte Carlo tests "what if you always bet X% of your starting
-            # bankroll" — not "what if you reinvest all gains every bet".
-            if staking_rule == 'fixed':
-                stake = stake_value
-            elif staking_rule == 'proportional':
-                stake = initial_bankroll * (stake_value / 100.0)
-            elif staking_rule == 'kelly':
-                mult_k = stake_value  # e.g. 0.25 for quarter-Kelly
-                if bookie_odds > 1.0:
-                    f_star = (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
-                    f_star = max(0.0, min(f_star, 0.20))
-                    stake = initial_bankroll * f_star * mult_k
-                else:
-                    stake = 0.0
+        if staking_rule == 'fixed':
+            stake = stake_value
+        elif staking_rule == 'proportional':
+            stake = initial_bankroll * (stake_value / 100.0)
+        elif staking_rule == 'kelly':
+            mult_k = stake_value
+            if bookie_odds > 1.0:
+                f_star = (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
+                f_star = max(0.0, min(f_star, 0.20))
+                stake = initial_bankroll * f_star * mult_k
             else:
                 stake = 0.0
+        else:
+            stake = 0.0
             
-            # Hard cap: never bet more than 10% of initial bankroll per bet
-            stake = min(stake, initial_bankroll * 0.10)
-                
-            if stake > 0.01 and br >= stake:
-                if won:
-                    profit = stake * (bookie_odds - 1.0)
-                    br += profit
-                else:
-                    profit = -stake
-                    br += profit
-            
-            # Stop early if ruined (below 10% of starting bankroll)
-            if br < (initial_bankroll * 0.10):
-                ruined = True
-                break
-            if br < (initial_bankroll * 0.50):
-                half_ruined = True
-                
-        if ruined:
-            ruined_runs += 1
-        if half_ruined:
-            half_ruined_runs += 1
-            
-        final_bankrolls.append(br)
-        if br > initial_bankroll:
-            profitable_runs += 1
+        stake = min(stake, initial_bankroll * 0.10)
+        
+        if stake > 0.01:
+            profits[i] = stake * (bookie_odds - 1.0) if won else -stake
 
-            
+    # Vectorized Monte Carlo Simulation
+    # Generate all samples at once: shape (runs, n_bets)
+    sampled_profits = np.random.choice(profits, size=(runs, n_bets), replace=True)
+    
+    # Cumulative bankroll trajectory: shape (runs, n_bets)
+    trajectories = initial_bankroll + np.cumsum(sampled_profits, axis=1)
+    
+    # Calculate ruin states
+    ruined_mask = np.any(trajectories < (initial_bankroll * 0.10), axis=1)
+    half_ruined_mask = np.any(trajectories < (initial_bankroll * 0.50), axis=1)
+    
+    final_bankrolls = trajectories[:, -1]
+    final_bankrolls[ruined_mask] = 0.0  # Cap ruined runs at 0
+    
+    ruined_runs = np.sum(ruined_mask)
+    half_ruined_runs = np.sum(half_ruined_mask)
+    profitable_runs = np.sum(final_bankrolls > initial_bankroll)
     final_bankrolls = np.array(final_bankrolls)
     
     p5 = float(np.percentile(final_bankrolls, 5))
