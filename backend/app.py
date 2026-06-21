@@ -1548,12 +1548,12 @@ def get_autopilot_predictions(source: str = 'api'):
                     if port_rm == 'kelly_quarter':
                         stakingRule = 'kelly_quarter'
                         stakeValue = 0.0
-                    elif port_rm == 'fixed_1':
+                    elif port_rm.startswith('fixed_'):
                         stakingRule = 'fixed'
-                        stakeValue = 1.0
-                    elif port_rm == 'fixed_2':
-                        stakingRule = 'fixed'
-                        stakeValue = 2.0
+                        try:
+                            stakeValue = float(port_rm.split('_')[1])
+                        except:
+                            stakeValue = 1.0
                     else:
                         stakingRule = 'kelly_quarter'
                         stakeValue = 0.0

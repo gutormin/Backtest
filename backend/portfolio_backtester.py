@@ -22,10 +22,12 @@ def _get_stake(risk_method, initial_bankroll, current_bankroll, prob, odds):
     This gives realistic results while still showing meaningful differences
     between risk methods.
     """
-    if risk_method == 'fixed_1':
-        stake = initial_bankroll * 0.01      # 1% of initial (e.g. $10 from $1000)
-    elif risk_method == 'fixed_2':
-        stake = initial_bankroll * 0.02      # 2% of initial (e.g. $20 from $1000)
+    if risk_method.startswith('fixed_'):
+        try:
+            pct = float(risk_method.split('_')[1])
+        except:
+            pct = 1.0
+        stake = initial_bankroll * (pct / 100.0)
     elif risk_method == 'kelly_quarter':
         # Kelly fraction calculated per-bet using prob/odds, but applied to initial_bankroll
         # This shows realistic per-bet Kelly stakes without compounding explosion
@@ -216,10 +218,12 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         avg_odds_s = sum(b['odds'] for b in s_bets_for_kelly) / len(s_bets_for_kelly) if s_bets_for_kelly else 2.0
         prob_s = st['win_rate'] / 100.0
 
-        if risk_method == 'fixed_1':
-            st['recommended_stake'] = round(initial_bankroll * 0.01, 2)
-        elif risk_method == 'fixed_2':
-            st['recommended_stake'] = round(initial_bankroll * 0.02, 2)
+        if risk_method.startswith('fixed_'):
+            try:
+                pct = float(risk_method.split('_')[1])
+            except:
+                pct = 1.0
+            st['recommended_stake'] = round(initial_bankroll * (pct / 100.0), 2)
         elif risk_method == 'kelly_quarter':
             if avg_odds_s > 1.0:
                 k_fraction = ((prob_s * avg_odds_s) - 1) / (avg_odds_s - 1)
@@ -358,7 +362,11 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
 
     ai_staking_rule = 'proportional'
     ai_stake_value = 1.0
-    if risk_method == 'fixed_2': ai_stake_value = 2.0
+    if risk_method.startswith('fixed_'):
+        try:
+            ai_stake_value = float(risk_method.split('_')[1])
+        except:
+            ai_stake_value = 1.0
     elif risk_method == 'kelly_quarter': ai_staking_rule = 'kelly'; ai_stake_value = 0.25
 
     ai_res = predict_strategy_sustainability(all_bets, initial_bankroll, 1.05, ai_staking_rule, ai_stake_value, run_monte_carlo=True)

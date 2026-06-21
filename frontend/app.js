@@ -8639,6 +8639,16 @@ setTimeout(loadClusterAiConfig, 2000);
 // --- Portfolio Backtesting ---
 let portfolioEquityChart = null;
 
+function togglePortfolioStakeInput() {
+    const method = document.getElementById('portfolio-risk-method').value;
+    const stakeInput = document.getElementById('portfolio-fixed-stake');
+    if (method === 'fixed') {
+        stakeInput.style.display = 'block';
+    } else {
+        stakeInput.style.display = 'none';
+    }
+}
+
 async function runPortfolioBacktest() {
     const checkboxes = document.querySelectorAll('.portfolio-checkbox:checked');
     const strategyIds = Array.from(checkboxes).map(cb => cb.value);
@@ -8648,7 +8658,11 @@ async function runPortfolioBacktest() {
         return;
     }
     
-    const riskMethod = document.getElementById('portfolio-risk-method').value;
+    let riskMethod = document.getElementById('portfolio-risk-method').value;
+    if (riskMethod === 'fixed') {
+        const pct = document.getElementById('portfolio-fixed-stake').value || "2.0";
+        riskMethod = `fixed_${pct}`;
+    }
     
     const btn = document.querySelector('button[onclick="runPortfolioBacktest()"]');
     if (btn) {
@@ -8857,7 +8871,21 @@ async function loadPortfolio(id) {
             
             if (portfolio.params.risk_method) {
                 const rm = document.getElementById('portfolio-risk-method');
-                if (rm) rm.value = portfolio.params.risk_method;
+                if (rm) {
+                    if (portfolio.params.risk_method.startsWith('fixed_')) {
+                        rm.value = 'fixed';
+                        const pct = portfolio.params.risk_method.split('_')[1];
+                        const inp = document.getElementById('portfolio-fixed-stake');
+                        if (inp) {
+                            inp.value = pct;
+                            inp.style.display = 'block';
+                        }
+                    } else {
+                        rm.value = portfolio.params.risk_method;
+                        const inp = document.getElementById('portfolio-fixed-stake');
+                        if (inp) inp.style.display = 'none';
+                    }
+                }
             }
             if (portfolio.params.initial_bankroll) {
                 const bk = document.getElementById('portfolio-bankroll-input');
