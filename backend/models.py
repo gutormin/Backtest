@@ -583,9 +583,16 @@ def estimate_bookmaker_odds(avg_over_25_odds, avg_under_25_odds, model_lambda_ho
     fair_ht_under15 = 1.0 - fair_ht_over15
     
     # 6. Apply juice and return bookmaker odds
-    def apply_juice(prob):
+    def apply_juice(prob, market_type="default"):
         if prob <= 0.001: return 99.0
-        val = 1.0 / (prob * total_implied)
+        
+        juice = total_implied
+        if market_type == "ht_1x2":
+            juice = max(1.12, total_implied + 0.06)
+        elif market_type == "cs":
+            juice = max(1.20, total_implied + 0.15)
+            
+        val = 1.0 / (prob * juice)
         return float(round(max(1.01, min(99.0, val)), 3))
         
     return {
@@ -599,17 +606,17 @@ def estimate_bookmaker_odds(avg_over_25_odds, avg_under_25_odds, model_lambda_ho
         'bookie_under_55': apply_juice(fair_under_55),
         'bookie_btts_yes': apply_juice(fair_btts_yes),
         'bookie_btts_no': apply_juice(fair_btts_no),
-        'bookie_cs_10': apply_juice(fair_cs_10),
-        'bookie_cs_20': apply_juice(fair_cs_20),
-        'bookie_cs_21': apply_juice(fair_cs_21),
-        'bookie_cs_00': apply_juice(fair_cs_00),
-        'bookie_cs_11': apply_juice(fair_cs_11),
-        'bookie_cs_01': apply_juice(fair_cs_01),
-        'bookie_cs_02': apply_juice(fair_cs_02),
-        'bookie_cs_12': apply_juice(fair_cs_12),
-        'bookie_ht_home': apply_juice(fair_ht_home),
-        'bookie_ht_draw': apply_juice(fair_ht_draw),
-        'bookie_ht_away': apply_juice(fair_ht_away),
+        'bookie_cs_10': apply_juice(fair_cs_10, "cs"),
+        'bookie_cs_20': apply_juice(fair_cs_20, "cs"),
+        'bookie_cs_21': apply_juice(fair_cs_21, "cs"),
+        'bookie_cs_00': apply_juice(fair_cs_00, "cs"),
+        'bookie_cs_11': apply_juice(fair_cs_11, "cs"),
+        'bookie_cs_01': apply_juice(fair_cs_01, "cs"),
+        'bookie_cs_02': apply_juice(fair_cs_02, "cs"),
+        'bookie_cs_12': apply_juice(fair_cs_12, "cs"),
+        'bookie_ht_home': apply_juice(fair_ht_home, "ht_1x2"),
+        'bookie_ht_draw': apply_juice(fair_ht_draw, "ht_1x2"),
+        'bookie_ht_away': apply_juice(fair_ht_away, "ht_1x2"),
         'bookie_ht_over05': apply_juice(fair_ht_over05),
         'bookie_ht_under05': apply_juice(fair_ht_under05),
         'bookie_ht_over15': apply_juice(fair_ht_over15),
