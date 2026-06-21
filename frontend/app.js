@@ -996,8 +996,10 @@ function populateBetsTable(bets) {
         tr.innerHTML = `
 
             <td>${bet.date}</td>
-
-            <td><strong>${bet.league}</strong></td>
+            <td>
+                ${bet.strategy_name ? `<span style="font-size:10px; color:var(--primary); text-transform:uppercase; letter-spacing:0.5px;">${bet.strategy_name}</span><br>` : ''}
+                <strong>${bet.league}</strong>
+            </td>
 
             <td>${bet.home_team} vs ${bet.away_team}</td>
 
@@ -2935,338 +2937,162 @@ function applyOddsSuggestion(rangeName) {
 
 
 function clearDashboard() {
+    try {
+        const safeSetText = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+        const safeSetVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        const safeSetDisplay = (id, val) => { const el = document.getElementById(id); if (el) el.style.display = val; };
+        const safeSetHTML = (id, val) => { const el = document.getElementById(id); if (el) el.innerHTML = val; };
+        const safeSetWidth = (id, val) => { const el = document.getElementById(id); if (el) el.style.width = val; };
 
-    // 1. Reset metrics
+        // 1. Reset metrics
+        safeSetText('metric-net-profit', '$0.00');
+        safeSetText('metric-profit-stakes', '+0.00 st.');
+        safeSetText('metric-roi', '0.0%');
+        safeSetText('metric-win-rate', '0.0%');
+        safeSetText('metric-total-bets', '0');
+        safeSetText('metric-avg-odds', '1.00');
+        safeSetText('metric-drawdown', '0.0%');
+        safeSetText('metric-dd-duration', 'Recup: 0 apostas');
+        safeSetText('metric-final-bankroll', '$0.00');
+        safeSetText('metric-clv', '0.0%');
+        safeSetText('metric-bcl', '0.0%');
 
-    document.getElementById('metric-net-profit').innerText = '$0.00';
+        // Restore standard panels in case Portfolio was run
+        safeSetDisplay('portfolio-results-panel', 'none');
+        safeSetDisplay('standard-metrics-grid', 'grid');
+        const mainCharts = document.querySelector('.main-charts');
+        if (mainCharts) mainCharts.style.display = 'block';
+        const resultsTableSection = document.querySelector('.results-table-section');
+        if (resultsTableSection) resultsTableSection.style.display = 'block';
+        const chartsGrid = document.querySelector('.charts-grid');
+        if (chartsGrid) chartsGrid.style.display = 'grid';
 
-    document.getElementById('metric-profit-stakes').innerText = '+0.00 st.';
+        // Reset Classes safely
+        ['metric-net-profit', 'metric-profit-stakes', 'metric-roi', 'metric-clv', 'metric-bcl'].forEach(id => {
+            const el = document.getElementById(id);
+            if(el && el.closest) {
+                const card = el.closest('.metric-card');
+                if(card) {
+                    if(id.includes('profit') && !id.includes('stakes')) card.className = 'metric-card card-profit';
+                    else if(id.includes('stakes')) card.className = 'metric-card card-stakes';
+                    else if(id.includes('roi')) card.className = 'metric-card card-roi';
+                    else if(id.includes('clv')) card.className = 'metric-card card-clv';
+                    else if(id.includes('bcl')) card.className = 'metric-card card-bcl';
+                }
+            }
+        });
 
-    document.getElementById('metric-roi').innerText = '0.0%';
+        // Reset advanced metrics
+        safeSetText('metric-sharpe', '0.00');
+        safeSetText('metric-sortino', '0.00');
+        safeSetText('metric-skewness', '0.00');
+        safeSetText('metric-consec-wins', '0');
+        safeSetText('metric-consec-losses', '0');
 
-    document.getElementById('metric-win-rate').innerText = '0.0%';
+        // Reset Portfolio Allocator
+        safeSetDisplay('portfolio-allocator-panel', 'none');
+        safeSetHTML('allocator-bars-container', '');
+        safeSetText('allocator-expected-return', '+0.00%');
+        safeSetText('allocator-volatility', '0.00%');
+        safeSetText('allocator-sharpe', '0.00');
 
-    document.getElementById('metric-total-bets').innerText = '0';
+        // Clear pre-match calculator bookmakers table
+        safeSetHTML('calc-bookmakers-tbody', '');
 
-    document.getElementById('metric-avg-odds').innerText = '1.00';
+        // Hide and reset Quartiles panel
+        safeSetDisplay('quartiles-panel', 'none');
+        safeSetDisplay('staking-comparison-panel', 'none');
 
-    document.getElementById('metric-drawdown').innerText = '0.0%';
-    const ddDur = document.getElementById('metric-dd-duration');
-    if (ddDur) ddDur.innerText = 'Recup: 0 apostas';
+        // Hide and reset EQS Risk panel
+        const riskEmpty = document.getElementById('risk-empty-state');
+        const riskContent = document.getElementById('risk-content');
+        if (riskEmpty && riskContent) {
+            riskEmpty.style.display = 'block';
+            riskContent.style.display = 'none';
+            switchTab('tab-laboratory');
+        }
 
-    document.getElementById('metric-final-bankroll').innerText = '$0.00';
+        for (let i = 1; i <= 4; i++) {
+            safeSetText(`q${i}-profit`, '$0.00');
+            safeSetText(`q${i}-stakes`, '0.00 st.');
+            safeSetText(`q${i}-roi`, '0.0%');
+            safeSetText(`q${i}-winrate`, '0.0%');
+            safeSetText(`q${i}-bets`, '0');
+        }
 
-    document.getElementById('metric-clv').innerText = '0.0%';
-    document.getElementById('metric-bcl').innerText = '0.0%';
+        // 2. Clear charts
+        if (typeof equityChart !== 'undefined' && equityChart) { equityChart.destroy(); equityChart = null; }
+        if (typeof leagueChart !== 'undefined' && leagueChart) { leagueChart.destroy(); leagueChart = null; }
+        if (typeof monthlyChart !== 'undefined' && monthlyChart) { monthlyChart.destroy(); monthlyChart = null; }
+        if (typeof oddsChart !== 'undefined' && oddsChart) { oddsChart.destroy(); oddsChart = null; }
 
-    // Restore standard panels in case Portfolio was run
-    document.getElementById('portfolio-results-panel').style.display = 'none';
-    document.getElementById('standard-metrics-grid').style.display = 'grid';
-    const mainCharts = document.querySelector('.main-charts');
-    if (mainCharts) mainCharts.style.display = 'block';
-    const resultsTableSection = document.querySelector('.results-table-section');
-    if (resultsTableSection) resultsTableSection.style.display = 'block';
-    const chartsGrid = document.querySelector('.charts-grid');
-    if (chartsGrid) chartsGrid.style.display = 'grid';
+        // 3. Clear bets cache and table
+        if (typeof allBets !== 'undefined') { allBets = []; }
+        safeSetHTML('bets-table-body', `<tr><td colspan="10" class="text-center empty-state"><i class="fa-solid fa-info-circle"></i> Configure os filtros ao lado e execute o backtest para ver os resultados.</td></tr>`);
 
-    
+        // 4. Hide AI & Optimization panels and reset Monte Carlo UI
+        safeSetDisplay('ai-analytics-panel', 'none');
+        safeSetDisplay('ai-optimization-panel', 'none');
 
-    const profitCard = document.getElementById('metric-net-profit').closest('.metric-card');
+        // Hide statistical validation and OOS panels
+        const statPanel = document.getElementById('stat-validation-panel');
+        if (statPanel) { statPanel.style.display = 'none'; safeSetHTML('stat-validation-grid', ''); }
 
-    const profitStakesCard = document.getElementById('metric-profit-stakes').closest('.metric-card');
+        const oosPanel = document.getElementById('oos-results-panel');
+        if (oosPanel) { oosPanel.style.display = 'none'; safeSetHTML('oos-metrics-grid', ''); }
 
-    const roiCard = document.getElementById('metric-roi').closest('.metric-card');
+        safeSetHTML('ai-checklist-container', `<div class="ai-report-text" style="color: var(--text-muted);">Aguardando a execução do backtest para gerar o checklist.</div>`);
 
-    profitCard.className = 'metric-card card-profit';
+        safeSetText('mc-profit-probability', '0.0%');
+        safeSetWidth('mc-profit-progress', '0%');
+        safeSetText('mc-ruin-probability', '0.0%');
+        safeSetText('mc-half-ruin-probability', '0.0%');
+        safeSetWidth('mc-ruin-progress', '0%');
+        safeSetText('mc-median-profit', '+$0.00');
+        const mp = document.getElementById('mc-median-profit'); if(mp) mp.className = 'widget-value';
+        safeSetText('mc-percentile-5', '$0.00');
+        const p5 = document.getElementById('mc-percentile-5'); if(p5) p5.className = 'half-val';
+        safeSetText('mc-percentile-95', '$0.00');
+        const p95 = document.getElementById('mc-percentile-95'); if(p95) p95.className = 'half-val';
 
-    profitStakesCard.className = 'metric-card card-stakes';
+        // Reset active strategy banner
+        safeSetDisplay('active-strategy-banner', 'none');
+        safeSetText('active-leagues-text', 'N/A');
+        safeSetText('active-market-text', 'N/A');
+        safeSetText('active-odds-text', '1.00 - 50.00');
+        safeSetText('active-ev-text', '1.05');
 
-    roiCard.className = 'metric-card card-roi';
+        // Reset Staking Recommendations
+        safeSetText('rec-stake-size', '0.0%');
+        safeSetText('rec-consec-losses', '0');
+        safeSetText('rec-min-bankroll', '$0.00');
+        safeSetText('rec-justification', 'Aguardando a execução do backtest para gerar a análise de banca.');
+        safeSetDisplay('rec-justification-box', 'none');
 
-    document.getElementById('metric-clv').closest('.metric-card').className = 'metric-card card-clv';
+        // 5. Clear scanner results
+        if (typeof lastScanResults !== 'undefined') { lastScanResults = null; }
+        if (typeof lastScanParams !== 'undefined') { lastScanParams = null; }
+        if (typeof lastBacktestSummary !== 'undefined') { lastBacktestSummary = null; }
+        if (typeof lastBacktestParams !== 'undefined') { lastBacktestParams = null; }
+        
+        safeSetDisplay('btn-export-backtest', 'none');
+        safeSetHTML('scanner-results', '');
+        safeSetDisplay('scanner-results', 'none');
 
-    document.getElementById('metric-bcl').closest('.metric-card').className = 'metric-card card-bcl';
+        // Clear Calculator results
+        safeSetDisplay('calc-results', 'none');
+        safeSetDisplay('calc-heatmap-container', 'none');
+        safeSetVal('calc-league', "");
+        safeSetHTML('calc-home-team', '<option value="" disabled selected>Selecione...</option>');
+        safeSetHTML('calc-away-team', '<option value="" disabled selected>Selecione...</option>');
+        const ht = document.getElementById('calc-home-team'); if(ht) ht.disabled = true;
+        const at = document.getElementById('calc-away-team'); if(at) at.disabled = true;
 
-    
-
-    // Reset advanced metrics
-
-    document.getElementById('metric-sharpe').innerText = '0.00';
-
-    document.getElementById('metric-sortino').innerText = '0.00';
-
-    document.getElementById('metric-skewness').innerText = '0.00';
-
-    document.getElementById('metric-consec-wins').innerText = '0';
-
-    document.getElementById('metric-consec-losses').innerText = '0';
-
-    
-
-    // Reset Portfolio Allocator
-
-    const portfolioPanel = document.getElementById('portfolio-allocator-panel');
-
-    if (portfolioPanel) {
-
-        portfolioPanel.style.display = 'none';
-
+        showToast("Dashboard limpo! Pronto para uma nova simulação.", "info");
+    } catch (err) {
+        console.error("Erro ao limpar dashboard:", err);
+        showToast("Dashboard parcialmente limpo.", "warning");
     }
-
-    const allocatorContainer = document.getElementById('allocator-bars-container');
-
-    if (allocatorContainer) {
-
-        allocatorContainer.innerHTML = '';
-
-    }
-
-    document.getElementById('allocator-expected-return').innerText = '+0.00%';
-
-    document.getElementById('allocator-volatility').innerText = '0.00%';
-
-    document.getElementById('allocator-sharpe').innerText = '0.00';
-
-    
-
-    // Clear pre-match calculator bookmakers table
-
-    document.getElementById('calc-bookmakers-tbody').innerHTML = '';
-
-    
-
-    // Hide and reset Quartiles panel
-
-    document.getElementById('quartiles-panel').style.display = 'none';
-
-    document.getElementById('staking-comparison-panel').style.display = 'none';
-
-    
-
-    // Hide and reset EQS Risk panel
-
-    const riskEmpty = document.getElementById('risk-empty-state');
-
-    const riskContent = document.getElementById('risk-content');
-
-    if (riskEmpty && riskContent) {
-
-        riskEmpty.style.display = 'block';
-
-        riskContent.style.display = 'none';
-
-        switchTab('tab-laboratory');
-
-    }
-
-
-
-    for (let i = 1; i <= 4; i++) {
-
-        document.getElementById(`q${i}-profit`).innerText = '$0.00';
-
-        document.getElementById(`q${i}-stakes`).innerText = '0.00 st.';
-
-        document.getElementById(`q${i}-roi`).innerText = '0.0%';
-
-        document.getElementById(`q${i}-winrate`).innerText = '0.0%';
-
-        document.getElementById(`q${i}-bets`).innerText = '0';
-
-    }
-
-    
-
-    // 2. Clear charts
-
-    if (equityChart) {
-
-        equityChart.destroy();
-
-        equityChart = null;
-
-    }
-
-    if (leagueChart) {
-
-        leagueChart.destroy();
-
-        leagueChart = null;
-
-    }
-
-    if (monthlyChart) {
-
-        monthlyChart.destroy();
-
-        monthlyChart = null;
-
-    }
-
-    if (oddsChart) {
-
-        oddsChart.destroy();
-
-        oddsChart = null;
-
-    }
-
-    
-
-    // 3. Clear bets cache and table
-
-    allBets = [];
-
-    const tbody = document.getElementById('bets-table-body');
-
-    tbody.innerHTML = `
-
-        <tr>
-
-            <td colspan="10" class="text-center empty-state">
-
-                <i class="fa-solid fa-info-circle"></i> Configure os filtros ao lado e execute o backtest para ver os resultados.
-
-            </td>
-
-        </tr>
-
-    `;
-
-    
-
-    // 4. Hide AI & Optimization panels and reset Monte Carlo UI
-
-    document.getElementById('ai-analytics-panel').style.display = 'none';
-
-    document.getElementById('ai-optimization-panel').style.display = 'none';
-
-
-
-    // Hide statistical validation and OOS panels
-
-    const statPanel = document.getElementById('stat-validation-panel');
-
-    if (statPanel) { statPanel.style.display = 'none'; document.getElementById('stat-validation-grid').innerHTML = ''; }
-
-    const oosPanel = document.getElementById('oos-results-panel');
-
-    if (oosPanel) { oosPanel.style.display = 'none'; document.getElementById('oos-metrics-grid').innerHTML = ''; }
-
-    
-
-    const checklistContainer = document.getElementById('ai-checklist-container');
-
-    if (checklistContainer) {
-
-        checklistContainer.innerHTML = `
-
-            <div class="ai-report-text" style="color: var(--text-muted);">
-
-                Aguardando a execução do backtest para gerar o checklist.
-
-            </div>
-
-        `;
-
-    }
-
-    
-
-    document.getElementById('mc-profit-probability').innerText = '0.0%';
-
-    document.getElementById('mc-profit-progress').style.width = '0%';
-
-    document.getElementById('mc-ruin-probability').innerText = '0.0%';
-    const halfRuinEl = document.getElementById('mc-half-ruin-probability');
-    if (halfRuinEl) halfRuinEl.innerText = '0.0%';
-
-    document.getElementById('mc-ruin-progress').style.width = '0%';
-
-    document.getElementById('mc-median-profit').innerText = '+$0.00';
-
-    document.getElementById('mc-median-profit').className = 'widget-value';
-
-    document.getElementById('mc-percentile-5').innerText = '$0.00';
-
-    document.getElementById('mc-percentile-5').className = 'half-val';
-
-    document.getElementById('mc-percentile-95').innerText = '$0.00';
-
-    document.getElementById('mc-percentile-95').className = 'half-val';
-
-    
-
-    // Reset active strategy banner
-
-    document.getElementById('active-strategy-banner').style.display = 'none';
-
-    document.getElementById('active-leagues-text').innerText = 'N/A';
-
-    document.getElementById('active-market-text').innerText = 'N/A';
-
-    document.getElementById('active-odds-text').innerText = '1.00 - 50.00';
-
-    document.getElementById('active-ev-text').innerText = '1.05';
-
-    
-
-    // Reset Staking Recommendations
-
-    document.getElementById('rec-stake-size').innerText = '0.0%';
-
-    document.getElementById('rec-consec-losses').innerText = '0';
-
-    document.getElementById('rec-min-bankroll').innerText = '$0.00';
-
-    document.getElementById('rec-justification').innerText = 'Aguardando a execução do backtest para gerar a análise de banca.';
-
-    document.getElementById('rec-justification-box').style.display = 'none';
-
-    
-
-    // 5. Clear scanner results
-
-    lastScanResults = null;
-
-    lastScanParams = null;
-
-    lastBacktestSummary = null;
-
-    lastBacktestParams = null;
-
-    const btnExport = document.getElementById('btn-export-backtest');
-
-    if (btnExport) btnExport.style.display = 'none';
-
-    const resultsDiv = document.getElementById('scanner-results');
-
-    resultsDiv.innerHTML = '';
-
-    resultsDiv.style.display = 'none';
-
-    
-
-    // Clear Calculator results
-
-    document.getElementById('calc-results').style.display = 'none';
-
-    document.getElementById('calc-heatmap-container').style.display = 'none';
-
-    document.getElementById('calc-league').value = "";
-
-    document.getElementById('calc-home-team').innerHTML = '<option value="" disabled selected>Selecione...</option>';
-
-    document.getElementById('calc-away-team').innerHTML = '<option value="" disabled selected>Selecione...</option>';
-
-    document.getElementById('calc-home-team').disabled = true;
-
-    document.getElementById('calc-away-team').disabled = true;
-
-    
-
-    showToast("Dashboard limpo! Pronto para uma nova simulação.", "info");
-
 }
 
 
