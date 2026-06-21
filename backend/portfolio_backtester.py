@@ -65,13 +65,14 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     if not selected_strategies:
         return {"error": "Nenhuma estratégia válida selecionada."}
 
+    if len(selected_strategies) > 4:
+        return {"error": "Servidor gratuito excedido! Selecione no máximo 4 estratégias para rodar o portfólio sem travar a memória."}
+
     all_bets = []
 
-    import concurrent.futures
-
-    print(f"[Portfolio] Rodando backtests individuais para {len(selected_strategies)} estratégias em paralelo...")
+    print(f"[Portfolio] Rodando backtests individuais para {len(selected_strategies)} estratégias...")
     
-    def process_strategy(s):
+    for s in selected_strategies:
         try:
             p = s['params']
             bt = ChronologicalBacktester()
@@ -96,21 +97,14 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
                 min_odds_over25=p.get('minOddsOver25'), max_odds_over25=p.get('maxOddsOver25'),
                 min_odds_under25=p.get('minOddsUnder25'), max_odds_under25=p.get('maxOddsUnder25')
             )
-            local_bets = []
             if "error" not in res and "bets" in res:
                 for b in res['bets']:
                     b['strategy_id'] = s['id']
                     b['strategy_name'] = s['name']
-                    local_bets.append(b)
-            return local_bets
+                    all_bets.append(b)
         except Exception as e:
             print(f"Error processing strategy {s['id']}: {e}")
-            return []
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
-        results = executor.map(process_strategy, selected_strategies)
-        for bets in results:
-            all_bets.extend(bets)
+            continue
 
     if not all_bets:
         return {"error": "Nenhuma aposta gerada pelas estratégias selecionadas."}
