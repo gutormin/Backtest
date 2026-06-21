@@ -8838,7 +8838,7 @@ async function loadPortfolio(id) {
         const res = await fetch(`${API_BASE_URL}/api/history`);
         const history = await res.json();
         const portfolio = history.find(h => h.id === id);
-        if (!portfolio || portfolio.type !== 'portfolio') {
+        if (!portfolio || (portfolio.type !== 'portfolio' && (!portfolio.params || !portfolio.params.strategy_ids))) {
             showToast('Portfólio não encontrado.', 'error');
             return;
         }
