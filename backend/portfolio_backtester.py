@@ -229,6 +229,26 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
                 st['recommended_stake'] = 0.0
 
     # ---------------------------------------------------------------
+    # PORTFOLIO KELLY NORMALIZATION
+    # The Kelly criterion assumes sequential bets on a single bankroll.
+    # When multiple strategies fire simultaneously, the total exposure can
+    # exceed the bankroll. We cap total exposure at MAX_PORTFOLIO_EXPOSURE
+    # and scale all stakes down proportionally, preserving relative sizing.
+    #
+    # Example: 8 strategies recommend $150 each = $1200 on $1000 bankroll.
+    # With cap at 20% = $200 total → each strategy gets scaled to ~$25.
+    # ---------------------------------------------------------------
+    MAX_PORTFOLIO_EXPOSURE = 0.20  # Never risk more than 20% of bankroll across all simultaneous bets
+
+    total_recommended = sum(st['recommended_stake'] for st in strategy_stats.values())
+    max_allowed_total = bankroll * MAX_PORTFOLIO_EXPOSURE
+
+    if total_recommended > max_allowed_total and total_recommended > 0:
+        scale_factor = max_allowed_total / total_recommended
+        for st in strategy_stats.values():
+            st['recommended_stake'] = round(st['recommended_stake'] * scale_factor, 2)
+
+    # ---------------------------------------------------------------
     # SUMMARY METRICS
     # ---------------------------------------------------------------
     net_profit = bankroll - initial_bankroll
@@ -376,5 +396,7 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         "summary_kelly": summary_kelly,
         "ai_analysis": ai_res,
         "quartiles": quartiles,
-        "bets": all_bets[-1000:]
+        "bets": all_bets[-1000:],
+        "total_recommended_exposure": round(sum(st['recommended_stake'] for st in strategy_stats.values()), 2),
+        "max_portfolio_exposure_pct": round(MAX_PORTFOLIO_EXPOSURE * 100, 0)
     }

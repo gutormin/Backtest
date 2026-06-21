@@ -8851,6 +8851,18 @@ async function runPortfolioBacktest() {
             `;
             tbody.appendChild(tr);
         });
+
+        // Show total portfolio exposure footer
+        const exposureFooter = document.getElementById('portfolio-exposure-footer');
+        const totalExposureEl = document.getElementById('portfolio-total-exposure');
+        const maxExposurePctEl = document.getElementById('portfolio-max-exposure-pct');
+        if (exposureFooter && data.total_recommended_exposure !== undefined) {
+            totalExposureEl.textContent = `$${data.total_recommended_exposure.toFixed(2)}`;
+            if (maxExposurePctEl && data.max_portfolio_exposure_pct !== undefined) {
+                maxExposurePctEl.textContent = `${data.max_portfolio_exposure_pct}%`;
+            }
+            exposureFooter.style.display = 'block';
+        }
         
         if (typeof window.renderLaboratoryPanels === 'function') {
             window.renderLaboratoryPanels(data);
