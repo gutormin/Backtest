@@ -135,8 +135,13 @@ async def run_cluster_ai_alerts():
     # Checar Pure Blood e Contrarian usando Autopilot
     if config.get("pure_blood_enabled") or config.get("contrarian_enabled"):
         auto_matches = get_autopilot_predictions("api")
+        if isinstance(auto_matches, dict) and auto_matches.get("status") == "error":
+            print(f"[Cluster AI] Erro ao buscar predições: {auto_matches.get('message')}")
+            return
+            
         for m in auto_matches:
-            lg = m['league_name']
+            if not isinstance(m, dict): continue
+            lg = m.get('league_name', '')
             if lg not in league_to_cluster:
                 continue
                 

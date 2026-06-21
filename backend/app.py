@@ -1585,10 +1585,7 @@ def get_autopilot_predictions(source: str = 'api'):
 
 
 if os.path.exists(frontend_dir):
-    app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
-
-
-
+    
 from .cluster_ai_tracker import get_cluster_ai_config, save_cluster_ai_config
 
 class ClusterAIConfigReq(BaseModel):
@@ -1625,6 +1622,8 @@ def api_run_portfolio(req: PortfolioRequest):
         import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+app.mount("/", StaticFiles(directory=frontend_dir, html=True), name="frontend")
 
 if __name__ == "__main__":
     import uvicorn
