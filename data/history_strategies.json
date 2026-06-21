@@ -664,7 +664,8 @@
             ],
             "edge_decay_pct": -10.05,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "ea8ad047-df2f-4362-af4b-160b3c0e4d5c",
@@ -1843,7 +1844,8 @@
             ],
             "edge_decay_pct": -9.96,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "d4a0f0e4-af1c-40b8-a82a-4fb048d804d5",
@@ -4910,7 +4912,8 @@
             ],
             "edge_decay_pct": 53.8,
             "edge_decay_alert": "⚠️ Alerta de Decaimento: O edge da estratégia decaiu 53.8% na última janela de 100 apostas em relação à média histórica. ROI médio: 20.7% → ROI recente: 9.6%."
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "d22ebaa2-3282-4b63-aa80-58361ac54eb4",
@@ -5349,7 +5352,8 @@
             ],
             "edge_decay_pct": -46.52,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "00b08056-f23d-405e-8bb1-b3bf973f02da",
@@ -5412,7 +5416,8 @@
             ],
             "edge_decay_pct": 0,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "f134e722-e5a5-4c1c-a1f1-aa4378731931",
@@ -5911,7 +5916,8 @@
             ],
             "edge_decay_pct": 3.37,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "34328876-8ba0-4ef1-bacb-063240cea6f0",
@@ -6842,7 +6848,8 @@
             ],
             "edge_decay_pct": 11.66,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "72f59c35-6f59-48b1-890d-84e97b8f28b4",
@@ -9153,7 +9160,8 @@
             ],
             "edge_decay_pct": 87.52,
             "edge_decay_alert": "⚠️ Alerta de Decaimento: O edge da estratégia decaiu 87.5% na última janela de 100 apostas em relação à média histórica. ROI médio: 12.7% → ROI recente: 1.6%."
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "13b1dfc8-ee80-4fd5-b190-a03774eac1c5",
@@ -9368,7 +9376,8 @@
             ],
             "edge_decay_pct": -10.86,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "d81db50f-56f9-493c-96ed-d35c093bac71",
@@ -9979,7 +9988,8 @@
             ],
             "edge_decay_pct": -19.23,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "7dad387e-b63c-4a98-b536-84c729e13a21",
@@ -11254,7 +11264,8 @@
             ],
             "edge_decay_pct": -12.39,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "322c90c8-88b9-4cb9-8e69-1d71740d3cf0",
@@ -11765,7 +11776,8 @@
             ],
             "edge_decay_pct": 9.45,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "ceac6130-1df9-498d-936f-62a3d441afc4",
@@ -12280,7 +12292,8 @@
             ],
             "edge_decay_pct": 40.63,
             "edge_decay_alert": "⚠️ Alerta de Decaimento: O edge da estratégia decaiu 40.6% na última janela de 100 apostas em relação à média histórica. ROI médio: 46.5% → ROI recente: 27.6%."
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "fdf0f237-b69f-44d6-8512-4a052a9a6981",
@@ -12338,7 +12351,8 @@
             "rolling_roi": [],
             "edge_decay_pct": null,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "eaee8e14-2ad8-4917-a2d5-6f4419d29a31",
@@ -13877,7 +13891,8 @@
             ],
             "edge_decay_pct": 11.88,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "4270c62c-89c9-43d9-947e-2cd15ce9411f",
@@ -13935,7 +13950,8 @@
             "rolling_roi": [],
             "edge_decay_pct": null,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "ce9b402f-ae8d-47f2-be21-1e07e2b49ef8",
@@ -13993,7 +14009,8 @@
             "rolling_roi": [],
             "edge_decay_pct": null,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "ff42126e-19ff-47e7-a0ab-ffda38c3a677",
@@ -14051,7 +14068,8 @@
             "rolling_roi": [],
             "edge_decay_pct": null,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "597d118a-1551-4694-bef2-02b531f24bc3",
@@ -14706,7 +14724,8 @@
             ],
             "edge_decay_pct": 60.95,
             "edge_decay_alert": "⚠️ Alerta de Decaimento: O edge da estratégia decaiu 60.9% na última janela de 100 apostas em relação à média histórica. ROI médio: 17.2% → ROI recente: 6.7%."
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "a3f51f9b-c046-4b26-9b6d-f100561fd6d0",
@@ -15361,7 +15380,8 @@
             ],
             "edge_decay_pct": 60.95,
             "edge_decay_alert": "⚠️ Alerta de Decaimento: O edge da estratégia decaiu 60.9% na última janela de 100 apostas em relação à média histórica. ROI médio: 17.2% → ROI recente: 6.7%."
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "323466df-adee-429f-8e11-443571ea33ae",
@@ -16576,7 +16596,8 @@
             ],
             "edge_decay_pct": -3.69,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "f8b32f43-a99f-46f7-9919-914c349d8127",
@@ -18711,7 +18732,8 @@
             ],
             "edge_decay_pct": 17.52,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "2206396d-b4be-4060-be41-ec420df181a3",
@@ -20290,7 +20312,8 @@
             ],
             "edge_decay_pct": 33.35,
             "edge_decay_alert": "⚠️ Alerta de Decaimento: O edge da estratégia decaiu 33.4% na última janela de 100 apostas em relação à média histórica. ROI médio: 9.3% → ROI recente: 6.2%."
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "26f71fb3-27f6-4e3c-bd84-1f68392d9eaf",
@@ -20969,7 +20992,8 @@
             ],
             "edge_decay_pct": -13.95,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     },
     {
         "id": "62c4c82d-38a3-4282-9127-8bf836547f7d",
@@ -24064,6 +24088,7 @@
             ],
             "edge_decay_pct": -28.01,
             "edge_decay_alert": null
-        }
+        },
+        "type": "strategy"
     }
 ]

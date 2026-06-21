@@ -67,7 +67,7 @@ class BacktestRequest(BaseModel):
     stakeValue: float
     oddsSource: str
     minOdds: Optional[float] = 1.0
-    maxOdds: Optional[float] = 50.0
+    maxOdds: Optional[float] = 2.50
     exchange_commission: float = 0.0
     out_of_sample: bool = False
     use_ml: bool = False
@@ -209,7 +209,7 @@ class ScanRequest(BaseModel):
     oddsSource: str
     scanType: str  # 'markets' or 'leagues'
     minOdds: Optional[float] = 1.0
-    maxOdds: Optional[float] = 50.0
+    maxOdds: Optional[float] = 2.50
     use_ml: bool = False
     data_source: str = "footballdata"
     futpython_api_key: str = ""
@@ -1037,7 +1037,7 @@ def get_upcoming_predicted_matches(
     markets: str = 'home',
     valueThreshold: float = 1.05,
     minOdds: float = 1.0,
-    maxOdds: float = 50.0,
+    maxOdds: float = 2.50,
     stakingRule: str = 'fixed',
     stakeValue: float = 10.0,
     initialBankroll: float = 1000.0,

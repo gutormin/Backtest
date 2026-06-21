@@ -1235,7 +1235,7 @@ async function runScanner(scanType) {
 
         minOdds: parseFloat(document.getElementById('min-odds').value) || 1.0,
 
-        maxOdds: parseFloat(document.getElementById('max-odds').value) || 50.0,
+        maxOdds: parseFloat(document.getElementById('max-odds').value) || 2.50,
 
         use_ml: document.getElementById('use-ml-toggle')?.checked || false,
 
@@ -3116,7 +3116,7 @@ function clearDashboard() {
         safeSetDisplay('active-strategy-banner', 'none');
         safeSetText('active-leagues-text', 'N/A');
         safeSetText('active-market-text', 'N/A');
-        safeSetText('active-odds-text', '1.00 - 50.00');
+        safeSetText('active-odds-text', '1.00 - 2.50');
         safeSetText('active-ev-text', '1.05');
 
         // Reset Staking Recommendations
@@ -4245,7 +4245,7 @@ async function autoUpdateSchedulerFromBacktest(backtestData) {
 
             min_odds: backtestData.minOdds || 1.0,
 
-            max_odds: backtestData.maxOdds || 50.0,
+            max_odds: backtestData.maxOdds || 2.50,
 
             staking_rule: backtestData.stakingRule,
 
@@ -4366,7 +4366,7 @@ async function saveSchedulerConfigUi() {
 
         min_odds: parseFloat(document.getElementById('min-odds').value) || 1.0,
 
-        max_odds: parseFloat(document.getElementById('max-odds').value) || 50.0,
+        max_odds: parseFloat(document.getElementById('max-odds').value) || 2.50,
 
         staking_rule: stakingRule,
 
@@ -4555,7 +4555,7 @@ async function loadUpcomingMatches() {
             markets: marketsParam,
             valueThreshold: parseFloat(document.getElementById('val-threshold').value),
             minOdds: parseFloat(document.getElementById('min-odds').value) || 1.0,
-            maxOdds: parseFloat(document.getElementById('max-odds').value) || 50.0,
+            maxOdds: parseFloat(document.getElementById('max-odds').value) || 2.50,
             stakingRule: stakingRule,
             stakeValue: stakeValue,
             initialBankroll: parseFloat(document.getElementById('init-bankroll').value),
@@ -6555,7 +6555,7 @@ async function runEqsScanner(scanType) {
 
         minOdds: parseFloat(document.getElementById('min-odds').value) || 1.0,
 
-        maxOdds: parseFloat(document.getElementById('max-odds').value) || 50.0,
+        maxOdds: parseFloat(document.getElementById('max-odds').value) || 2.50,
 
         use_ml: document.getElementById('use-ml-toggle')?.checked || false,
 
@@ -6931,7 +6931,7 @@ window.runSpecificEqsBacktest = function(scanType, code, optRange) {
 
     let minOdd = window.lastEqsScanParams.minOdds || 1.0;
 
-    let maxOdd = window.lastEqsScanParams.maxOdds || 50.0;
+    let maxOdd = window.lastEqsScanParams.maxOdds || 2.50;
 
     
 
@@ -7092,7 +7092,7 @@ function openSaveStrategyModal() {
 
     const minO = lastBacktestParams.minOdds || 1.0;
 
-    const maxO = lastBacktestParams.maxOdds || 50.0;
+    const maxO = lastBacktestParams.maxOdds || 2.50;
 
     const suggestedName = `Otimizada (EV: ${evVal} | Odds: ${minO.toFixed(2)}-${maxO.toFixed(2)})`;
 
@@ -8129,7 +8129,7 @@ window.runBacktest = async function() {
     const stakeValue = stakeRule === 'kelly' ? parseFloat(document.getElementById('kelly-fraction').value) || 0.25 : parseFloat(document.getElementById('stake-value').value) || 10.0;
     const oddsSource = document.getElementById('odds-source').value || 'B365';
     const minOdds = parseFloat(document.getElementById('min-odds').value) || 1.0;
-    const maxOdds = parseFloat(document.getElementById('max-odds').value) || 50.0;
+    const maxOdds = parseFloat(document.getElementById('max-odds').value) || 2.50;
     const exchangeCommission = parseFloat(document.getElementById('exchange-commission') ? document.getElementById('exchange-commission').value : 0.0) || 0.0;
     
     const oosToggle = document.getElementById('oos-toggle');

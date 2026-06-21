@@ -56,7 +56,7 @@ class ChronologicalBacktester:
         self.ml_history = defaultdict(lambda: {'X': [], 'y': []})
         self.matches_since_ml_fit = 0
 
-    def run(self, leagues, start_date, end_date, market, value_threshold, initial_bankroll, staking_rule, stake_value, odds_source='B365', run_monte_carlo=True, min_odds=1.0, max_odds=50.0, exchange_commission=0.0, use_ml=False, data_source='football-data', futpython_api_key='', min_odds_h=None, max_odds_h=None, min_odds_d=None, max_odds_d=None, min_odds_a=None, max_odds_a=None, min_odds_over25=None, max_odds_over25=None, min_odds_under25=None, max_odds_under25=None):
+    def run(self, leagues, start_date, end_date, market, value_threshold, initial_bankroll, staking_rule, stake_value, odds_source='B365', run_monte_carlo=True, min_odds=1.0, max_odds=2.50, exchange_commission=0.0, use_ml=False, data_source='football-data', futpython_api_key='', min_odds_h=None, max_odds_h=None, min_odds_d=None, max_odds_d=None, min_odds_a=None, max_odds_a=None, min_odds_over25=None, max_odds_over25=None, min_odds_under25=None, max_odds_under25=None):
         """
         Runs a chronological backtest across selected leagues.
         
@@ -1691,7 +1691,7 @@ class ChronologicalBacktester:
             'portfolio_optimization': portfolio_opt
         }
 
-    def run_parallel_scan(self, leagues, start_date, end_date, value_threshold, initial_bankroll, staking_rule, stake_value, odds_source='B365', min_odds=1.0, max_odds=50.0, scan_type='markets', markets_list=None, use_ml=False, data_source='football-data', futpython_api_key=''):
+    def run_parallel_scan(self, leagues, start_date, end_date, value_threshold, initial_bankroll, staking_rule, stake_value, odds_source='B365', min_odds=1.0, max_odds=2.50, scan_type='markets', markets_list=None, use_ml=False, data_source='football-data', futpython_api_key=''):
         """
         Runs a highly optimized parallel scan of either multiple markets or multiple leagues
         in a single chronological pass to avoid duplicate ratings computation.
