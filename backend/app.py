@@ -1330,6 +1330,35 @@ def api_delete_history(strategy_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/history/{strategy_id}/toggle_active")
+def api_toggle_active_portfolio(strategy_id: str):
+    try:
+        from .history_manager import load_history, save_history
+        history = load_history()
+        
+        # Find the portfolio and its current status
+        target = next((s for s in history if s.get('id') == strategy_id), None)
+        if not target or target.get('type') != 'portfolio':
+            raise HTTPException(status_code=404, detail="Portfólio não encontrado.")
+            
+        new_status = not target.get('is_tg_active', False)
+        
+        # If activating, deactivate all others. If deactivating, just deactivate it.
+        for s in history:
+            if s.get('type') == 'portfolio':
+                if s.get('id') == strategy_id:
+                    s['is_tg_active'] = new_status
+                else:
+                    if new_status: # Only deactivate others if we are activating one
+                        s['is_tg_active'] = False
+                        
+        save_history(history)
+        return {"status": "ok", "is_tg_active": new_status}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 # Mount frontend files
 class LiveSteamRequest(BaseModel):
     minDropPct: float = 5.0
@@ -1410,9 +1439,19 @@ def get_autopilot_predictions(source: str = 'api'):
         from .models import estimate_bookmaker_odds
         
         history = load_history()
+        
+        # Check for active portfolio
+        active_portfolio = next((s for s in history if s.get('type') == 'portfolio' and s.get('is_tg_active')), None)
+        active_strategy_ids = []
+        if active_portfolio:
+            active_strategy_ids = active_portfolio.get('params', {}).get('strategy_ids', [])
+            
         # Filter strategies that have positive net_profit
         valid_strategies = []
         for s in history:
+            if s.get('type') == 'portfolio':
+                continue
+                
             net_profit = s.get('summary', {}).get('net_profit', 0)
             if net_profit > 0:
                 valid_strategies.append(s)
@@ -1497,9 +1536,30 @@ def get_autopilot_predictions(source: str = 'api'):
                 s_min = float(p.get('minOdds', 1.0))
                 s_max = float(p.get('maxOdds', 50.0))
                 s_val = float(p.get('valThreshold', 1.05))
+                
+                strategy_name_prefix = ""
                 stakingRule = p.get('stakingRule', 'fixed')
                 stakeValue = float(p.get('stakeValue', 10.0))
                 initialBankroll = float(p.get('initialBankroll', 1000.0))
+                
+                if active_portfolio and strategy.get('id') in active_strategy_ids:
+                    port_params = active_portfolio.get('params', {})
+                    port_rm = port_params.get('risk_method', 'kelly_quarter')
+                    if port_rm == 'kelly_quarter':
+                        stakingRule = 'kelly_quarter'
+                        stakeValue = 0.0
+                    elif port_rm == 'fixed_1':
+                        stakingRule = 'fixed'
+                        stakeValue = 1.0
+                    elif port_rm == 'fixed_2':
+                        stakingRule = 'fixed'
+                        stakeValue = 2.0
+                    else:
+                        stakingRule = 'kelly_quarter'
+                        stakeValue = 0.0
+                        
+                    initialBankroll = float(port_params.get('initial_bankroll', 1000.0))
+                    strategy_name_prefix = "[Portfólio] "
                 
                 for s_m in s_markets:
                     market_prob = 0.0
@@ -1572,7 +1632,7 @@ def get_autopilot_predictions(source: str = 'api'):
                             'is_tip': True,
                             'stake_pct': round(stake_pct, 1),
                             'odds_comparison': odds_comp,
-                            'strategy_name': strategy.get('name', 'Autopilot Strategy')
+                            'strategy_name': strategy_name_prefix + strategy.get('name', 'Autopilot Strategy')
                         })
                     
         # Sort and return

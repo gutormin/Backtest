@@ -7174,12 +7174,21 @@ async function loadHistoryTab() {
             if (item.type === 'portfolio') {
                 // Portfolio Card
                 card.style.borderLeft = '4px solid #8b5cf6';
+                const isActive = item.is_tg_active === true;
+                const activeBadge = isActive ? `<span style="font-size: 11px; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3);"><i class="fa-brands fa-telegram"></i> Ativo no Robô</span>` : '';
+                const btnActiveHtml = isActive ? 
+                    `<button class="btn-clear" onclick="toggleActivePortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; color: var(--text-primary); background: rgba(255,255,255,0.05);"><i class="fa-solid fa-bell-slash"></i> Desativar</button>` :
+                    `<button class="btn-scanner" onclick="toggleActivePortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; margin: 0; background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #10b981;"><i class="fa-brands fa-telegram"></i> Ativar no Robô</button>`;
+
                 card.innerHTML = `
                     <div>
                         <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                            <div style="display: flex; align-items: center; gap: 10px;">
-                                <i class="fa-solid fa-layer-group" style="color: #8b5cf6; font-size: 18px;"></i>
-                                <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
+                            <div style="display: flex; flex-direction: column; gap: 5px;">
+                                <div style="display: flex; align-items: center; gap: 10px;">
+                                    <i class="fa-solid fa-layer-group" style="color: #8b5cf6; font-size: 18px;"></i>
+                                    <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
+                                </div>
+                                <div>${activeBadge}</div>
                             </div>
                             <span style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">${dateStr}</span>
                         </div>
@@ -7208,9 +7217,10 @@ async function loadHistoryTab() {
                             </div>
                         </div>
                     </div>
-                    <div style="display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px;">
+                    <div style="display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; flex-wrap: wrap;">
                         <button class="btn-clear" onclick="deleteHistoryStrategy('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; color: var(--danger);"><i class="fa-solid fa-trash"></i> Excluir</button>
-                        <button class="btn-scanner" onclick="loadPortfolio('${item.id}')" style="flex: 2; padding: 6px; font-size: 13px; margin: 0; background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #fff;"><i class="fa-solid fa-check-square"></i> Selecionar Estratégias</button>
+                        <button class="btn-scanner" onclick="loadPortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; margin: 0; background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #fff;"><i class="fa-solid fa-check-square"></i> Abrir</button>
+                        ${btnActiveHtml}
                     </div>
                 `;
                 grid.appendChild(card);
@@ -8919,5 +8929,28 @@ async function savePortfolio() {
         }
     } catch (e) {
         showToast('Erro ao salvar.', 'error');
+    }
+}
+
+async function toggleActivePortfolio(id) {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/history/${id}/toggle_active`, {
+            method: 'POST'
+        });
+        
+        if (res.ok) {
+            const data = await res.json();
+            if (data.is_tg_active) {
+                showToast('Portfólio ativado! O robô do Telegram usará a banca e gestão deste portfólio.', 'success');
+            } else {
+                showToast('Portfólio desativado.', 'success');
+            }
+            loadHistoryTab(); // Refresh the history view
+        } else {
+            showToast('Falha ao alterar o status do portfólio.', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showToast('Erro ao alterar status.', 'error');
     }
 }
