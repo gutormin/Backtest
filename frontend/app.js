@@ -26,6 +26,46 @@ const API_BASE_URL = window.location.origin;
 window.currentDataSource = 'footballdata';
 window.futpythonApiKey = 'cmqa6oz0p01i1wq6lzxknltmd';
 
+// ============================================================
+// LOCAL STORAGE PERSISTENCE
+// Strategies/portfolios are stored in the browser's localStorage
+// so they survive server restarts and redeployments automatically.
+// The server is kept in sync so the portfolio backtester works.
+// ============================================================
+const LS_HISTORY_KEY = 'predictive_history_v3';
+
+function lsLoadHistory() {
+    try { return JSON.parse(localStorage.getItem(LS_HISTORY_KEY) || '[]'); } catch { return []; }
+}
+
+function lsSaveHistory(data) {
+    try { localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(data)); } catch {}
+}
+
+function lsAddItem(item) {
+    const h = lsLoadHistory();
+    const idx = h.findIndex(x => x.id === item.id);
+    if (idx >= 0) h[idx] = item; else h.unshift(item);
+    lsSaveHistory(h);
+}
+
+function lsDeleteItem(id) {
+    lsSaveHistory(lsLoadHistory().filter(x => x.id !== id));
+}
+
+async function lsSyncToServer(localItems) {
+    // Re-POST any local items not present on server (after Render redeployment)
+    for (const item of localItems) {
+        try {
+            await fetch(`${API_BASE_URL}/api/history`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+            });
+        } catch {}
+    }
+}
+
 function handleDataSourceChange() {
     window.currentDataSource = document.getElementById('data-source-select').value;
     const configDiv = document.getElementById('futpython-config');
@@ -7110,13 +7150,15 @@ async function submitSaveStrategy() {
 
         if (!res.ok) throw new Error("Erro ao salvar estratégia.");
 
-        
+        // Persist to localStorage so it survives server restarts
+        const saved = await res.json();
+        if (saved && saved.entry) lsAddItem(saved.entry);
 
         showToast("Estratégia salva com sucesso no Histórico!", "success");
 
         closeSaveStrategyModal();
 
-        loadHistoryTab(); // Refresh se já estiver carregado
+        loadHistoryTab();
 
     } catch (err) {
 
@@ -7146,27 +7188,38 @@ async function loadHistoryTab() {
 
     try {
 
-        const res = await fetch(`${API_BASE_URL}/api/history`);
+        // Load from server
+        let serverHistory = [];
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/history`);
+            serverHistory = await res.json();
+        } catch {}
 
-        const history = await res.json();
+        // Load from localStorage (survives server restarts)
+        const localHistory = lsLoadHistory();
 
-        
+        // Find items in localStorage that the server doesn't have (lost after redeploy)
+        const serverIds = new Set(serverHistory.map(x => x.id));
+        const localOnly = localHistory.filter(x => !serverIds.has(x.id));
 
-        if (!history || history.length === 0) {
-
-            grid.innerHTML = '';
-
-            emptyState.style.display = 'block';
-
-            return;
-
+        // Sync missing items back to server silently
+        if (localOnly.length > 0) {
+            await lsSyncToServer(localOnly);
         }
 
-        
+        // Merge: localOnly items + server items (server is authoritative for existing ones)
+        const history = [...localOnly, ...serverHistory];
+
+        // Keep localStorage up-to-date with the merged set
+        lsSaveHistory(history);
+
+        if (!history || history.length === 0) {
+            grid.innerHTML = '';
+            emptyState.style.display = 'block';
+            return;
+        }
 
         grid.innerHTML = '';
-
-        
 
         history.forEach(item => {
 
@@ -7369,16 +7422,17 @@ async function deleteHistoryStrategy(id) {
 
         
 
+        // Remove from localStorage too
+        lsDeleteItem(id);
         showToast("Estratégia excluída.", "success");
-
         loadHistoryTab();
 
     } catch (err) {
-
+        // Even if server fails, remove from localStorage
+        lsDeleteItem(id);
+        loadHistoryTab();
         showToast(err.message, "error");
-
     }
-
 }
 
 
@@ -8968,6 +9022,9 @@ async function savePortfolio() {
         });
         
         if (res.ok) {
+            const saved = await res.json();
+            // Persist to localStorage so it survives Render redeployments
+            if (saved && saved.entry) lsAddItem(saved.entry);
             showToast('Portfólio salvo com sucesso no Histórico!', 'success');
             // Switch to history tab and reload so the new card appears immediately
             switchTab('tab-history');
