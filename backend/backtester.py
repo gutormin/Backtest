@@ -1571,6 +1571,11 @@ class ChronologicalBacktester:
             'max_dd_duration': max_dd_duration_kelly
         }
         
+        # Helper safely compute mean avoiding NaNs
+        def safe_mean(values):
+            clean_vals = [v for v in values if pd.notna(v)]
+            return float(np.mean(clean_vals)) if clean_vals else 0.0
+
         summary = {
                 'initial_bankroll': round(initial_bankroll, 2),
                 'final_bankroll': round(bankroll, 2),
@@ -1584,14 +1589,14 @@ class ChronologicalBacktester:
                 'max_drawdown': round(max_drawdown * 100, 2),
                 'max_dd_duration': max_dd_duration_fixed if staking_rule == 'fixed' else (max_dd_duration_prop if staking_rule == 'proportional' else max_dd_duration_kelly),
                 'total_staked': round(total_staked, 2),
-                'avg_odds': round(np.mean([b['odds'] for b in bets_record]), 2) if bets_record else 0.0,
+                'avg_odds': round(safe_mean([b['odds'] for b in bets_record]), 2),
                 'sharpe_ratio': round(sharpe_ratio, 2),
                 'sortino_ratio': round(sortino_ratio, 2),
                 'skewness': round(skewness, 2),
                 'max_consec_wins': max_consec_wins,
                 'max_consec_losses': max_consec_losses,
-                'avg_clv': round(float(np.mean([b['clv'] for b in bets_record if b.get('clv') is not None])), 2) if any(b.get('clv') is not None for b in bets_record) else None,
-                'bcl_percent': round(len([b for b in bets_record if b.get('clv') is not None and b['clv'] > 0]) / len([b for b in bets_record if b.get('clv') is not None]) * 100, 1) if any(b.get('clv') is not None for b in bets_record) else None
+                'avg_clv': round(safe_mean([b['clv'] for b in bets_record if b.get('clv') is not None]), 2) if any(pd.notna(b.get('clv')) for b in bets_record) else None,
+                'bcl_percent': round(len([b for b in bets_record if b.get('clv') is not None and pd.notna(b['clv']) and b['clv'] > 0]) / len([b for b in bets_record if b.get('clv') is not None and pd.notna(b['clv'])]) * 100, 1) if any(pd.notna(b.get('clv')) for b in bets_record) else None
         }
 
         # Métricas estatísticas avançadas

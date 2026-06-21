@@ -8274,7 +8274,11 @@ window.runBacktest = async function() {
         }
     } catch(err) {
         console.error("Backtest error:", err);
-        alert("Erro JS: " + err.message + "\nStack: " + err.stack);
+        if (err.message.includes("Unexpected end of JSON input")) {
+            alert("Erro: O servidor encerrou a conexão inesperadamente (possível falta de memória / OOM). Se você ativou a Otimização da IA (XGBoost), tente selecionar menos ligas simultaneamente para evitar exceder os limites do servidor gratuito.");
+        } else {
+            alert("Erro JS: " + err.message + "\nStack: " + err.stack);
+        }
         if(btn) btn.innerHTML = '<i class="fa-solid fa-flask"></i> Executar Backtest';
     }
 };
