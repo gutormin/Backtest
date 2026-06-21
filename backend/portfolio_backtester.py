@@ -217,14 +217,14 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         prob_s = st['win_rate'] / 100.0
 
         if risk_method == 'fixed_1':
-            st['recommended_stake'] = round(bankroll * 0.01, 2)
+            st['recommended_stake'] = round(initial_bankroll * 0.01, 2)
         elif risk_method == 'fixed_2':
-            st['recommended_stake'] = round(bankroll * 0.02, 2)
+            st['recommended_stake'] = round(initial_bankroll * 0.02, 2)
         elif risk_method == 'kelly_quarter':
             if avg_odds_s > 1.0:
                 k_fraction = ((prob_s * avg_odds_s) - 1) / (avg_odds_s - 1)
                 k_fraction = max(0.0, min(k_fraction, 0.20))
-                st['recommended_stake'] = round(bankroll * (k_fraction / 4.0), 2)
+                st['recommended_stake'] = round(initial_bankroll * (k_fraction / 4.0), 2)
             else:
                 st['recommended_stake'] = 0.0
 
@@ -241,7 +241,7 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     MAX_PORTFOLIO_EXPOSURE = 0.20  # Never risk more than 20% of bankroll across all simultaneous bets
 
     total_recommended = sum(st['recommended_stake'] for st in strategy_stats.values())
-    max_allowed_total = bankroll * MAX_PORTFOLIO_EXPOSURE
+    max_allowed_total = initial_bankroll * MAX_PORTFOLIO_EXPOSURE
 
     if total_recommended > max_allowed_total and total_recommended > 0:
         scale_factor = max_allowed_total / total_recommended
