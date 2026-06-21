@@ -429,7 +429,7 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         "summary_kelly": summary_kelly,
         "ai_analysis": ai_res,
         "quartiles": quartiles,
-        "bets": all_bets[-1000:],
+        "bets": all_bets,
         "total_recommended_exposure": round(sum(st['recommended_stake'] for st in strategy_stats.values()), 2),
         "max_portfolio_exposure_pct": round(MAX_PORTFOLIO_EXPOSURE * 100, 0)
     }
