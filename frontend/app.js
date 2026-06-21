@@ -6167,7 +6167,7 @@ function switchTab(tabId) {
 
     if (tabId === 'tab-history') {
 
-        loadHistory();
+        loadHistoryTab();
 
     }
 
@@ -8954,6 +8954,9 @@ async function savePortfolio() {
         
         if (res.ok) {
             showToast('Portfólio salvo com sucesso no Histórico!', 'success');
+            // Switch to history tab and reload so the new card appears immediately
+            switchTab('tab-history');
+            await loadHistoryTab();
         } else {
             showToast('Falha ao salvar portfólio.', 'error');
         }
