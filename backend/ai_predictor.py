@@ -561,7 +561,14 @@ def optimize_strategy_parameters(bets_record, current_val_threshold, initial_ban
 def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value):
     """
     Recalculates chronological bankroll evolution and performance metrics
-    for a subset of bets, using the original staking rule.
+    for a subset of bets, using the EXACT same staking logic as the real backtest
+    (backtester.py run() and run_parallel_scan).
+    
+    Key rules mirrored from the real backtest:
+    - Proportional: uses CURRENT bankroll (compounding), not initial_bankroll
+    - Kelly: uses CURRENT bankroll, capped at 5% of bankroll (not 10%)
+    - Intra-day correlation: stake / sqrt(n_bets_today) for non-fixed rules
+    - Daily exposure cap: max 10% of bankroll per day for non-fixed rules
     """
     if len(df_sub) == 0:
         return None
@@ -578,16 +585,26 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
     
     profit_in_stakes = 0.0
     
+    # Track daily bet counts and exposure (mirrors backtester.py)
+    from collections import defaultdict
+    daily_bet_count = defaultdict(int)
+    daily_exposure = defaultdict(float)
+    
     for row in df_sub.to_dict('records'):
         bookie_odds = float(row['odds'])
         model_prob = float(row['prob']) / 100.0
         profit = 0.0
+        date_str = str(row['date'])
         
-        # Staking rules: anchor to initial_bankroll to prevent compounding explosion
+        daily_bet_count[date_str] += 1
+        n_bets_today = daily_bet_count[date_str]
+        
+        # Staking rules: mirror EXACTLY from backtester.py run()
         if staking_rule == 'fixed':
             stake = stake_value
         elif staking_rule == 'proportional':
-            stake = initial_bankroll * (stake_value / 100.0)
+            # Real backtest uses CURRENT bankroll, not initial
+            stake = bankroll * (stake_value / 100.0)
         elif staking_rule.startswith('kelly'):
             mult_k = 1.0
             if staking_rule == 'kelly_half': mult_k = 0.5
@@ -599,15 +616,28 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
 
             if bookie_odds > 1.0:
                 f_star = (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
-                f_star = max(0.0, min(f_star, 0.20))
-                stake = initial_bankroll * f_star * mult_k
-                stake = min(stake, initial_bankroll * 0.10)
+                f_star = max(0.0, f_star)  # No short selling (matches run())
+                # Real backtest uses CURRENT bankroll and caps at 5%
+                stake = bankroll * f_star * mult_k
+                stake = min(stake, bankroll * 0.05)  # Cap at 5% (matches run())
             else:
                 stake = 0.0
         else:
             stake = 0.0
+        
+        # Apply intra-day correlation correction (only for Kelly/Proportional)
+        # Mirrors backtester.py run() lines 1115-1121
+        if staking_rule != 'fixed':
+            if n_bets_today > 1:
+                import math
+                stake = stake / math.sqrt(n_bets_today)
+            
+            # Cap daily exposure at 10% of bankroll
+            if daily_exposure[date_str] + stake > bankroll * 0.10:
+                stake = max(0, bankroll * 0.10 - daily_exposure[date_str])
             
         if stake > 0.01 and bankroll >= stake:
+            daily_exposure[date_str] += stake
             total_staked += stake
             bet_won = float(row['profit']) > 0
             if bet_won:
