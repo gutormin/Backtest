@@ -2948,23 +2948,23 @@ function applyOddsSuggestion(rangeName) {
         }
 
         if (subRange.includes('Super Favoritos') || subRange.includes('<=1.50')) {
-            if (minEl) minEl.value = "1.50";
+            if (minEl) minEl.value = "1.51";
         } else if (subRange.includes('Zebras') || subRange.includes('>3.00')) {
             if (maxEl) maxEl.value = "3.00";
         } else if (subRange.includes('Favoritos (1.50-2.00)')) {
-            if (minEl) minEl.value = "2.00";
+            if (minEl) minEl.value = "2.01";
         } else if (subRange.includes('Médios (2.00-3.00)')) {
             if (maxEl) maxEl.value = "2.00";
         } else if (subRange.includes('Baixo (<=3.00)')) {
-            if (minEl) minEl.value = "3.00";
+            if (minEl) minEl.value = "3.01";
         } else if (subRange.includes('Alto (>3.80)')) {
             if (maxEl) maxEl.value = "3.80";
         } else if (subRange.includes('Médio (3.00-3.80)')) {
             if (maxEl) maxEl.value = "3.00";
         } else if (subRange.includes('Favorito (<=1.70)')) {
-            if (minEl) minEl.value = "1.70";
+            if (minEl) minEl.value = "1.71";
         } else if (subRange.includes('Equilibrado (1.70-2.20)')) {
-            if (minEl) minEl.value = "2.20";
+            if (minEl) minEl.value = "2.21";
         } else if (subRange.includes('Zebra (>2.20)')) {
             if (maxEl) maxEl.value = "2.20";
         }
@@ -2979,11 +2979,11 @@ function applyOddsSuggestion(rangeName) {
     const maxInput = document.getElementById('max-odds');
     
     if (rangeName.includes('Super Favoritos') || rangeName.includes('<=1.50')) {
-        minInput.value = "1.50";
+        minInput.value = "1.51";
     } else if (rangeName.includes('Zebras') || rangeName.includes('>3.00')) {
         maxInput.value = "3.00";
     } else if (rangeName.includes('Favoritos (1.50-2.00)')) {
-        minInput.value = "2.00";
+        minInput.value = "2.01";
     } else if (rangeName.includes('Médios (2.00-3.00)')) {
         maxInput.value = "2.00";
     }
