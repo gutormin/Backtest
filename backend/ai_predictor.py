@@ -558,43 +558,11 @@ def optimize_strategy_parameters(bets_record, current_val_threshold, initial_ban
             
     return suggestions
 
-import pandas as pd
-import numpy as np
-from collections import defaultdict
-import math
-
-
-def predict_strategy_sustainability(bets_record, initial_bankroll=1000.0, value_threshold=1.05,
-                                     staking_rule='fixed', stake_value=10.0, run_monte_carlo=True):
-    """
-    Wrapper that calls optimize_strategy_parameters and run_monte_carlo_simulation
-    and returns a combined result dict.
-    """
-    from .ai_predictor import optimize_strategy_parameters, run_monte_carlo_simulation
-    suggestions = optimize_strategy_parameters(
-        bets_record, value_threshold, initial_bankroll, staking_rule, stake_value
-    )
-    mc_result = None
-    if run_monte_carlo:
-        mc_result = run_monte_carlo_simulation(
-            bets_record, initial_bankroll, staking_rule, stake_value
-        )
-    return {'suggestions': suggestions, 'monte_carlo': mc_result}
-
 
 def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value):
     """
     Calculates performance metrics for a filtered subset of bets.
-
-    APPROACH: Uses direct sum of original recorded profits and stakes.
-
-    WHY THIS IS MORE ACCURATE than re-simulating compound staking:
-    - When you remove bets from a compounding sequence, every subsequent stake
-      changes (because the bankroll at each point changes). Re-simulating from
-      scratch for the subset gives a WRONG result because it ignores how removal
-      affects all subsequent bets in the original sequence.
-    - Direct sum of original profits/stakes gives ROI within 0.5% of the real
-      backtest result, vs 10-15% error with compound re-simulation.
+    Uses direct sum of original profits/stakes for accurate ROI prediction.
     """
     if len(df_sub) == 0:
         return None
@@ -602,7 +570,7 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
     has_original_stakes = 'stake' in df_sub.columns and df_sub['stake'].sum() > 0
 
     if has_original_stakes:
-        # ROI: direct sum (most accurate predictor of real result)
+        # ROI via direct sum - most accurate prediction of real backtest ROI
         total_profit_raw = float(df_sub['profit'].sum())
         total_staked_raw = float(df_sub['stake'].sum())
         wins = int((df_sub['profit'] > 0).sum())
@@ -610,12 +578,12 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
         win_rate = (wins / total_bets * 100) if total_bets > 0 else 0.0
         roi = (total_profit_raw / total_staked_raw * 100) if total_staked_raw > 0 else 0.0
 
-        # Scale to initial_bankroll for net_profit and equity curve
+        # Scale to initial_bankroll for equity curve / net_profit display
         first_row = df_sub.iloc[0]
-        original_first_bankroll = float(first_row['bankroll']) - float(first_row['profit'])
-        if original_first_bankroll <= 0:
-            original_first_bankroll = initial_bankroll
-        scale = initial_bankroll / original_first_bankroll if original_first_bankroll > 0 else 1.0
+        orig_first_br = float(first_row['bankroll']) - float(first_row['profit'])
+        if orig_first_br <= 0:
+            orig_first_br = initial_bankroll
+        scale = initial_bankroll / orig_first_br if orig_first_br > 0 else 1.0
 
         bankroll = initial_bankroll
         peak_bankroll = initial_bankroll
@@ -625,33 +593,26 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
         equity_curve = [{'date': str(dates[0]), 'bankroll': round(initial_bankroll, 2)}]
 
         for row in df_sub.to_dict('records'):
-            scaled_profit = float(row['profit']) * scale
-            scaled_stake = float(row['stake']) * scale
+            sp = float(row['profit']) * scale
+            ss = float(row['stake']) * scale
             bookie_odds = float(row['odds'])
-
-            if scaled_stake > 0.01:
-                bankroll += scaled_profit
-
-                if scaled_profit > 0:
+            if ss > 0.01:
+                bankroll += sp
+                if sp > 0:
                     profit_in_stakes += (bookie_odds - 1.0)
                 else:
                     profit_in_stakes += -1.0
-
                 if bankroll > peak_bankroll:
                     peak_bankroll = bankroll
                 dd = (peak_bankroll - bankroll) / peak_bankroll if peak_bankroll > 0 else 0.0
                 if dd > max_drawdown:
                     max_drawdown = dd
-
-                equity_curve.append({
-                    'date': str(row['date']),
-                    'bankroll': round(bankroll, 2)
-                })
+                equity_curve.append({'date': str(row['date']), 'bankroll': round(bankroll, 2)})
 
         net_profit = bankroll - initial_bankroll
 
     else:
-        # Fallback for fixed staking (no stake field): recalculate
+        # Fallback: fixed staking without recorded stakes
         bankroll = initial_bankroll
         peak_bankroll = initial_bankroll
         max_drawdown = 0.0
@@ -666,7 +627,6 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
             stake = stake_value
             bet_won = float(row['profit']) > 0
             bookie_odds = float(row['odds'])
-
             if stake > 0.01 and bankroll >= stake:
                 total_staked_raw += stake
                 if bet_won:
@@ -678,17 +638,12 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
                     profit = -stake
                     bankroll += profit
                     profit_in_stakes += -1.0
-
                 if bankroll > peak_bankroll:
                     peak_bankroll = bankroll
                 dd = (peak_bankroll - bankroll) / peak_bankroll if peak_bankroll > 0 else 0.0
                 if dd > max_drawdown:
                     max_drawdown = dd
-
-                equity_curve.append({
-                    'date': str(row['date']),
-                    'bankroll': round(bankroll, 2)
-                })
+                equity_curve.append({'date': str(row['date']), 'bankroll': round(bankroll, 2)})
 
         win_rate = (wins / total_bets * 100) if total_bets > 0 else 0.0
         net_profit = bankroll - initial_bankroll
@@ -705,6 +660,7 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
         },
         'equity_curve': equity_curve
     }
+
 
 
 
