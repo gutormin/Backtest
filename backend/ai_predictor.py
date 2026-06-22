@@ -561,105 +561,132 @@ def optimize_strategy_parameters(bets_record, current_val_threshold, initial_ban
 def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value):
     """
     Recalculates chronological bankroll evolution and performance metrics
-    for a subset of bets, using the EXACT same staking logic as the real backtest
-    (backtester.py run() and run_parallel_scan).
+    for a filtered subset of bets.
     
-    Key rules mirrored from the real backtest:
-    - Proportional: uses CURRENT bankroll (compounding), not initial_bankroll
-    - Kelly: uses CURRENT bankroll, capped at 5% of bankroll (not 10%)
-    - Intra-day correlation: stake / sqrt(n_bets_today) for non-fixed rules
-    - Daily exposure cap: max 10% of bankroll per day for non-fixed rules
+    APPROACH: Uses the original recorded stakes/profits from bets_record, scaled
+    proportionally to initial_bankroll. This is the most accurate method because:
+    - Recalculating Kelly/proportional stakes from scratch for a subset gives wrong
+      results (the bankroll trajectory diverges from the real backtest because removing
+      bets changes the entire compounding sequence)
+    - Scaling original stakes to initial_bankroll preserves relative bet sizing while
+      giving a valid projection of the filtered scenario
     """
     if len(df_sub) == 0:
         return None
+    
+    # Check if original stake data exists
+    has_original_stakes = 'stake' in df_sub.columns and df_sub['stake'].sum() > 0
+    
+    if has_original_stakes:
+        # Use original stakes scaled proportionally to initial_bankroll
+        # Find scale factor: original initial bankroll = first bankroll - first profit
+        first_row = df_sub.iloc[0]
+        original_first_bankroll = float(first_row['bankroll']) - float(first_row['profit'])
+        if original_first_bankroll <= 0:
+            original_first_bankroll = initial_bankroll
+        scale = initial_bankroll / original_first_bankroll if original_first_bankroll > 0 else 1.0
         
-    bankroll = initial_bankroll
-    peak_bankroll = initial_bankroll
-    max_drawdown = 0.0
-    total_staked = 0.0
-    wins = 0
-    
-    # Convert dates to string representation
-    dates = df_sub['date'].values
-    equity_curve = [{'date': str(dates[0]), 'bankroll': round(initial_bankroll, 2)}]
-    
-    profit_in_stakes = 0.0
-    
-    # Track daily bet counts and exposure (mirrors backtester.py)
-    from collections import defaultdict
-    daily_bet_count = defaultdict(int)
-    daily_exposure = defaultdict(float)
-    
-    for row in df_sub.to_dict('records'):
-        bookie_odds = float(row['odds'])
-        model_prob = float(row['prob']) / 100.0
-        profit = 0.0
-        date_str = str(row['date'])
+        bankroll = initial_bankroll
+        peak_bankroll = initial_bankroll
+        max_drawdown = 0.0
+        total_staked = 0.0
+        wins = 0
+        profit_in_stakes = 0.0
         
-        daily_bet_count[date_str] += 1
-        n_bets_today = daily_bet_count[date_str]
+        dates = df_sub['date'].values
+        equity_curve = [{'date': str(dates[0]), 'bankroll': round(initial_bankroll, 2)}]
         
-        # Staking rules: mirror EXACTLY from backtester.py run()
-        if staking_rule == 'fixed':
-            stake = stake_value
-        elif staking_rule == 'proportional':
-            # Real backtest uses CURRENT bankroll, not initial
-            stake = bankroll * (stake_value / 100.0)
-        elif staking_rule.startswith('kelly'):
-            mult_k = 1.0
-            if staking_rule == 'kelly_half': mult_k = 0.5
-            elif staking_rule == 'kelly_quarter': mult_k = 0.25
-            elif staking_rule == 'kelly_eighth': mult_k = 0.125
-            elif staking_rule == 'kelly_sixteenth': mult_k = 0.0625
-            elif staking_rule == 'kelly': mult_k = stake_value
-            else: mult_k = stake_value
-
-            if bookie_odds > 1.0:
-                f_star = (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
-                f_star = max(0.0, f_star)  # No short selling (matches run())
-                # Real backtest uses CURRENT bankroll and caps at 5%
-                stake = bankroll * f_star * mult_k
-                stake = min(stake, bankroll * 0.05)  # Cap at 5% (matches run())
+        for row in df_sub.to_dict('records'):
+            orig_stake = float(row['stake']) * scale
+            orig_profit = float(row['profit']) * scale
+            bookie_odds = float(row['odds'])
+            
+            if orig_stake > 0.01:
+                total_staked += orig_stake
+                bankroll += orig_profit
+                
+                if orig_profit > 0:
+                    wins += 1
+                    profit_in_stakes += (bookie_odds - 1.0)
+                else:
+                    profit_in_stakes += -1.0
+                    
+                if bankroll > peak_bankroll:
+                    peak_bankroll = bankroll
+                dd = (peak_bankroll - bankroll) / peak_bankroll if peak_bankroll > 0 else 0.0
+                if dd > max_drawdown:
+                    max_drawdown = dd
+                    
+                equity_curve.append({
+                    'date': str(row['date']),
+                    'bankroll': round(bankroll, 2)
+                })
+    else:
+        # Fallback: recalculate stakes from scratch (less accurate but workable for fixed staking)
+        import math
+        from collections import defaultdict
+        bankroll = initial_bankroll
+        peak_bankroll = initial_bankroll
+        max_drawdown = 0.0
+        total_staked = 0.0
+        wins = 0
+        profit_in_stakes = 0.0
+        dates = df_sub['date'].values
+        equity_curve = [{'date': str(dates[0]), 'bankroll': round(initial_bankroll, 2)}]
+        daily_bet_count = defaultdict(int)
+        daily_exposure = defaultdict(float)
+        
+        for row in df_sub.to_dict('records'):
+            bookie_odds = float(row['odds'])
+            model_prob = float(row['prob']) / 100.0
+            date_str = str(row['date'])
+            daily_bet_count[date_str] += 1
+            n_bets_today = daily_bet_count[date_str]
+            
+            if staking_rule == 'fixed':
+                stake = stake_value
+            elif staking_rule == 'proportional':
+                stake = bankroll * (stake_value / 100.0)
+            elif staking_rule.startswith('kelly'):
+                mult_k = stake_value if staking_rule == 'kelly' else 0.25
+                if bookie_odds > 1.0:
+                    f_star = max(0.0, (model_prob * bookie_odds - 1.0) / (bookie_odds - 1.0))
+                    stake = min(bankroll * f_star * mult_k, bankroll * 0.05)
+                else:
+                    stake = 0.0
             else:
                 stake = 0.0
-        else:
-            stake = 0.0
-        
-        # Apply intra-day correlation correction (only for Kelly/Proportional)
-        # Mirrors backtester.py run() lines 1115-1121
-        if staking_rule != 'fixed':
-            if n_bets_today > 1:
-                import math
-                stake = stake / math.sqrt(n_bets_today)
             
-            # Cap daily exposure at 10% of bankroll
-            if daily_exposure[date_str] + stake > bankroll * 0.10:
-                stake = max(0, bankroll * 0.10 - daily_exposure[date_str])
-            
-        if stake > 0.01 and bankroll >= stake:
-            daily_exposure[date_str] += stake
-            total_staked += stake
-            bet_won = float(row['profit']) > 0
-            if bet_won:
-                wins += 1
-                profit = stake * (bookie_odds - 1.0)
-                bankroll += profit
-                profit_in_stakes += (bookie_odds - 1.0)
-            else:
-                profit = -stake
-                bankroll += profit
-                profit_in_stakes += -1.0
+            if staking_rule != 'fixed':
+                if n_bets_today > 1:
+                    stake = stake / math.sqrt(n_bets_today)
+                if daily_exposure[date_str] + stake > bankroll * 0.10:
+                    stake = max(0, bankroll * 0.10 - daily_exposure[date_str])
                 
-            if bankroll > peak_bankroll:
-                peak_bankroll = bankroll
-            dd = (peak_bankroll - bankroll) / peak_bankroll
-            if dd > max_drawdown:
-                max_drawdown = dd
-                
-            equity_curve.append({
-                'date': str(row['date']),
-                'bankroll': round(bankroll, 2)
-            })
+            if stake > 0.01 and bankroll >= stake:
+                daily_exposure[date_str] += stake
+                total_staked += stake
+                bet_won = float(row['profit']) > 0
+                if bet_won:
+                    wins += 1
+                    profit = stake * (bookie_odds - 1.0)
+                    bankroll += profit
+                    profit_in_stakes += (bookie_odds - 1.0)
+                else:
+                    profit = -stake
+                    bankroll += profit
+                    profit_in_stakes += -1.0
+                    
+                if bankroll > peak_bankroll:
+                    peak_bankroll = bankroll
+                dd = (peak_bankroll - bankroll) / peak_bankroll if peak_bankroll > 0 else 0.0
+                if dd > max_drawdown:
+                    max_drawdown = dd
+                    
+                equity_curve.append({
+                    'date': str(row['date']),
+                    'bankroll': round(bankroll, 2)
+                })
             
     total_bets = len(df_sub)
     win_rate = (wins / total_bets * 100) if total_bets > 0 else 0.0
@@ -677,6 +704,8 @@ def recalculate_sub_backtest(df_sub, initial_bankroll, staking_rule, stake_value
         },
         'equity_curve': equity_curve
     }
+
+
 
 def run_monte_carlo_simulation(bets_record, initial_bankroll=1000.0, staking_rule='fixed', stake_value=10.0, runs=1000):
     """

@@ -2483,7 +2483,13 @@ class ChronologicalBacktester:
                         'stake': round(p_stake, 2),
                         'profit': round(p_profit, 2),
                         'bankroll': round(state_ref['bankroll'], 2),
-                        'clv': round(p_clv, 2) if p_clv is not None else None
+                        'clv': round(p_clv, 2) if p_clv is not None else None,
+                        # Cross-market odds (used by AI optimizer to simulate cross-market filters)
+                        'odds_h': round(float(odds_h), 2) if odds_h is not None and not pd.isna(odds_h) else None,
+                        'odds_d': round(float(odds_d), 2) if odds_d is not None and not pd.isna(odds_d) else None,
+                        'odds_a': round(float(odds_a), 2) if odds_a is not None and not pd.isna(odds_a) else None,
+                        'odds_over25': round(float(odds_over25), 2) if odds_over25 is not None and not pd.isna(odds_over25) else None,
+                        'odds_under25': round(float(odds_under25), 2) if odds_under25 is not None and not pd.isna(odds_under25) else None,
                     })
 
             if match_date <= end_dt:
