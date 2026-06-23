@@ -445,6 +445,7 @@
 <div class="tabs-container" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 0;">
     <button class="tab-btn active" id="tab-btn-scanner" onclick="switchTab('tab-scanner')" style="background: none; border: none; color: var(--text-primary); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid var(--primary); transition: all 0.3s ease;"><i class="fa-solid fa-globe"></i> Scanner Institucional</button>
     <button class="tab-btn" id="tab-btn-laboratory" onclick="switchTab('tab-laboratory')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-microscope"></i> Laboratório Estatístico</button>
+    <button class="tab-btn" id="tab-btn-optimization" onclick="switchTab('tab-optimization')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-wand-magic-sparkles"></i> Central de Otimização (IA)</button>
     <button class="tab-btn" id="tab-btn-clustering" onclick="switchTab('tab-clustering')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-network-wired"></i> Clusterização (IA)</button>
     <button class="tab-btn" id="tab-btn-radar" onclick="switchTab('tab-radar')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-satellite-dish"></i> Radar Smart Money</button>
     <button class="tab-btn" id="tab-btn-arbitrage" onclick="switchTab('tab-arbitrage')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-scale-balanced"></i> Arbitragem</button>
@@ -2015,6 +2016,72 @@
 </div>
 </section>
 </div> <!-- End Tab Dashboard -->
+
+        <!-- Tab: Otimização Inteligente -->
+        <div id="tab-optimization" class="tab-pane" style="display: none;">
+            <div style="background: rgba(16, 185, 129, 0.1); border-left: 4px solid var(--success); padding: 20px; border-radius: 8px; margin-bottom: 24px;">
+                <h3 style="margin-top: 0; color: var(--success); display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-wand-magic-sparkles text-glow"></i> Central de Otimização Multidimensional (IA)
+                </h3>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 0;">
+                    Esta central compara o sinal puro da sua estratégia (via simulação Flat Staking de $10) contra parametrizações ótimas de EV e odds. Aplique as melhorias sugeridas para impulsionar o ROI e mitigar o Drawdown.
+                </p>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 24px; align-items: start; margin-bottom: 24px;" class="opt-layout-grid">
+                <!-- Left Column: Equity Chart comparison and suggestion details -->
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <!-- Comparison Chart Card -->
+                    <div class="calculator-card glassmorphism" style="padding: 20px;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-chart-line text-glow"></i> Projeção de Curva de Banca Comparativa
+                        </h3>
+                        <div style="height: 350px; position: relative;">
+                            <canvas id="opt-comparison-chart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Suggestions list -->
+                    <div class="calculator-card glassmorphism" style="padding: 20px;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-list-check text-glow"></i> Cenários de Otimização Disponíveis
+                        </h3>
+                        <div id="opt-suggestions-list" style="display: flex; flex-direction: column; gap: 15px;">
+                            <div style="padding: 20px; text-align: center; color: var(--text-secondary); font-size: 13px; background: rgba(255, 255, 255, 0.01); border: 1px dashed rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                                <i class="fa-solid fa-chart-line" style="font-size: 24px; margin-bottom: 10px; opacity: 0.5;"></i>
+                                Execute um backtest no Laboratório Estatístico para ver as recomendações de otimização detalhadas.
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Comparison Table and stats summary -->
+                <div style="display: flex; flex-direction: column; gap: 24px;">
+                    <!-- Comparison table -->
+                    <div class="calculator-card glassmorphism" style="padding: 20px;">
+                        <h3 style="margin-top: 0; margin-bottom: 15px; font-size: 16px; display: flex; align-items: center; gap: 8px;">
+                            <i class="fa-solid fa-code-compare text-glow"></i> Tabela Comparativa de Métricas
+                        </h3>
+                        <div id="opt-comparison-table-container">
+                            <div style="text-align: center; padding: 20px; color: var(--text-muted); font-size: 13px;">
+                                Nenhum cenário de otimização selecionado para comparação.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Info Alert -->
+                    <div style="background: rgba(59, 130, 246, 0.05); border: 1px solid rgba(59, 130, 246, 0.15); border-radius: 8px; padding: 15px;">
+                        <h4 style="margin-top: 0; margin-bottom: 8px; color: #60a5fa; font-size: 14px; display: flex; align-items: center; gap: 6px;">
+                            <i class="fa-solid fa-circle-info"></i> Metodologia Científica
+                        </h4>
+                        <p style="margin: 0; font-size: 12px; color: var(--text-muted); line-height: 1.5;">
+                            Para isolar a qualidade do sinal da gestão de banca, as métricas do laboratório e a otimização usam stakes fixos ($10 por aposta). Desta forma, garantimos que as regras de filtragem sejam matematicamente robustas e livres de ruídos causados por juros compostos ou oscilações de banca.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
 <!-- Tab: Veredito e Risco -->
  <!-- End Tab Risk -->
 <!-- Tab: Global Scanner -->

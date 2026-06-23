@@ -1503,7 +1503,7 @@ class ChronologicalBacktester:
             equity_curve_kelly.append({'date': end_date, 'bankroll': round(initial_bankroll, 2)})
             
         # Compute AI sustainability analysis
-        ai_res = predict_strategy_sustainability(bets_record, initial_bankroll, value_threshold, staking_rule, stake_value, run_monte_carlo=run_monte_carlo)
+        ai_res = predict_strategy_sustainability(bets_record, initial_bankroll, value_threshold, staking_rule, stake_value, run_monte_carlo=run_monte_carlo, min_odds=min_odds, max_odds=max_odds)
         
         # Calculate quartiles (4 chronological blocks of 25% of bets)
         quartiles = []

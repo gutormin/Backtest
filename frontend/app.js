@@ -2143,6 +2143,10 @@ function displayAiAnalysis(aiAnalysis, results, isPortfolio = false) {
 
         optPanel.style.display = 'none';
 
+        if (typeof renderOptimizationTab === 'function') {
+            renderOptimizationTab([], null);
+        }
+
         return;
 
     }
@@ -2388,6 +2392,9 @@ function displayAiAnalysis(aiAnalysis, results, isPortfolio = false) {
     // Render optimization suggestions
 
     displayOptimizationSuggestions(aiAnalysis.suggestions, isPortfolio);
+    if (typeof renderOptimizationTab === 'function') {
+        renderOptimizationTab(aiAnalysis.suggestions, results);
+    }
 
 }
 
@@ -2849,6 +2856,315 @@ function displayOptimizationSuggestions(suggestions, isPortfolio = false) {
 
 }
 
+let optComparisonChart = null;
+let currentSelectedSuggestion = null;
+
+function renderOptimizationTab(suggestions, results) {
+    const listContainer = document.getElementById('opt-suggestions-list');
+    const tableContainer = document.getElementById('opt-comparison-table-container');
+    
+    if (!listContainer) return;
+    
+    listContainer.innerHTML = '';
+    
+    const filteredSuggestions = (suggestions || []).filter(sug => {
+        if (sug.type === 'odds_warning' && appliedOptimizationSuggestions.has(sug.value)) return false;
+        if (sug.type === 'ev' && appliedOptimizationSuggestions.has(`ev_${sug.value}`)) return false;
+        if (sug.type === 'leagues' && appliedOptimizationSuggestions.has(`leagues_${JSON.stringify(sug.exclude_codes)}`)) return false;
+        return true;
+    });
+    
+    if (!filteredSuggestions || filteredSuggestions.length === 0) {
+        listContainer.innerHTML = `
+            <div style="padding: 30px; text-align: center; color: var(--text-secondary); font-size: 13px; background: rgba(255, 255, 255, 0.01); border: 1px dashed rgba(255, 255, 255, 0.05); border-radius: 8px;">
+                <i class="fa-solid fa-circle-check" style="color: var(--success); font-size: 28px; margin-bottom: 12px; display: block;"></i>
+                <strong>Tudo Otimizado!</strong><br><br>
+                O motor multidimensional varreu todas as combinações de EV+, odds e exclusão de ligas. Sua estratégia atual já se encontra no ponto ótimo.
+            </div>
+        `;
+        if (tableContainer) {
+            tableContainer.innerHTML = `
+                <div style="text-align: center; padding: 30px; color: var(--text-muted); font-size: 13px;">
+                    Nenhum cenário de otimização ativo para comparação.
+                </div>
+            `;
+        }
+        if (optComparisonChart) {
+            optComparisonChart.destroy();
+            optComparisonChart = null;
+        }
+        return;
+    }
+    
+    // Select the first suggestion by default
+    currentSelectedSuggestion = filteredSuggestions[0];
+    
+    filteredSuggestions.forEach((sug, idx) => {
+        const div = document.createElement('div');
+        div.className = `optimization-sug-item ${sug === currentSelectedSuggestion ? 'active' : ''}`;
+        
+        let activeBg = 'rgba(16, 185, 129, 0.08)';
+        let activeBorder = 'rgba(16, 185, 129, 0.3)';
+        let defaultBg = 'rgba(255, 255, 255, 0.02)';
+        let defaultBorder = 'rgba(255, 255, 255, 0.05)';
+        
+        div.style.cssText = `
+            padding: 16px;
+            background: ${sug === currentSelectedSuggestion ? activeBg : defaultBg};
+            border: 1px solid ${sug === currentSelectedSuggestion ? activeBorder : defaultBorder};
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+        `;
+        
+        // Add hover effects
+        div.onmouseover = () => {
+            if (sug !== currentSelectedSuggestion) {
+                div.style.background = 'rgba(255, 255, 255, 0.04)';
+                div.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+            }
+        };
+        div.onmouseout = () => {
+            if (sug !== currentSelectedSuggestion) {
+                div.style.background = defaultBg;
+                div.style.borderColor = defaultBorder;
+            }
+        };
+        
+        let iconHtml = '';
+        let badgeColor = '';
+        let badgeText = '';
+        
+        if (sug.type === 'ev') {
+            iconHtml = '<i class="fa-solid fa-bolt" style="color: #f59e0b;"></i>';
+            badgeText = 'EV+';
+            badgeColor = 'rgba(245, 158, 11, 0.15); color: #fbbf24';
+        } else if (sug.type === 'leagues') {
+            iconHtml = '<i class="fa-solid fa-trophy" style="color: #3b82f6;"></i>';
+            badgeText = 'Ligas';
+            badgeColor = 'rgba(59, 130, 246, 0.15); color: #60a5fa';
+        } else {
+            iconHtml = '<i class="fa-solid fa-chart-line" style="color: #10b981;"></i>';
+            badgeText = 'Odds';
+            badgeColor = 'rgba(16, 185, 129, 0.15); color: #34d399';
+        }
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.style.flex = '1';
+        infoDiv.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                ${iconHtml}
+                <span style="font-size: 11px; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: ${badgeColor};">${badgeText}</span>
+            </div>
+            <p style="margin: 0; font-size: 13px; color: var(--text-primary); line-height: 1.4;">${sug.text}</p>
+        `;
+        
+        let actionBtnHtml = '';
+        if (sug.type === 'ev') {
+            actionBtnHtml = `<button class="btn-scanner" style="margin: 0; font-size: 12px; padding: 6px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;" onclick="event.stopPropagation(); applyEvSuggestion(${sug.value})"><i class="fa-solid fa-wand-magic"></i> Aplicar</button>`;
+        } else if (sug.type === 'leagues') {
+            const codesStr = JSON.stringify(sug.exclude_codes).replace(/"/g, '&quot;');
+            actionBtnHtml = `<button class="btn-scanner" style="margin: 0; font-size: 12px; padding: 6px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;" onclick='event.stopPropagation(); applyLeagueSuggestion(` + JSON.stringify(sug.exclude_codes) + `)'><i class="fa-solid fa-filter-circle-xmark"></i> Aplicar</button>`;
+        } else {
+            const escapedValue = sug.value.replace(/'/g, "\\'");
+            actionBtnHtml = `<button class="btn-scanner" style="margin: 0; font-size: 12px; padding: 6px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;" onclick="event.stopPropagation(); applyOddsSuggestion('${escapedValue}')"><i class="fa-solid fa-wand-magic-sparkles"></i> Aplicar</button>`;
+        }
+        
+        div.appendChild(infoDiv);
+        
+        const rightDiv = document.createElement('div');
+        rightDiv.style.cssText = 'display: flex; flex-direction: column; align-items: flex-end; gap: 8px;';
+        rightDiv.innerHTML = actionBtnHtml;
+        div.appendChild(rightDiv);
+        
+        div.onclick = () => {
+            currentSelectedSuggestion = sug;
+            document.querySelectorAll('.optimization-sug-item').forEach(el => {
+                el.style.background = defaultBg;
+                el.style.borderColor = defaultBorder;
+            });
+            div.style.background = activeBg;
+            div.style.borderColor = activeBorder;
+            
+            updateComparisonDisplay(sug, results);
+        };
+        
+        listContainer.appendChild(div);
+    });
+    
+    updateComparisonDisplay(currentSelectedSuggestion, results);
+}
+
+function updateComparisonDisplay(sug, results) {
+    if (!sug) return;
+    const tableContainer = document.getElementById('opt-comparison-table-container');
+    if (!tableContainer) return;
+    
+    const orig = sug.original_summary;
+    const opt = sug.optimized_summary;
+    
+    const profitDiff = opt.net_profit - orig.net_profit;
+    const roiDiff = opt.roi - orig.roi;
+    const wrDiff = opt.win_rate - orig.win_rate;
+    const ddDiff = opt.max_drawdown - orig.max_drawdown;
+    const betsDiff = opt.total_bets - orig.total_bets;
+    
+    const profitDiffClass = profitDiff >= 0 ? 'text-success' : 'text-danger';
+    const roiDiffClass = roiDiff >= 0 ? 'text-success' : 'text-danger';
+    const wrDiffClass = wrDiff >= 0 ? 'text-success' : 'text-danger';
+    const ddDiffClass = ddDiff <= 0 ? 'text-success' : 'text-danger';
+    const betsDiffClass = betsDiff >= 0 ? 'text-success' : 'text-danger';
+    
+    const profitDiffText = (profitDiff >= 0 ? '+' : '') + `$${profitDiff.toFixed(2)}`;
+    const roiDiffText = (roiDiff >= 0 ? '+' : '') + `${roiDiff.toFixed(2)}%`;
+    const wrDiffText = (wrDiff >= 0 ? '+' : '') + `${wrDiff.toFixed(1)}%`;
+    const ddDiffText = (ddDiff >= 0 ? '+' : '') + `${ddDiff.toFixed(1)}%`;
+    const betsDiffText = (betsDiff >= 0 ? '+' : '') + betsDiff;
+    
+    tableContainer.innerHTML = `
+        <table class="suggestion-comparison-table" style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.1); text-align: left;">
+                    <th style="padding: 10px 8px; color: var(--text-secondary);">Métrica</th>
+                    <th style="padding: 10px 8px; color: var(--text-secondary);">Original</th>
+                    <th style="padding: 10px 8px; color: var(--text-secondary);">Otimizado</th>
+                    <th style="padding: 10px 8px; color: var(--text-secondary);">Diferença</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                    <td style="padding: 12px 8px; font-weight: 500; color: var(--text-primary);">Lucro Líquido</td>
+                    <td style="padding: 12px 8px; color: var(--text-secondary);">$${orig.net_profit.toFixed(2)}</td>
+                    <td style="padding: 12px 8px; color: #10b981; font-weight: 600;">$${opt.net_profit.toFixed(2)}</td>
+                    <td style="padding: 12px 8px; font-weight: 600;" class="${profitDiffClass}">${profitDiffText}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                    <td style="padding: 12px 8px; font-weight: 500; color: var(--text-primary);">ROI (Yield)</td>
+                    <td style="padding: 12px 8px; color: var(--text-secondary);">${orig.roi.toFixed(2)}%</td>
+                    <td style="padding: 12px 8px; color: #10b981; font-weight: 600;">${opt.roi.toFixed(2)}%</td>
+                    <td style="padding: 12px 8px; font-weight: 600;" class="${roiDiffClass}">${roiDiffText}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                    <td style="padding: 12px 8px; font-weight: 500; color: var(--text-primary);">Taxa de Acerto</td>
+                    <td style="padding: 12px 8px; color: var(--text-secondary);">${orig.win_rate.toFixed(1)}%</td>
+                    <td style="padding: 12px 8px; color: var(--text-secondary);">${opt.win_rate.toFixed(1)}%</td>
+                    <td style="padding: 12px 8px; font-weight: 600;" class="${wrDiffClass}">${wrDiffText}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                    <td style="padding: 12px 8px; font-weight: 500; color: var(--text-primary);">Max Drawdown</td>
+                    <td style="padding: 12px 8px; color: var(--text-secondary);">${orig.max_drawdown.toFixed(1)}%</td>
+                    <td style="padding: 12px 8px; color: #ef4444; font-weight: 600;">${opt.max_drawdown.toFixed(1)}%</td>
+                    <td style="padding: 12px 8px; font-weight: 600;" class="${ddDiffClass}">${ddDiffText}</td>
+                </tr>
+                <tr style="border-bottom: 1px solid rgba(255, 255, 255, 0.05);">
+                    <td style="padding: 12px 8px; font-weight: 500; color: var(--text-primary);">Total Apostas</td>
+                    <td style="padding: 12px 8px; color: var(--text-secondary);">${orig.total_bets}</td>
+                    <td style="padding: 12px 8px; color: var(--text-secondary);">${opt.total_bets}</td>
+                    <td style="padding: 12px 8px; font-weight: 600;" class="${betsDiffClass}">${betsDiffText}</td>
+                </tr>
+            </tbody>
+        </table>
+    `;
+    
+    renderOptComparisonChart(sug, results);
+}
+
+function renderOptComparisonChart(sug, results) {
+    const ctx = document.getElementById('opt-comparison-chart');
+    if (!ctx) return;
+    
+    if (optComparisonChart) {
+        optComparisonChart.destroy();
+    }
+    
+    const origCurve = results.equity_curve || [];
+    const optCurve = sug.optimized_curve || [];
+    
+    const allDates = Array.from(new Set([
+        ...origCurve.map(pt => pt.date),
+        ...optCurve.map(pt => pt.date)
+    ])).sort();
+    
+    const ctxCanvas = ctx.getContext('2d');
+    const gradOrig = ctxCanvas.createLinearGradient(0, 0, 0, 300);
+    gradOrig.addColorStop(0, 'rgba(99, 102, 241, 0.15)');
+    gradOrig.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
+    
+    const gradOpt = ctxCanvas.createLinearGradient(0, 0, 0, 300);
+    gradOpt.addColorStop(0, 'rgba(16, 185, 129, 0.2)');
+    gradOpt.addColorStop(1, 'rgba(16, 185, 129, 0.0)');
+    
+    optComparisonChart = new Chart(ctxCanvas, {
+        type: 'line',
+        data: {
+            labels: allDates,
+            datasets: [
+                {
+                    label: 'Original Strategy ($)',
+                    data: origCurve.map(pt => pt.bankroll),
+                    borderColor: 'rgba(99, 102, 241, 0.6)',
+                    borderWidth: 1.5,
+                    borderDash: [4, 4],
+                    fill: true,
+                    backgroundColor: gradOrig,
+                    tension: 0.15,
+                    pointRadius: allDates.length > 200 ? 0 : 1,
+                    pointHoverRadius: 4
+                },
+                {
+                    label: 'Optimized Strategy ($)',
+                    data: optCurve.map(pt => pt.bankroll),
+                    borderColor: '#10b981',
+                    borderWidth: 2.5,
+                    fill: true,
+                    backgroundColor: gradOpt,
+                    tension: 0.15,
+                    pointRadius: allDates.length > 200 ? 0 : 2,
+                    pointHoverRadius: 5
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#9ca3af',
+                        font: { family: 'Outfit', size: 12 },
+                        usePointStyle: true,
+                        boxWidth: 8
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.02)' },
+                    ticks: {
+                        color: '#9ca3af',
+                        font: { family: 'Outfit', size: 10 },
+                        maxTicksLimit: 12
+                    }
+                },
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: {
+                        color: '#9ca3af',
+                        font: { family: 'Outfit', size: 10 }
+                    }
+                }
+            }
+        }
+    });
+}
+
 
 
 function applyEvSuggestion(val) {
@@ -2947,6 +3263,17 @@ function applyOddsSuggestion(rangeName) {
             toggleCollapsibleSection('advanced-odds-filters');
         }
 
+        // Custom range parser like "1.50-3.00"
+        if (subRange.includes('-') && !subRange.includes('Favoritos') && !subRange.includes('Equilibrado') && !subRange.includes('Baixo') && !subRange.includes('Médio')) {
+            const bounds = subRange.split('-');
+            if (minEl) minEl.value = bounds[0];
+            if (maxEl) maxEl.value = bounds[1];
+            showToast(`Filtro avançado de odds otimizado para ${bounds[0]} a ${bounds[1]}. Rodando simulação...`, "success");
+            appliedOptimizationSuggestions.add(rangeName);
+            runBacktest();
+            return;
+        }
+
         if (subRange.includes('Super Favoritos') || subRange.includes('<=1.50')) {
             if (minEl) minEl.value = "1.51";
         } else if (subRange.includes('Zebras') || subRange.includes('>3.00')) {
@@ -2977,6 +3304,17 @@ function applyOddsSuggestion(rangeName) {
 
     const minInput = document.getElementById('min-odds');
     const maxInput = document.getElementById('max-odds');
+    
+    // Custom range parser like "1.50-3.00"
+    if (rangeName.includes('-') && !rangeName.includes('Favoritos') && !rangeName.includes('Equilibrado') && !rangeName.includes('Baixo') && !rangeName.includes('Médio')) {
+        const bounds = rangeName.split('-');
+        if (minInput) minInput.value = bounds[0];
+        if (maxInput) maxInput.value = bounds[1];
+        showToast(`Filtro de Odds otimizado para ${bounds[0]} a ${bounds[1]}. Rodando simulação...`, "success");
+        appliedOptimizationSuggestions.add(rangeName);
+        runBacktest();
+        return;
+    }
     
     if (rangeName.includes('Super Favoritos') || rangeName.includes('<=1.50')) {
         minInput.value = "1.51";

@@ -28,7 +28,7 @@ def beta_posterior_probability(alpha, beta_param, threshold):
     above_threshold_area = np.sum(kernel[x > threshold])
     return float(above_threshold_area / total_area)
 
-def predict_strategy_sustainability(bets_record, initial_bankroll=1000.0, value_threshold=1.05, staking_rule='fixed', stake_value=10.0, run_monte_carlo=True):
+def predict_strategy_sustainability(bets_record, initial_bankroll=1000.0, value_threshold=1.05, staking_rule='fixed', stake_value=10.0, run_monte_carlo=True, min_odds=1.0, max_odds=50.0):
     """
     Evaluates the sustainability of a backtested strategy.
     
@@ -215,7 +215,7 @@ def predict_strategy_sustainability(bets_record, initial_bankroll=1000.0, value_
     report = generate_ai_report(ml_prob, bayesian_conf, drift, total_bets, roi_first, roi_second)
     
     # 5. Run strategy optimization suggestions
-    suggestions = optimize_strategy_parameters(bets_record, value_threshold, initial_bankroll, staking_rule, stake_value)
+    suggestions = optimize_strategy_parameters(bets_record, value_threshold, initial_bankroll, staking_rule, stake_value, min_odds=min_odds, max_odds=max_odds)
     
     # 6. Run Monte Carlo Simulation
     mc_res = run_monte_carlo_simulation(bets_record, initial_bankroll, staking_rule, stake_value) if run_monte_carlo else None
@@ -327,7 +327,7 @@ def generate_ai_report(ml_prob, bayesian_conf, drift, total_bets, roi_first, roi
 
     return f"{ml_eval} {bayesian_eval} {drift_eval} \n\n**{verdict}**"
 
-def optimize_strategy_parameters(bets_record, current_val_threshold, initial_bankroll=1000.0, staking_rule='fixed', stake_value=10.0):
+def optimize_strategy_parameters(bets_record, current_val_threshold, initial_bankroll=1000.0, staking_rule='fixed', stake_value=10.0, min_odds=1.0, max_odds=50.0):
     """
     Simulates counterfactual scenarios on backtest results to identify
     potential optimizations in odds ranges, EV threshold, and league selection.
@@ -369,113 +369,169 @@ def optimize_strategy_parameters(bets_record, current_val_threshold, initial_ban
     
     suggestions = []
     
-    # 1. EV Trigger Optimization
-    best_ev_trigger = None
-    best_ev_roi = baseline_roi
-    best_ev_profit = baseline_profit
-    best_ev_res = None
-    best_ev_dd = baseline_dd
+    # 1. MDO Grid Search: EV + Odds ranges (to maximize signal efficiency using Flat Staking)
+    best_ev_thresh = current_val_threshold
+    best_min_odds = float(df['odds'].min())
+    best_max_odds = float(df['odds'].max())
+    best_fitness = -9999.0
+    best_flat_res = None
+    best_sub_df = df
+    
+    # Helper to evaluate flat staking ($10 stakes)
+    def evaluate_flat_staking(df_sub):
+        if len(df_sub) == 0:
+            return {'roi': -100.0, 'max_drawdown': 1.0, 'net_profit': -1000.0, 'total_bets': 0}
+        stake = 10.0
+        bankroll = 1000.0
+        peak_bankroll = 1000.0
+        max_drawdown = 0.0
+        wins = 0
+        total_staked = 0.0
+        
+        for row in df_sub.to_dict('records'):
+            odds = float(row['odds'])
+            won = float(row['profit']) > 0
+            total_staked += stake
+            if won:
+                wins += 1
+                profit = stake * (odds - 1.0)
+                bankroll += profit
+            else:
+                profit = -stake
+                bankroll += profit
+            
+            if bankroll > peak_bankroll:
+                peak_bankroll = bankroll
+            dd = (peak_bankroll - bankroll) / peak_bankroll if peak_bankroll > 0 else 0.0
+            if dd > max_drawdown:
+                max_drawdown = dd
+        
+        net_profit = bankroll - 1000.0
+        roi = (net_profit / total_staked * 100) if total_staked > 0 else 0.0
+        return {
+            'roi': roi,
+            'max_drawdown': max_drawdown,
+            'net_profit': net_profit,
+            'total_bets': len(df_sub)
+        }
 
-    # Test increasing the trigger by 0.02, 0.04, 0.06
-    for diff in [0.02, 0.04, 0.06]:
-        opt_trigger = current_val_threshold + diff
-        sub = df[df['ev'] >= opt_trigger]
-        if len(sub) >= 15:  # Must maintain at least 15 bets
-            opt_res = recalculate_sub_backtest(sub, initial_bankroll, staking_rule, stake_value)
+    # Baseline flat staking evaluation
+    flat_baseline = evaluate_flat_staking(df)
+    
+    def get_fitness(flat_res):
+        if flat_res['total_bets'] < 15:
+            return -9999.0
+        dd_val = max(1.0, flat_res['max_drawdown'] * 100.0)
+        import math
+        return (flat_res['roi'] / dd_val) * math.log(flat_res['total_bets'])
+
+    baseline_fitness = get_fitness(flat_baseline)
+    best_fitness = baseline_fitness
+    best_flat_res = flat_baseline
+    
+    # Search grid
+    ev_grid = [round(current_val_threshold + offset, 4) for offset in [0.0, 0.02, 0.04, 0.06, 0.08, 0.10]]
+    min_o_grid = [1.0, 1.2, 1.3, 1.4, 1.5, 1.6, 1.8, 2.0]
+    max_o_grid = [2.5, 3.0, 4.0, 5.0, 8.0, 15.0, 50.0]
+    
+    for ev_t in ev_grid:
+        for min_o in min_o_grid:
+            for max_o in max_o_grid:
+                if min_o >= max_o:
+                    continue
+                ev_t_val = round(ev_t, 4)
+                min_o_val = round(min_o, 4)
+                max_o_val = round(max_o, 4)
+                # filter subset with floating-point tolerance
+                df_sub = df[(df['ev'] >= ev_t_val - 1e-9) & (df['odds'] >= min_o_val - 1e-9) & (df['odds'] <= max_o_val + 1e-9)]
+                
+                # Check significance: must have at least 15 bets and at least 15% of total bets
+                if len(df_sub) < max(15, int(len(df) * 0.15)):
+                    continue
+                
+                flat_res = evaluate_flat_staking(df_sub)
+                fitness = get_fitness(flat_res)
+                
+                if fitness > best_fitness:
+                    best_fitness = fitness
+                    best_ev_thresh = ev_t
+                    best_min_odds = min_o
+                    best_max_odds = max_o
+                    best_flat_res = flat_res
+                    best_sub_df = df_sub
+                    print(f"Grid Update: ev={ev_t}, min={min_o}, max={max_o}, fitness={fitness:.4f}, bets={flat_res['total_bets']}")
+
+    # Let's check if we found a better setup
+    improved = best_fitness > baseline_fitness + 0.05
+    print(f"DEBUG MDO: improved={improved}, best_ev={best_ev_thresh}, best_min={best_min_odds}, min={min_odds}, best_max={best_max_odds}, max={max_odds}, baseline_fit={baseline_fitness:.3f}, best_fit={best_fitness:.3f}, best_roi={best_flat_res['roi']:.2f}%, best_dd={best_flat_res['max_drawdown']*100:.2f}%, best_bets={best_flat_res['total_bets']}, ev_115_count={len(df[df['ev'] >= 1.15])}, ev_115_sub_count={len(df[(df['ev'] >= 1.15) & (df['odds'] >= 1.0) & (df['odds'] <= 50.0)])}")
+    
+    # 1. EV trigger optimization suggestion
+    if improved and best_ev_thresh > current_val_threshold:
+        opt_res = recalculate_sub_backtest(df[df['ev'] >= best_ev_thresh], initial_bankroll, staking_rule, stake_value)
+        if opt_res:
+            opt_roi = opt_res['summary']['roi']
+            roi_diff = opt_roi - baseline_roi
+            dd_diff = opt_res['summary']['max_drawdown'] - (baseline_dd * 100.0)
+            dd_note = f" e reduziria o Drawdown Máximo em {abs(dd_diff):.1f}pp" if dd_diff < -2 else ""
+            
+            suggestions.append({
+                "type": "ev",
+                "text": f"Subir o Gatilho EV de {current_val_threshold:.2f} para {best_ev_thresh:.2f} (otimização pura de sinal). Isso eleva o ROI para {opt_roi:.1f}% (+{roi_diff:.1f}%){dd_note} com base em {opt_res['summary']['total_bets']} apostas de maior qualidade.",
+                "value": round(best_ev_thresh, 2),
+                "original_summary": original_summary,
+                "optimized_summary": opt_res['summary'],
+                "optimized_curve": opt_res['equity_curve']
+            })
+            
+    # 2. Primary odds range suggestion
+    if improved and (best_min_odds > min_odds + 0.05 or best_max_odds < max_odds - 0.5):
+        sub_odds = df[(df['odds'] >= best_min_odds) & (df['odds'] <= best_max_odds)]
+        if len(sub_odds) >= 15:
+            opt_res = recalculate_sub_backtest(sub_odds, initial_bankroll, staking_rule, stake_value)
             if opt_res:
                 opt_roi = opt_res['summary']['roi']
-                opt_profit = opt_res['summary']['net_profit']
-                opt_dd = opt_res['summary']['max_drawdown'] / 100.0
-
-                # Qualify if ROI improves at least 0.5% OR drawdown drops at least 5pp
-                # (0.5% threshold instead of 1.5% because our predictor is now accurate,
-                # not inflated — real compounding will produce even better results)
-                roi_ok = opt_roi > best_ev_roi + 0.5
-                dd_ok = opt_dd < best_ev_dd - 0.05
-                if roi_ok or dd_ok:
-                    best_ev_roi = opt_roi
-                    best_ev_trigger = opt_trigger
-                    best_ev_profit = opt_profit
-                    best_ev_res = opt_res
-                    best_ev_dd = opt_dd
-
-    if best_ev_trigger is not None and best_ev_res:
-        roi_diff = best_ev_roi - baseline_roi
-        dd_diff = best_ev_res['summary']['max_drawdown'] - round(baseline_dd * 100, 2)
-        dd_note = f" e reduziria o Drawdown Máximo em {abs(dd_diff):.1f}pp" if dd_diff < -2 else ""
-        suggestions.append({
-            "type": "ev",
-            "text": f"Subir o Gatilho EV de {current_val_threshold:.2f} para {best_ev_trigger:.2f} filtraria apostas de menor margem. Isso elevaria o ROI para {best_ev_roi:.1f}% (+{roi_diff:.1f}%){dd_note} e realizaria {best_ev_res['summary']['total_bets']} apostas de maior qualidade.",
-            "value": round(best_ev_trigger, 2),
-            "original_summary": original_summary,
-            "optimized_summary": best_ev_res['summary'],
-            "optimized_curve": best_ev_res['equity_curve']
-        })
-        
-    # 2. League Exclusions
+                roi_diff = opt_roi - baseline_roi
+                dd_diff = opt_res['summary']['max_drawdown'] - (baseline_dd * 100.0)
+                dd_note = f" e reduziria o Drawdown Máximo em {abs(dd_diff):.1f}pp" if dd_diff < -2 else ""
+                
+                suggestions.append({
+                    "type": "odds_warning",
+                    "text": f"Limitar as odds ao intervalo de {best_min_odds:.2f} a {best_max_odds:.2f} (otimização pura de sinal). Filtra ruídos extremos de odds baixas ou variância alta. ROI previsto de {opt_roi:.1f}% (+{roi_diff:.1f}%){dd_note}.",
+                    "value": f"{best_min_odds:.2f}-{best_max_odds:.2f}",
+                    "original_summary": original_summary,
+                    "optimized_summary": opt_res['summary'],
+                    "optimized_curve": opt_res['equity_curve']
+                })
+                
+    # 3. League Exclusions (using flat net profit logic)
     leagues_present = df['league'].unique()
     if len(leagues_present) >= 3:
-        league_profits = df.groupby('league')['profit'].sum()
-        bad_leagues = league_profits[league_profits < -5.0].index.tolist()
+        league_stats = []
+        for l in leagues_present:
+            sub_l = df[df['league'] == l]
+            flat_l = evaluate_flat_staking(sub_l)
+            league_stats.append((l, flat_l['net_profit'], len(sub_l)))
+            
+        bad_leagues = [l for l, profit, count in league_stats if profit < -5.0 and count >= 5]
         
         if bad_leagues and len(bad_leagues) < len(leagues_present):
-            sub = df[~df['league'].isin(bad_leagues)]
-            if len(sub) >= 15: # Must maintain at least 15 bets
-                opt_res = recalculate_sub_backtest(sub, initial_bankroll, staking_rule, stake_value)
+            sub_ex = df[~df['league'].isin(bad_leagues)]
+            if len(sub_ex) >= 15:
+                opt_res = recalculate_sub_backtest(sub_ex, initial_bankroll, staking_rule, stake_value)
                 if opt_res:
                     opt_roi = opt_res['summary']['roi']
                     opt_profit = opt_res['summary']['net_profit']
                     profit_improvement = opt_profit - baseline_profit
                     
-                    if profit_improvement > 10.0 or opt_roi > baseline_roi + 1.5:
+                    if profit_improvement > 10.0 or opt_roi > baseline_roi + 1.0:
                         suggestions.append({
                             "type": "leagues",
-                            "text": f"Excluir os campeonatos {', '.join(bad_leagues)} (deficitários no histórico) elevaria o lucro líquido geral em +${profit_improvement:.2f} e o ROI subiria para {opt_roi:.1f}%.",
+                            "text": f"Excluir os campeonatos {', '.join(bad_leagues)} (identificados com retorno negativo plano no laboratório). Eleva o lucro líquido real em +${profit_improvement:.2f} e o ROI para {opt_roi:.1f}%.",
                             "exclude_codes": bad_leagues,
                             "original_summary": original_summary,
                             "optimized_summary": opt_res['summary'],
                             "optimized_curve": opt_res['equity_curve']
                         })
-                        
-    # 3. Odds Range Warnings
-    def get_range_name(odd):
-        if odd <= 1.50: return 'Super Favoritos (<=1.50)'
-        if odd <= 2.00: return 'Favoritos (1.50-2.00)'
-        if odd <= 3.00: return 'Médios (2.00-3.00)'
-        return 'Zebras (>3.00)'
-        
-    df['odds_range'] = df['odds'].apply(get_range_name)
-    range_profits = df.groupby('odds_range')['profit'].sum()
-    
-    for r_name, r_profit in range_profits.items():
-        if r_profit < -15.0:
-            # Exclude this odds range and run a counterfactual sub-backtest
-            if 'Super Favoritos' in r_name:
-                sub = df[df['odds'] > 1.50]
-            elif 'Favoritos (1.50-2.00)' in r_name:
-                sub = df[df['odds'] >= 2.00]
-            elif 'Médios' in r_name:
-                sub = df[df['odds'] <= 2.00]
-            elif 'Zebras' in r_name:
-                sub = df[df['odds'] <= 3.00]
-            else:
-                sub = pd.DataFrame()
-                
-            opt_res = None
-            if len(sub) >= 15:
-                opt_res = recalculate_sub_backtest(sub, initial_bankroll, staking_rule, stake_value)
-                
-            sug = {
-                "type": "odds_warning",
-                "text": f"Evitar apostas na faixa de {r_name} neste mercado. Ela gerou um prejuízo acumulado de -${abs(r_profit):.2f} no histórico, puxando o ROI geral para baixo.",
-                "value": r_name
-            }
-            if opt_res:
-                sug["original_summary"] = original_summary
-                sug["optimized_summary"] = opt_res['summary']
-                sug["optimized_curve"] = opt_res['equity_curve']
-                
-            suggestions.append(sug)
             
     # 4. Cross-market Odds Range Optimization
     cross_markets = [
