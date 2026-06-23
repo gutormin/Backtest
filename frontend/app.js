@@ -7629,7 +7629,7 @@ async function loadHistoryTab() {
         // Load from server
         let serverHistory = [];
         try {
-            const res = await fetch(`${API_BASE_URL}/api/history`);
+            const res = await fetch(`${API_BASE_URL}/api/history?t=${Date.now()}`, { cache: 'no-store' });
             serverHistory = await res.json();
         } catch {}
 
@@ -7738,94 +7738,86 @@ async function loadHistoryTab() {
             card.style.borderLeft = '4px solid var(--primary)';
 
             // Leagues format
-
             let leaguesTxt = "Todas";
-
             if (p.leagues && p.leagues.length > 0) {
-
-                leaguesTxt = p.leagues.length > 3 ? `${p.leagues.slice(0,3).join(', ')} e +${p.leagues.length - 3}` : p.leagues.join(', ');
-
+                const names = p.leagues.map(code => {
+                    const found = window.AVAILABLE_LEAGUES ? window.AVAILABLE_LEAGUES.find(l => l.code === code) : null;
+                    return found ? found.name : code;
+                });
+                leaguesTxt = names.length > 3 ? `${names.slice(0,3).join(', ')} e +${names.length - 3}` : names.join(', ');
             }
 
-            
+            let ruleText = "Desconhecida";
+            if (p.stakingRule === 'fixed') {
+                ruleText = `Fixo ($${p.stakeValue || 10.0})`;
+            } else if (p.stakingRule === 'proportional') {
+                ruleText = `Proporcional (${p.stakeValue || 2.0}%)`;
+            } else if (p.stakingRule === 'kelly') {
+                const frac = p.stakeValue || 0.25;
+                let fracName = "";
+                if (frac === 1) fracName = "Full";
+                else {
+                    const inv = 1 / frac;
+                    fracName = `1/${inv.toFixed(0)}`;
+                }
+                ruleText = `Kelly (${fracName} - ${frac * 100}%)`;
+            }
+
+            let sourceText = "Football-Data CSV";
+            if (p.data_source === 'futpython') {
+                sourceText = "Futpython API";
+            }
 
             card.innerHTML = `
-
                 <div>
-
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-
                         <div style="display: flex; align-items: center; gap: 10px;">
                             <input type="checkbox" class="portfolio-checkbox" value="${item.id}" style="width: 18px; height: 18px; cursor: pointer;">
                             <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
                         </div>
-
                         <span style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">${dateStr}</span>
-
                     </div>
-
                     
-
-                    <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">
-
-                        <div style="margin-bottom: 4px;"><strong>Mercado:</strong> <span style="color:var(--info);">${p.market || 'Desconhecido'}</span></div>
-
-                        <div style="margin-bottom: 4px;"><strong>Ligas:</strong> ${leaguesTxt}</div>
-
+                    <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px;">
+                        <div><strong>Mercado:</strong> <span style="color:var(--info);">${p.market || 'Desconhecido'}</span></div>
+                        <div><strong>Fonte:</strong> <span style="color:#a78bfa;">${sourceText}</span></div>
+                        <div style="grid-column: 1 / -1;"><strong>Ligas:</strong> ${leaguesTxt}</div>
                         <div><strong>Odds:</strong> ${p.minOdds} a ${p.maxOdds}</div>
-
+                        <div><strong>Gestão:</strong> <span style="color:#fbbf24;">${ruleText}</span></div>
                     </div>
-
                     
-
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-
+                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
                         <div>
-
                             <div style="font-size: 11px; color: var(--text-muted);">Win Rate</div>
-
                             <div style="font-size: 14px; font-weight: bold; color: ${s.win_rate != null && s.win_rate >= 50 ? 'var(--success)' : 'var(--warning)'};">${s.win_rate != null ? s.win_rate.toFixed(1) + '%' : '--'}</div>
-
                         </div>
-
                         <div>
-
                             <div style="font-size: 11px; color: var(--text-muted);">Lucro</div>
-
                             <div style="font-size: 14px; font-weight: bold; color: ${s.net_profit != null && s.net_profit >= 0 ? 'var(--success)' : 'var(--danger)'};">${s.net_profit != null ? '$' + s.net_profit.toFixed(2) : '--'}</div>
-
                         </div>
-
                         <div>
-
                             <div style="font-size: 11px; color: var(--text-muted);">ROI</div>
-
                             <div style="font-size: 14px; font-weight: bold; color: ${s.roi != null && s.roi >= 0 ? 'var(--success)' : 'var(--danger)'};">${s.roi != null ? s.roi.toFixed(2) + '%' : '--'}</div>
-
                         </div>
-
                         <div>
-
-                            <div style="font-size: 11px; color: var(--text-muted);">Sharpe</div>
-
-                            <div style="font-size: 14px; font-weight: bold; color: ${s.sharpe_ratio != null && s.sharpe_ratio >= 1 ? 'var(--success)' : 'var(--text-primary)'};">${s.sharpe_ratio != null ? s.sharpe_ratio.toFixed(2) : '--'}</div>
-
+                            <div style="font-size: 11px; color: var(--text-muted);">Drawdown</div>
+                            <div style="font-size: 14px; font-weight: bold; color: var(--danger);">${s.max_drawdown != null ? s.max_drawdown.toFixed(1) + '%' : '--'}</div>
                         </div>
-
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-muted);">Sharpe</div>
+                            <div style="font-size: 14px; font-weight: bold; color: ${s.sharpe_ratio != null && s.sharpe_ratio >= 1 ? 'var(--success)' : 'var(--text-primary)'};">${s.sharpe_ratio != null ? s.sharpe_ratio.toFixed(2) : '--'}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-muted);">Apostas</div>
+                            <div style="font-size: 14px; font-weight: bold; color: var(--text-primary);">${s.total_bets != null ? s.total_bets : '--'}</div>
+                        </div>
                     </div>
-
                 </div>
-
                 
-
                 <div style="display: flex; gap: 10px; margin-top: auto;">
-
                     <button class="btn-clear" onclick="deleteHistoryStrategy('${item.id}')" style="flex: 1; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-trash-can"></i> Excluir</button>
-
                     <button class="btn-scanner" onclick='reloadStrategy(${JSON.stringify(p).replace(/'/g, "&#39;")})' style="flex: 1; justify-content: center;"><i class="fa-solid fa-play"></i> Carregar</button>
-
                 </div>
-
             `;
 
             grid.appendChild(card);
@@ -9369,7 +9361,7 @@ async function loadPortfolio(id) {
         
         // Fallback to fetch if not found in local (rare edge case)
         if (!portfolio) {
-            const res = await fetch(`${API_BASE_URL}/api/history`);
+            const res = await fetch(`${API_BASE_URL}/api/history?t=${Date.now()}`, { cache: 'no-store' });
             const serverHistory = await res.json();
             portfolio = serverHistory.find(h => h.id === id);
         }
