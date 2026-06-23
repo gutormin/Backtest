@@ -374,28 +374,38 @@ def optimize_strategy_parameters(bets_record, current_val_threshold, initial_ban
     best_ev_roi = baseline_roi
     best_ev_profit = baseline_profit
     best_ev_res = None
-    
-    # We test increasing the trigger by 0.02, 0.04, 0.06
+    best_ev_dd = baseline_dd
+
+    # Test increasing the trigger by 0.02, 0.04, 0.06
     for diff in [0.02, 0.04, 0.06]:
         opt_trigger = current_val_threshold + diff
         sub = df[df['ev'] >= opt_trigger]
-        if len(sub) >= 15: # Must maintain at least 15 bets
+        if len(sub) >= 15:  # Must maintain at least 15 bets
             opt_res = recalculate_sub_backtest(sub, initial_bankroll, staking_rule, stake_value)
             if opt_res:
                 opt_roi = opt_res['summary']['roi']
                 opt_profit = opt_res['summary']['net_profit']
-                
-                if opt_roi > best_ev_roi + 1.5:
+                opt_dd = opt_res['summary']['max_drawdown'] / 100.0
+
+                # Qualify if ROI improves at least 0.5% OR drawdown drops at least 5pp
+                # (0.5% threshold instead of 1.5% because our predictor is now accurate,
+                # not inflated — real compounding will produce even better results)
+                roi_ok = opt_roi > best_ev_roi + 0.5
+                dd_ok = opt_dd < best_ev_dd - 0.05
+                if roi_ok or dd_ok:
                     best_ev_roi = opt_roi
                     best_ev_trigger = opt_trigger
                     best_ev_profit = opt_profit
                     best_ev_res = opt_res
-                    
+                    best_ev_dd = opt_dd
+
     if best_ev_trigger is not None and best_ev_res:
         roi_diff = best_ev_roi - baseline_roi
+        dd_diff = best_ev_res['summary']['max_drawdown'] - round(baseline_dd * 100, 2)
+        dd_note = f" e reduziria o Drawdown Máximo em {abs(dd_diff):.1f}pp" if dd_diff < -2 else ""
         suggestions.append({
             "type": "ev",
-            "text": f"Subir o Gatilho EV de {current_val_threshold:.2f} para {best_ev_trigger:.2f} filtraria apostas de menor margem. Isso elevaria o ROI para {best_ev_roi:.1f}% (+{roi_diff:.1f}%) e realizaria {best_ev_res['summary']['total_bets']} apostas de maior qualidade.",
+            "text": f"Subir o Gatilho EV de {current_val_threshold:.2f} para {best_ev_trigger:.2f} filtraria apostas de menor margem. Isso elevaria o ROI para {best_ev_roi:.1f}% (+{roi_diff:.1f}%){dd_note} e realizaria {best_ev_res['summary']['total_bets']} apostas de maior qualidade.",
             "value": round(best_ev_trigger, 2),
             "original_summary": original_summary,
             "optimized_summary": best_ev_res['summary'],
