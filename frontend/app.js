@@ -3179,6 +3179,8 @@ function applyEvSuggestion(val) {
 
         appliedOptimizationSuggestions.add(`ev_${val}`);
 
+        switchTab('tab-laboratory');
+
         runBacktest();
 
     }
@@ -3202,6 +3204,8 @@ function applyLeagueSuggestion(codes) {
     showToast(`Ligas problemáticas removidas. Reexecutando backtest...`, "success");
 
     appliedOptimizationSuggestions.add(`leagues_${JSON.stringify(codes)}`);
+
+    switchTab('tab-laboratory');
 
     runBacktest();
 
@@ -3270,6 +3274,7 @@ function applyOddsSuggestion(rangeName) {
             if (maxEl) maxEl.value = bounds[1];
             showToast(`Filtro avançado de odds otimizado para ${bounds[0]} a ${bounds[1]}. Rodando simulação...`, "success");
             appliedOptimizationSuggestions.add(rangeName);
+            switchTab('tab-laboratory');
             runBacktest();
             return;
         }
@@ -3298,6 +3303,7 @@ function applyOddsSuggestion(rangeName) {
         
         showToast(`Filtro avançado de odds otimizado. Rodando simulação...`, "success");
         appliedOptimizationSuggestions.add(rangeName);
+        switchTab('tab-laboratory');
         runBacktest();
         return;
     }
@@ -3312,6 +3318,7 @@ function applyOddsSuggestion(rangeName) {
         if (maxInput) maxInput.value = bounds[1];
         showToast(`Filtro de Odds otimizado para ${bounds[0]} a ${bounds[1]}. Rodando simulação...`, "success");
         appliedOptimizationSuggestions.add(rangeName);
+        switchTab('tab-laboratory');
         runBacktest();
         return;
     }
@@ -3328,6 +3335,7 @@ function applyOddsSuggestion(rangeName) {
     
     showToast(`Filtro de Odds otimizado para excluir ${rangeName}. Rodando simulação...`, "success");
     appliedOptimizationSuggestions.add(rangeName);
+    switchTab('tab-laboratory');
     runBacktest();
 }
 
