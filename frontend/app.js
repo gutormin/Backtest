@@ -3446,6 +3446,9 @@ function clearDashboard() {
         const oosPanel = document.getElementById('oos-results-panel');
         if (oosPanel) { oosPanel.style.display = 'none'; safeSetHTML('oos-metrics-grid', ''); }
 
+        const driftPanel = document.getElementById('drift-validation-panel');
+        if (driftPanel) { driftPanel.style.display = 'none'; safeSetHTML('drift-validation-content', ''); }
+
         safeSetHTML('ai-checklist-container', `<div class="ai-report-text" style="color: var(--text-muted);">Aguardando a execução do backtest para gerar o checklist.</div>`);
 
         safeSetText('mc-profit-probability', '0.0%');
@@ -6474,15 +6477,33 @@ function renderOosResults(oosSummary, inSampleSummary) {
 
         const sameSign = (isROI >= 0 && oosROI >= 0) || (isROI < 0 && oosROI < 0);
 
-        const degradation = isROI !== 0 ? Math.abs((oosROI - isROI) / Math.abs(isROI)) : 1;
+        const isImproved = oosROI >= isROI;
+
+        let degradation = 0;
+
+        if (!isImproved && isROI !== 0) {
+
+            degradation = Math.abs((isROI - oosROI) / Math.abs(isROI));
+
+        }
 
 
 
-        if (sameSign && degradation <= 0.5) {
+        if (isImproved) {
+
+            badge.className = 'oos-badge oos-pass';
+
+            badge.innerHTML = '<i class="fa-solid fa-circle-arrow-up"></i> Melhorado';
+
+            badge.style.cssText = 'background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);';
+
+        } else if (sameSign && degradation <= 0.5) {
 
             badge.className = 'oos-badge oos-pass';
 
             badge.innerHTML = '<i class="fa-solid fa-check"></i> Consistente';
+
+            badge.style.cssText = '';
 
         } else if (sameSign) {
 
@@ -6490,11 +6511,15 @@ function renderOosResults(oosSummary, inSampleSummary) {
 
             badge.innerHTML = '<i class="fa-solid fa-exclamation"></i> Degradado';
 
+            badge.style.cssText = '';
+
         } else {
 
             badge.className = 'oos-badge oos-fail';
 
             badge.innerHTML = '<i class="fa-solid fa-xmark"></i> Invertido';
+
+            badge.style.cssText = '';
 
         }
 
@@ -6502,7 +6527,72 @@ function renderOosResults(oosSummary, inSampleSummary) {
 
 }
 
-
+function renderDriftValidation(aiAnalysis, results) {
+    const panel = document.getElementById('drift-validation-panel');
+    const container = document.getElementById('drift-validation-content');
+    if (!panel || !container) return;
+    
+    if (!aiAnalysis || aiAnalysis.status === 'insufficient_data') {
+        panel.style.display = 'none';
+        return;
+    }
+    
+    panel.style.display = 'block';
+    
+    const driftRatio = aiAnalysis.drift_ratio;
+    const totalBets = results.summary.total_bets;
+    const oosSummary = aiAnalysis.oos_summary;
+    const oosRoi = oosSummary ? oosSummary.roi : null;
+    const stakeRule = document.getElementById('stake-rule').value;
+    
+    let verdict = 'NEUTRO';
+    let statusClass = 'drift-neutral';
+    let badgeStyle = 'background: rgba(156, 163, 175, 0.15); color: #9ca3af; border: 1px solid rgba(156, 163, 175, 0.3);';
+    let cenarioTitulo = 'Volume de Amostra Reduzido';
+    let recomendacaoText = 'A amostragem de apostas é pequena demais (menos de 120 apostas). O desvio observado na performance de curto prazo pode ser apenas ruído estatístico temporário. Continue acumulando dados.';
+    
+    if (totalBets >= 120) {
+        if (driftRatio >= -3.0) {
+            verdict = 'APROVADO';
+            statusClass = 'drift-approved';
+            badgeStyle = 'background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3);';
+            cenarioTitulo = 'Estabilidade Temporal Confirmada';
+            recomendacaoText = 'Aprovado: O Edge da estratégia é estável e resiliente. O rendimento manteve-se equilibrado entre a primeira e a segunda metades do histórico, indicando que a estratégia não está obsoleta.';
+        } else if (oosRoi !== null && oosRoi >= 0.0) {
+            verdict = 'APROVADO';
+            statusClass = 'drift-warn';
+            badgeStyle = 'background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.3);';
+            cenarioTitulo = 'Distorção de Gestão de Banca Detectada';
+            if (stakeRule !== 'fixed') {
+                recomendacaoText = 'Aprovado com Cautela: Embora o Drift de ROI consolidado seja negativo devido ao crescimento exponencial das stakes (efeito de compounding do Kelly/Proporcional), a validação Fora-da-Amostra (OOS) permanece altamente lucrativa (+ ' + oosRoi.toFixed(1) + '% ROI). O sinal puro do Edge continua ativo. Recomendamos utilizar 0.5x (metade) da stake padrão para controle de variância.';
+            } else {
+                recomendacaoText = 'Aprovado com Cautela: A estratégia apresentou uma perda de rendimento na segunda metade do histórico, mas a validação recente Fora-da-Amostra (OOS) manteve-se lucrativa (+ ' + oosRoi.toFixed(1) + '% ROI). O Edge ainda está ativo. Opere com exposição de capital reduzida.';
+            }
+        } else {
+            verdict = 'REJEITADO';
+            statusClass = 'drift-rejected';
+            badgeStyle = 'background: rgba(239, 68, 68, 0.15); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.3);';
+            cenarioTitulo = 'Perda de Vantagem Matemática (Edge Decay)';
+            recomendacaoText = 'Rejeitado: O mercado se ajustou e a estratégia perdeu o edge matemático. Tanto o histórico recente (Drift) quanto a validação fora da amostra (OOS) estão em declínio. Risco de ruína elevado no longo prazo. Recomendamos não operar com dinheiro real.';
+        }
+    }
+    
+    container.innerHTML = `
+        <div style="background: rgba(255, 255, 255, 0.01); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 8px; padding: 18px; display: grid; grid-template-columns: 140px 1fr; gap: 20px; align-items: center;">
+            <div style="text-align: center; border-right: 1px solid rgba(255, 255, 255, 0.05); padding-right: 20px;">
+                <span style="font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--text-muted); display: block; margin-bottom: 6px; font-weight: 600;">Veredito do Drift</span>
+                <span class="drift-verdict-badge ${statusClass}" style="font-size: 15px; font-weight: bold; padding: 6px 14px; border-radius: 4px; display: inline-block; ${badgeStyle}">${verdict}</span>
+            </div>
+            <div>
+                <h5 style="margin: 0 0 6px 0; font-size: 13.5px; color: var(--text-primary); font-weight: 600; display: flex; align-items: center; gap: 6px;">
+                    <i class="fa-solid fa-circle-exclamation" style="font-size: 12px; color: ${statusClass === 'drift-approved' ? '#10b981' : (statusClass === 'drift-warn' ? '#fbbf24' : (statusClass === 'drift-rejected' ? '#ef4444' : '#9ca3af'))};"></i>
+                    ${cenarioTitulo}
+                </h5>
+                <p style="margin: 0; font-size: 12.5px; color: var(--text-secondary); line-height: 1.45;">${recomendacaoText}</p>
+            </div>
+        </div>
+    `;
+}
 
 // --- Edge Quality Score & Risk Management ---
 
@@ -9001,6 +9091,10 @@ window.renderLaboratoryPanels = function(data, isPortfolio = false) {
     if (typeof renderOosResults === 'function' && data.ai_analysis) {
         const oosSum = data.ai_analysis.oos_summary || null;
         renderOosResults(oosSum, data.summary);
+    }
+
+    if (typeof renderDriftValidation === 'function') {
+        renderDriftValidation(data.ai_analysis, data);
     }
 
     if (typeof renderRiskManagement === 'function') {

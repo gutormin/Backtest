@@ -1390,6 +1390,16 @@
                             </div>
                         </div>
 
+                        <!-- Drift Validation Diagnostic Card -->
+                        <div class="drift-validation-panel" id="drift-validation-panel" style="display: none; margin-bottom: 25px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 25px;">
+                            <h4 style="color: var(--warning); font-family: var(--font-heading); margin-bottom: 15px; display: flex; align-items: center; gap: 8px;">
+                                <i class="fa-solid fa-gauge-high"></i> Diagnóstico de Estabilidade do Edge (Filtro de Drift)
+                            </h4>
+                            <div id="drift-validation-content">
+                                <!-- Populated dynamically -->
+                            </div>
+                        </div>
+
                         <h4 style="margin-bottom: 15px; font-size: 14px; color: var(--text-muted);"><i class="fa-solid fa-list-check"></i> Detalhamento do Score</h4>
                         <div id="eqs-breakdown" class="eqs-breakdown-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px;">
                             <!-- Populated dynamically -->
