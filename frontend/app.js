@@ -7868,19 +7868,26 @@ async function deleteHistoryStrategy(id) {
 
 
 
-function reloadStrategy(params) {
+async function reloadStrategy(params) {
 
     if (!params) return;
 
-    
-
     // Switch to Laboratory Tab
-
     switchTab('tab-laboratory');
 
-    
-
-    // Fill basic fields
+    // Fill data source first and wait for leagues to load
+    if (params.data_source && document.getElementById('data-source-select')) {
+        const dsSelect = document.getElementById('data-source-select');
+        if (dsSelect.value !== params.data_source) {
+            dsSelect.value = params.data_source;
+            if (typeof handleDataSourceChange === 'function') {
+                handleDataSourceChange();
+            }
+            if (typeof loadLeagues === 'function') {
+                await loadLeagues();
+            }
+        }
+    }
 
     // Fill basic fields
     if (params.market) {
@@ -7890,6 +7897,9 @@ function reloadStrategy(params) {
             marketCheckboxes.forEach(cb => {
                 cb.checked = marketsToSelect.includes(cb.value);
             });
+        }
+        if (typeof onMarketSelectionChange === 'function') {
+            onMarketSelectionChange();
         }
     }
     
@@ -7907,6 +7917,7 @@ function reloadStrategy(params) {
             const cb = document.querySelector(`#leagues-checkbox-list input[value="${code}"], input[name="league-group"][value="${code}"], #league-${code}`);
             if (cb) cb.checked = true;
         });
+        if (typeof updateLeagueLabel === 'function') updateLeagueLabel();
     }
     
     // Fill EV and Gestão fields
@@ -7916,16 +7927,25 @@ function reloadStrategy(params) {
     if (params.stakingRule) {
         const srEl = document.getElementById('stake-rule');
         if (srEl) {
-            srEl.value = params.stakingRule;
+            let mappedRule = params.stakingRule;
+            let mappedFraction = params.stakeValue;
+            
+            if (params.stakingRule.startsWith('kelly')) {
+                mappedRule = 'kelly';
+                if (params.stakingRule === 'kelly_half') mappedFraction = 0.5;
+                else if (params.stakingRule === 'kelly_quarter') mappedFraction = 0.25;
+                else if (params.stakingRule === 'kelly_eighth') mappedFraction = 0.125;
+                else if (params.stakingRule === 'kelly_sixteenth') mappedFraction = 0.0625;
+            }
+            
+            srEl.value = mappedRule;
             srEl.dispatchEvent(new Event('change'));
-        }
-    }
-    
-    if (params.stakeValue !== undefined) {
-        if (params.stakingRule === 'kelly' && document.getElementById('kelly-fraction')) {
-            document.getElementById('kelly-fraction').value = params.stakeValue;
-        } else if (document.getElementById('stake-value')) {
-            document.getElementById('stake-value').value = params.stakeValue;
+            
+            if (mappedRule === 'kelly' && document.getElementById('kelly-fraction')) {
+                document.getElementById('kelly-fraction').value = mappedFraction;
+            } else if (document.getElementById('stake-value')) {
+                document.getElementById('stake-value').value = mappedFraction;
+            }
         }
     }
     
@@ -7935,10 +7955,7 @@ function reloadStrategy(params) {
     if (params.out_of_sample !== undefined && document.getElementById('oos-toggle')) document.getElementById('oos-toggle').checked = params.out_of_sample;
     if (params.use_ml !== undefined && document.getElementById('use-ml-toggle')) document.getElementById('use-ml-toggle').checked = params.use_ml;
 
-    
-
     // Run backtest
-
     showToast("Carregando estratégia...", "info");
 
     setTimeout(() => {

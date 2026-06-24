@@ -535,8 +535,17 @@ class ChronologicalBacktester:
             # HARD CAPS for final lambdas to prevent probability artifacts (underflow)
             lambda_home = max(0.5, min(5.0, lambda_home))
             lambda_away = max(0.5, min(5.0, lambda_away))
-            lambda_home_ht = max(0.35, min(2.5, lambda_home_ht))
-            lambda_away_ht = max(0.25, min(2.5, lambda_away_ht))
+            
+            # Safe HT lambda caps
+            if 'lambda_home_ht' in locals() and lambda_home_ht is not None:
+                lambda_home_ht = max(0.35, min(2.5, lambda_home_ht))
+            else:
+                lambda_home_ht = 0.5
+                
+            if 'lambda_away_ht' in locals() and lambda_away_ht is not None:
+                lambda_away_ht = max(0.25, min(2.5, lambda_away_ht))
+            else:
+                lambda_away_ht = 0.4
             
             # Predict outcome probabilities
             max_goals = 8
@@ -2122,6 +2131,17 @@ class ChronologicalBacktester:
             prob_btts_yes = float((1.0 - home_probs[0]) * (1.0 - away_probs[0]))
             
             # HT Probabilities
+            # Safe HT lambda caps
+            if 'lambda_home_ht' in locals() and lambda_home_ht is not None:
+                lambda_home_ht = max(0.35, min(2.5, lambda_home_ht))
+            else:
+                lambda_home_ht = 0.5
+                
+            if 'lambda_away_ht' in locals() and lambda_away_ht is not None:
+                lambda_away_ht = max(0.25, min(2.5, lambda_away_ht))
+            else:
+                lambda_away_ht = 0.4
+                
             home_probs_ht = [math.exp(-lambda_home_ht) * (lambda_home_ht**i) / _FACTORIALS[i] for i in range(max_goals + 1)]
             away_probs_ht = [math.exp(-lambda_away_ht) * (lambda_away_ht**i) / _FACTORIALS[i] for i in range(max_goals + 1)]
             prob_matrix_ht = np.outer(home_probs_ht, away_probs_ht)
