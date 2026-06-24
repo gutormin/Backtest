@@ -729,8 +729,10 @@ def fetch_futpython_data(league_code, start_date, api_key):
     liga = "/".join(parts[1:])
     
     temporadas = [
-        "2022", "2023", "2024", "2025", "2026",
-        "2021-2022", "2022-2023", "2023-2024", "2024-2025", "2025-2026"
+        # Single-year (South American leagues: Brazil, Argentina, Colombia, Chile, etc.)
+        "2025", "2024", "2023", "2022", "2021", "2020",
+        # Biannual (European/Asian leagues)
+        "2025-2026", "2024-2025", "2023-2024", "2022-2023", "2021-2022",
     ]
     base_url = "https://futpythontrader.com.br/api/download"
     dataframes = []
