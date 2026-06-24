@@ -17,40 +17,7 @@
 <link href="styles.css?v=5" rel="stylesheet"/>
 </head>
 <body>
-<div id="debug-log-overlay" style="position: fixed; bottom: 10px; right: 10px; width: 400px; max-height: 200px; overflow-y: auto; background: rgba(0,0,0,0.85); color: #00ff00; font-family: monospace; font-size: 10px; padding: 10px; border-radius: 5px; z-index: 100000; border: 1px solid #333; pointer-events: none;">
-  <strong>Logs do Console:</strong><br>
-</div>
-<script>
-  (function() {
-    function logToOverlay(msg, color) {
-      const overlay = document.getElementById('debug-log-overlay');
-      if (!overlay) return;
-      const item = document.createElement('div');
-      item.style.color = color || '#00ff00';
-      item.style.marginBottom = '2px';
-      item.innerText = '[' + new Date().toLocaleTimeString() + '] ' + msg;
-      overlay.appendChild(item);
-      overlay.scrollTop = overlay.scrollHeight;
-    }
-    window.onerror = function(message, source, lineno, colno, error) {
-      logToOverlay('ERROR: ' + message + ' (' + source + ':' + lineno + ')', '#ff0000');
-      return false;
-    };
-    window.onunhandledrejection = function(event) {
-      logToOverlay('REJECTION: ' + event.reason, '#ff5500');
-    };
-    const originalConsoleError = console.error;
-    console.error = function(...args) {
-      logToOverlay(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), '#ff0000');
-      originalConsoleError.apply(console, args);
-    };
-    const originalConsoleLog = console.log;
-    console.log = function(...args) {
-      logToOverlay(args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '), '#ffffff');
-      originalConsoleLog.apply(console, args);
-    };
-  })();
-</script>
+
 <div class="app-container">
 <!-- Sidebar Controls -->
 <aside class="sidebar">
@@ -2648,7 +2615,7 @@
     </div>
 
     <!-- Custom Script com Cache Buster para evitar problemas de atualização -->
-    <script src="app.js?v=40"></script>
+    <script src="app.js?v=41"></script>
 
 <script>
 window.toggleGroup = function(groupEl, event) {
