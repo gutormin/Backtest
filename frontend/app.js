@@ -7561,13 +7561,10 @@ async function submitSaveStrategy() {
     
 
     const payload = {
-
         name: finalName,
-
         params: lastBacktestParams,
-
-        summary: lastBacktestSummary.summary
-
+        summary: lastBacktestSummary.summary,
+        created_at: new Date().toISOString()
     };
 
 
@@ -7660,8 +7657,12 @@ async function loadHistoryTab() {
         grid.innerHTML = '';
 
         history.forEach(item => {
-
-            const dateStr = new Date(item.created_at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+            // Guarantee correct timezone parsing if it comes from the python backend without Z
+            let dtStr = item.created_at;
+            if (dtStr && dtStr.length === 19 && !dtStr.endsWith('Z')) {
+                dtStr += 'Z';
+            }
+            const dateStr = new Date(dtStr).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
 
             const s = item.summary || {};
 
@@ -7881,46 +7882,58 @@ function reloadStrategy(params) {
 
     // Fill basic fields
 
+    // Fill basic fields
     if (params.market) {
-
-        document.querySelectorAll('input[name="market-group"]').forEach(cb => {
-
-            cb.checked = (cb.value === params.market);
-
-        });
-
+        const marketsToSelect = Array.isArray(params.market) ? params.market : [params.market];
+        const marketCheckboxes = document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]');
+        if (marketCheckboxes.length > 0) {
+            marketCheckboxes.forEach(cb => {
+                cb.checked = marketsToSelect.includes(cb.value);
+            });
+        }
     }
-
     
-
     if (params.minOdds) document.getElementById('min-odds').value = params.minOdds;
-    if (params.maxOdds) document.getElementById('max-odds').value = Math.min(parseFloat(params.maxOdds), 2.50);
-
+    if (params.maxOdds) document.getElementById('max-odds').value = params.maxOdds;
     
-
     if (params.startDate) document.getElementById('start-date').value = params.startDate;
-
     if (params.endDate) document.getElementById('end-date').value = params.endDate;
-
     
-
     if (params.leagues && Array.isArray(params.leagues)) {
-
         // Uncheck all first
-
-        document.querySelectorAll('input[name="league-group"]').forEach(cb => cb.checked = false);
-
+        document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"], input[name="league-group"]').forEach(cb => cb.checked = false);
         // Check saved
-
         params.leagues.forEach(code => {
-
-            const cb = document.getElementById(`league-${code}`);
-
+            const cb = document.querySelector(`#leagues-checkbox-list input[value="${code}"], input[name="league-group"][value="${code}"], #league-${code}`);
             if (cb) cb.checked = true;
-
         });
-
     }
+    
+    // Fill EV and Gestão fields
+    if (params.valueThreshold !== undefined && document.getElementById('val-threshold')) document.getElementById('val-threshold').value = params.valueThreshold;
+    if (params.initialBankroll !== undefined && document.getElementById('init-bankroll')) document.getElementById('init-bankroll').value = params.initialBankroll;
+    
+    if (params.stakingRule) {
+        const srEl = document.getElementById('stake-rule');
+        if (srEl) {
+            srEl.value = params.stakingRule;
+            srEl.dispatchEvent(new Event('change'));
+        }
+    }
+    
+    if (params.stakeValue !== undefined) {
+        if (params.stakingRule === 'kelly' && document.getElementById('kelly-fraction')) {
+            document.getElementById('kelly-fraction').value = params.stakeValue;
+        } else if (document.getElementById('stake-value')) {
+            document.getElementById('stake-value').value = params.stakeValue;
+        }
+    }
+    
+    if (params.oddsSource && document.getElementById('odds-source')) document.getElementById('odds-source').value = params.oddsSource;
+    if (params.exchange_commission !== undefined && document.getElementById('exchange-commission')) document.getElementById('exchange-commission').value = params.exchange_commission;
+    
+    if (params.out_of_sample !== undefined && document.getElementById('oos-toggle')) document.getElementById('oos-toggle').checked = params.out_of_sample;
+    if (params.use_ml !== undefined && document.getElementById('use-ml-toggle')) document.getElementById('use-ml-toggle').checked = params.use_ml;
 
     
 
