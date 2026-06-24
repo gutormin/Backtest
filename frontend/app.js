@@ -7954,7 +7954,20 @@ async function reloadStrategy(params) {
             document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"], input[name="league-group"]').forEach(cb => cb.checked = false);
             // Check saved
             params.leagues.forEach(code => {
-                const cb = document.querySelector(`#leagues-checkbox-list input[value="${code}"], input[name="league-group"][value="${code}"], #league-${code}`);
+                let cb = document.getElementById('league-' + code);
+                if (!cb) {
+                    try {
+                        cb = document.querySelector(`#leagues-checkbox-list input[value="${code}"], input[name="league-group"][value="${code}"]`);
+                    } catch (e) {
+                        const allCbs = document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"], input[name="league-group"]');
+                        for (const input of allCbs) {
+                            if (input.value === code || input.id === 'league-' + code) {
+                                cb = input;
+                                break;
+                            }
+                        }
+                    }
+                }
                 if (cb) cb.checked = true;
             });
             if (typeof updateLeagueLabel === 'function') updateLeagueLabel();
