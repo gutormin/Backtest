@@ -66,16 +66,18 @@ async function lsSyncToServer(localItems) {
     }
 }
 
-function handleDataSourceChange() {
+async function handleDataSourceChange() {
     window.currentDataSource = document.getElementById('data-source-select').value;
     const configDiv = document.getElementById('futpython-config');
     if (window.currentDataSource === 'futpython') {
-        configDiv.style.display = 'block';
+        if (configDiv) configDiv.style.display = 'block';
     } else {
-        configDiv.style.display = 'none';
+        if (configDiv) configDiv.style.display = 'none';
     }
     // Reload leagues
-    if (typeof loadLeagues === 'function') loadLeagues();
+    if (typeof loadLeagues === 'function') {
+        await loadLeagues();
+    }
     
     // Also reload if there's a standalone select somewhere
     const selects = document.querySelectorAll('.league-select');
@@ -86,7 +88,7 @@ function handleDataSourceChange() {
     
     // Also reload calculator leagues
     if (typeof populateCalculatorLeagues === 'function') {
-        populateCalculatorLeagues();
+        await populateCalculatorLeagues();
     }
 }
 
@@ -259,17 +261,17 @@ async function loadLeagues() {
 
 function toggleStakeLabel() {
     const rule = document.getElementById('stake-rule').value;
-    const label = document.getElementById('stake-value-label');
+    const label = document.getElementById('stake-val-label');
     const stakeInput = document.getElementById('stake-value');
     const stakeValGroup = document.getElementById('stake-val-group');
     const kellySliderContainer = document.getElementById('kelly-slider-container');
     
     if (rule === 'fixed') {
-        label.innerText = 'Valor Fixo ($):';
+        if (label) label.innerText = 'Valor Fixo ($):';
         if (stakeValGroup) stakeValGroup.style.display = 'block';
         if (kellySliderContainer) kellySliderContainer.style.display = 'none';
     } else if (rule === 'proportional') {
-        label.innerText = 'Risco na Banca (%):';
+        if (label) label.innerText = 'Risco na Banca (%):';
         if (stakeValGroup) stakeValGroup.style.display = 'block';
         if (kellySliderContainer) kellySliderContainer.style.display = 'none';
     } else {
@@ -7647,6 +7649,7 @@ async function loadHistoryTab() {
 
         // Keep localStorage up-to-date with the merged set
         lsSaveHistory(history);
+        window.loadedHistoryStrategies = history;
 
         if (!history || history.length === 0) {
             grid.innerHTML = '';
@@ -7817,7 +7820,7 @@ async function loadHistoryTab() {
                 
                 <div style="display: flex; gap: 10px; margin-top: auto;">
                     <button class="btn-clear" onclick="deleteHistoryStrategy('${item.id}')" style="flex: 1; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-trash-can"></i> Excluir</button>
-                    <button class="btn-scanner" onclick='reloadStrategy(${JSON.stringify(p).replace(/'/g, "&#39;")})' style="flex: 1; justify-content: center;"><i class="fa-solid fa-play"></i> Carregar</button>
+                    <button class="btn-scanner" onclick="reloadStrategyById('${item.id}')" style="flex: 1; justify-content: center;"><i class="fa-solid fa-play"></i> Carregar</button>
                 </div>
             `;
 
@@ -7868,102 +7871,164 @@ async function deleteHistoryStrategy(id) {
 
 
 
+async function reloadStrategyById(id) {
+    try {
+        console.log("reloadStrategyById called with id:", id);
+        let strategy = null;
+        if (window.loadedHistoryStrategies) {
+            strategy = window.loadedHistoryStrategies.find(s => s.id === id);
+        }
+        if (!strategy) {
+            const local = lsLoadHistory();
+            strategy = local.find(s => s.id === id);
+        }
+        if (!strategy) {
+            throw new Error("Estratégia não encontrada no histórico.");
+        }
+        console.log("Found strategy params:", strategy.params);
+        await reloadStrategy(strategy.params);
+    } catch (err) {
+        console.error("Erro ao carregar estratégia por ID:", err);
+        showToast("Erro ao carregar estratégia: " + err.message, "error");
+    }
+}
+
+window.reloadStrategyById = reloadStrategyById;
+window.reloadStrategy = reloadStrategy;
+
 async function reloadStrategy(params) {
 
-    if (!params) return;
-
-    // Switch to Laboratory Tab
-    switchTab('tab-laboratory');
-
-    // Fill data source first and wait for leagues to load
-    if (params.data_source && document.getElementById('data-source-select')) {
-        const dsSelect = document.getElementById('data-source-select');
-        if (dsSelect.value !== params.data_source) {
-            dsSelect.value = params.data_source;
-            if (typeof handleDataSourceChange === 'function') {
-                handleDataSourceChange();
-            }
-            if (typeof loadLeagues === 'function') {
-                await loadLeagues();
-            }
-        }
+    if (!params) {
+        console.warn("reloadStrategy called without params");
+        return;
     }
 
-    // Fill basic fields
-    if (params.market) {
-        const marketsToSelect = Array.isArray(params.market) ? params.market : [params.market];
-        const marketCheckboxes = document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]');
-        if (marketCheckboxes.length > 0) {
-            marketCheckboxes.forEach(cb => {
-                cb.checked = marketsToSelect.includes(cb.value);
+    try {
+        console.log("reloadStrategy executing with params:", params);
+
+        // Switch to Laboratory Tab
+        switchTab('tab-laboratory');
+
+        // Fill data source first and wait for leagues to load
+        if (params.data_source && document.getElementById('data-source-select')) {
+            const dsSelect = document.getElementById('data-source-select');
+            console.log("Setting data source to:", params.data_source);
+            if (dsSelect.value !== params.data_source) {
+                dsSelect.value = params.data_source;
+                if (typeof handleDataSourceChange === 'function') {
+                    await handleDataSourceChange();
+                }
+            }
+        }
+
+        // Force-load leagues if the checkboxes container is currently empty
+        const leaguesList = document.getElementById('leagues-checkbox-list');
+        const hasLeaguesLoaded = leaguesList && leaguesList.querySelectorAll('input[type="checkbox"]').length > 0;
+        if (!hasLeaguesLoaded && typeof loadLeagues === 'function') {
+            console.log("Leagues not loaded in DOM, calling loadLeagues");
+            await loadLeagues();
+        }
+
+        // Fill basic fields
+        if (params.market) {
+            const marketsToSelect = Array.isArray(params.market) ? params.market : [params.market];
+            const marketCheckboxes = document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]');
+            if (marketCheckboxes.length > 0) {
+                marketCheckboxes.forEach(cb => {
+                    cb.checked = marketsToSelect.includes(cb.value);
+                });
+            }
+            if (typeof onMarketSelectionChange === 'function') {
+                onMarketSelectionChange();
+            }
+        }
+        
+        if (params.minOdds !== undefined) document.getElementById('min-odds').value = params.minOdds;
+        if (params.maxOdds !== undefined) document.getElementById('max-odds').value = params.maxOdds;
+        
+        if (params.startDate) document.getElementById('start-date').value = params.startDate;
+        if (params.endDate) document.getElementById('end-date').value = params.endDate;
+        
+        if (params.leagues && Array.isArray(params.leagues)) {
+            // Uncheck all first
+            document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"], input[name="league-group"]').forEach(cb => cb.checked = false);
+            // Check saved
+            params.leagues.forEach(code => {
+                const cb = document.querySelector(`#leagues-checkbox-list input[value="${code}"], input[name="league-group"][value="${code}"], #league-${code}`);
+                if (cb) cb.checked = true;
             });
+            if (typeof updateLeagueLabel === 'function') updateLeagueLabel();
         }
-        if (typeof onMarketSelectionChange === 'function') {
-            onMarketSelectionChange();
+        
+        // Fill EV and Gestão fields
+        if (params.valueThreshold !== undefined && document.getElementById('val-threshold')) document.getElementById('val-threshold').value = params.valueThreshold;
+        if (params.initialBankroll !== undefined && document.getElementById('init-bankroll')) document.getElementById('init-bankroll').value = params.initialBankroll;
+        
+        if (params.stakingRule) {
+            const srEl = document.getElementById('stake-rule');
+            if (srEl) {
+                let mappedRule = params.stakingRule;
+                let mappedFraction = params.stakeValue;
+                
+                if (params.stakingRule.startsWith('kelly')) {
+                    mappedRule = 'kelly';
+                    if (params.stakingRule === 'kelly_half') mappedFraction = 0.5;
+                    else if (params.stakingRule === 'kelly_quarter') mappedFraction = 0.25;
+                    else if (params.stakingRule === 'kelly_eighth') mappedFraction = 0.125;
+                    else if (params.stakingRule === 'kelly_sixteenth') mappedFraction = 0.0625;
+                }
+                
+                srEl.value = mappedRule;
+                srEl.dispatchEvent(new Event('change'));
+                
+                if (mappedRule === 'kelly' && document.getElementById('kelly-fraction')) {
+                    const kf = document.getElementById('kelly-fraction');
+                    kf.value = mappedFraction;
+                    // Fire input event to trigger UI text update next to slider
+                    kf.dispatchEvent(new Event('input'));
+                } else if (document.getElementById('stake-value')) {
+                    document.getElementById('stake-value').value = mappedFraction;
+                }
+            }
         }
-    }
-    
-    if (params.minOdds) document.getElementById('min-odds').value = params.minOdds;
-    if (params.maxOdds) document.getElementById('max-odds').value = params.maxOdds;
-    
-    if (params.startDate) document.getElementById('start-date').value = params.startDate;
-    if (params.endDate) document.getElementById('end-date').value = params.endDate;
-    
-    if (params.leagues && Array.isArray(params.leagues)) {
-        // Uncheck all first
-        document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"], input[name="league-group"]').forEach(cb => cb.checked = false);
-        // Check saved
-        params.leagues.forEach(code => {
-            const cb = document.querySelector(`#leagues-checkbox-list input[value="${code}"], input[name="league-group"][value="${code}"], #league-${code}`);
-            if (cb) cb.checked = true;
+        
+        if (params.oddsSource && document.getElementById('odds-source')) document.getElementById('odds-source').value = params.oddsSource;
+        if (params.exchange_commission !== undefined && document.getElementById('exchange-commission')) document.getElementById('exchange-commission').value = params.exchange_commission;
+        
+        if (params.out_of_sample !== undefined && document.getElementById('oos-toggle')) document.getElementById('oos-toggle').checked = params.out_of_sample;
+        if (params.use_ml !== undefined && document.getElementById('use-ml-toggle')) document.getElementById('use-ml-toggle').checked = params.use_ml;
+
+        // Clean & set sub-market odds filters (minOddsH, maxOddsH, etc.)
+        const subOddsFields = [
+            { param: 'minOddsH', id: 'min-odds-h' },
+            { param: 'maxOddsH', id: 'max-odds-h' },
+            { param: 'minOddsD', id: 'min-odds-d' },
+            { param: 'maxOddsD', id: 'max-odds-d' },
+            { param: 'minOddsA', id: 'min-odds-a' },
+            { param: 'maxOddsA', id: 'max-odds-a' },
+            { param: 'minOddsOver25', id: 'min-odds-over25' },
+            { param: 'maxOddsOver25', id: 'max-odds-over25' },
+            { param: 'minOddsUnder25', id: 'min-odds-under25' },
+            { param: 'maxOddsUnder25', id: 'max-odds-under25' }
+        ];
+        subOddsFields.forEach(f => {
+            const el = document.getElementById(f.id);
+            if (el) {
+                el.value = (params[f.param] !== undefined && params[f.param] !== null) ? params[f.param] : '';
+            }
         });
-        if (typeof updateLeagueLabel === 'function') updateLeagueLabel();
+
+        // Run backtest
+        showToast("Carregando estratégia...", "info");
+
+        setTimeout(() => {
+            runBacktest(params);
+        }, 100);
+
+    } catch (err) {
+        console.error("Erro ao preencher parâmetros da estratégia:", err);
+        showToast("Erro ao carregar parâmetros da estratégia: " + err.message, "error");
     }
-    
-    // Fill EV and Gestão fields
-    if (params.valueThreshold !== undefined && document.getElementById('val-threshold')) document.getElementById('val-threshold').value = params.valueThreshold;
-    if (params.initialBankroll !== undefined && document.getElementById('init-bankroll')) document.getElementById('init-bankroll').value = params.initialBankroll;
-    
-    if (params.stakingRule) {
-        const srEl = document.getElementById('stake-rule');
-        if (srEl) {
-            let mappedRule = params.stakingRule;
-            let mappedFraction = params.stakeValue;
-            
-            if (params.stakingRule.startsWith('kelly')) {
-                mappedRule = 'kelly';
-                if (params.stakingRule === 'kelly_half') mappedFraction = 0.5;
-                else if (params.stakingRule === 'kelly_quarter') mappedFraction = 0.25;
-                else if (params.stakingRule === 'kelly_eighth') mappedFraction = 0.125;
-                else if (params.stakingRule === 'kelly_sixteenth') mappedFraction = 0.0625;
-            }
-            
-            srEl.value = mappedRule;
-            srEl.dispatchEvent(new Event('change'));
-            
-            if (mappedRule === 'kelly' && document.getElementById('kelly-fraction')) {
-                document.getElementById('kelly-fraction').value = mappedFraction;
-            } else if (document.getElementById('stake-value')) {
-                document.getElementById('stake-value').value = mappedFraction;
-            }
-        }
-    }
-    
-    if (params.oddsSource && document.getElementById('odds-source')) document.getElementById('odds-source').value = params.oddsSource;
-    if (params.exchange_commission !== undefined && document.getElementById('exchange-commission')) document.getElementById('exchange-commission').value = params.exchange_commission;
-    
-    if (params.out_of_sample !== undefined && document.getElementById('oos-toggle')) document.getElementById('oos-toggle').checked = params.out_of_sample;
-    if (params.use_ml !== undefined && document.getElementById('use-ml-toggle')) document.getElementById('use-ml-toggle').checked = params.use_ml;
-
-    // Run backtest
-    showToast("Carregando estratégia...", "info");
-
-    setTimeout(() => {
-
-        runBacktest();
-
-    }, 500);
-
 }
 
 
@@ -8555,60 +8620,103 @@ window.runSteamScan = function() {
 };
 
 
-window.runBacktest = async function() {
-    // --- Portfolio Fix: Restore standard UI panels ---
-    document.getElementById('portfolio-results-panel').style.display = 'none';
-    document.getElementById('standard-metrics-grid').style.display = 'grid';
-    const mainCharts = document.querySelector('.main-charts');
-    if (mainCharts) mainCharts.style.display = 'block';
-    const stakingPanel = document.getElementById('staking-comparison-panel');
-    if (stakingPanel) stakingPanel.style.display = 'block';
-    const quartilesPanel = document.getElementById('quartiles-panel');
-    if (quartilesPanel) quartilesPanel.style.display = 'block';
-    const resultsTableSection = document.querySelector('.results-table-section');
-    if (resultsTableSection) resultsTableSection.style.display = 'block';
-    const chartCards = document.querySelectorAll('.chart-card');
-    chartCards.forEach(c => {
-        if(c.parentElement && c.parentElement.className === 'charts-grid') {
-            c.closest('div[style*="display: grid"]').style.display = 'grid';
-        }
-    });
-
-    const btn = document.getElementById('btn-run-backtest');
-    if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rodando...';
-
-    const leagues = Array.from(document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]:checked')).map(cb => cb.value);
-    const startDate = document.getElementById('start-date').value;
-    const endDate = document.getElementById('end-date').value;
-    const markets = Array.from(document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]:checked')).map(cb => cb.value);
-    
-    const valThreshold = parseFloat(document.getElementById('val-threshold').value) || 1.0;
-    const initialBankroll = parseFloat(document.getElementById('init-bankroll') ? document.getElementById('init-bankroll').value : 1000.0) || 1000.0;
-    const stakeRule = document.getElementById('stake-rule').value;
-    const stakeValue = stakeRule === 'kelly' ? parseFloat(document.getElementById('kelly-fraction').value) || 0.25 : parseFloat(document.getElementById('stake-value').value) || 10.0;
-    const oddsSource = document.getElementById('odds-source').value || 'B365';
-    const minOdds = parseFloat(document.getElementById('min-odds').value) || 1.0;
-    const maxOdds = parseFloat(document.getElementById('max-odds').value) || 2.50;
-    const exchangeCommission = parseFloat(document.getElementById('exchange-commission') ? document.getElementById('exchange-commission').value : 0.0) || 0.0;
-    
-    const oosToggle = document.getElementById('oos-toggle');
-    const oos = oosToggle ? oosToggle.checked : false;
-
-    const useMLToggle = document.getElementById('use-ml-toggle');
-    const useMl = useMLToggle ? useMLToggle.checked : false;
-
-    const minOddsH = document.getElementById('min-odds-h') && document.getElementById('min-odds-h').value ? parseFloat(document.getElementById('min-odds-h').value) : null;
-    const maxOddsH = document.getElementById('max-odds-h') && document.getElementById('max-odds-h').value ? parseFloat(document.getElementById('max-odds-h').value) : null;
-    const minOddsD = document.getElementById('min-odds-d') && document.getElementById('min-odds-d').value ? parseFloat(document.getElementById('min-odds-d').value) : null;
-    const maxOddsD = document.getElementById('max-odds-d') && document.getElementById('max-odds-d').value ? parseFloat(document.getElementById('max-odds-d').value) : null;
-    const minOddsA = document.getElementById('min-odds-a') && document.getElementById('min-odds-a').value ? parseFloat(document.getElementById('min-odds-a').value) : null;
-    const maxOddsA = document.getElementById('max-odds-a') && document.getElementById('max-odds-a').value ? parseFloat(document.getElementById('max-odds-a').value) : null;
-    const minOddsOver25 = document.getElementById('min-odds-over25') && document.getElementById('min-odds-over25').value ? parseFloat(document.getElementById('min-odds-over25').value) : null;
-    const maxOddsOver25 = document.getElementById('max-odds-over25') && document.getElementById('max-odds-over25').value ? parseFloat(document.getElementById('max-odds-over25').value) : null;
-    const minOddsUnder25 = document.getElementById('min-odds-under25') && document.getElementById('min-odds-under25').value ? parseFloat(document.getElementById('min-odds-under25').value) : null;
-    const maxOddsUnder25 = document.getElementById('max-odds-under25') && document.getElementById('max-odds-under25').value ? parseFloat(document.getElementById('max-odds-under25').value) : null;
-
+window.runBacktest = async function(overrideParams) {
     try {
+        // --- Portfolio Fix: Restore standard UI panels ---
+        const pPanel = document.getElementById('portfolio-results-panel');
+        if (pPanel) pPanel.style.display = 'none';
+
+        const smGrid = document.getElementById('standard-metrics-grid');
+        if (smGrid) smGrid.style.display = 'grid';
+
+        const mainCharts = document.querySelector('.main-charts');
+        if (mainCharts) mainCharts.style.display = 'block';
+
+        const stakingPanel = document.getElementById('staking-comparison-panel');
+        if (stakingPanel) stakingPanel.style.display = 'block';
+
+        const quartilesPanel = document.getElementById('quartiles-panel');
+        if (quartilesPanel) quartilesPanel.style.display = 'block';
+
+        const resultsTableSection = document.querySelector('.results-table-section');
+        if (resultsTableSection) resultsTableSection.style.display = 'block';
+
+        const chartCards = document.querySelectorAll('.chart-card');
+        chartCards.forEach(c => {
+            if(c.parentElement && c.parentElement.className === 'charts-grid') {
+                const parentGrid = c.closest('div[style*="display: grid"]');
+                if (parentGrid) parentGrid.style.display = 'grid';
+            }
+        });
+
+        const btn = document.getElementById('btn-run-backtest');
+        if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rodando...';
+
+        let leagues, startDate, endDate, markets, valThreshold, initialBankroll, stakeRule, stakeValue, oddsSource, minOdds, maxOdds, exchangeCommission, oos, useMl;
+        let minOddsH, maxOddsH, minOddsD, maxOddsD, minOddsA, maxOddsA, minOddsOver25, maxOddsOver25, minOddsUnder25, maxOddsUnder25;
+        let dataSource, API_key;
+
+        if (overrideParams) {
+            leagues = overrideParams.leagues || [];
+            startDate = overrideParams.startDate;
+            endDate = overrideParams.endDate;
+            markets = Array.isArray(overrideParams.market) ? overrideParams.market : (overrideParams.market ? [overrideParams.market] : []);
+            valThreshold = overrideParams.valueThreshold !== undefined ? overrideParams.valueThreshold : 1.0;
+            initialBankroll = overrideParams.initialBankroll !== undefined ? overrideParams.initialBankroll : 1000.0;
+            stakeRule = overrideParams.stakingRule || 'fixed';
+            stakeValue = overrideParams.stakeValue !== undefined ? overrideParams.stakeValue : 10.0;
+            oddsSource = overrideParams.oddsSource || 'B365';
+            minOdds = overrideParams.minOdds !== undefined ? overrideParams.minOdds : 1.0;
+            maxOdds = overrideParams.maxOdds !== undefined ? overrideParams.maxOdds : 2.50;
+            exchangeCommission = overrideParams.exchange_commission !== undefined ? overrideParams.exchange_commission : 0.0;
+            oos = overrideParams.out_of_sample !== undefined ? overrideParams.out_of_sample : false;
+            useMl = overrideParams.use_ml !== undefined ? overrideParams.use_ml : false;
+            minOddsH = overrideParams.minOddsH !== undefined ? overrideParams.minOddsH : null;
+            maxOddsH = overrideParams.maxOddsH !== undefined ? overrideParams.maxOddsH : null;
+            minOddsD = overrideParams.minOddsD !== undefined ? overrideParams.minOddsD : null;
+            maxOddsD = overrideParams.maxOddsD !== undefined ? overrideParams.maxOddsD : null;
+            minOddsA = overrideParams.minOddsA !== undefined ? overrideParams.minOddsA : null;
+            maxOddsA = overrideParams.maxOddsA !== undefined ? overrideParams.maxOddsA : null;
+            minOddsOver25 = overrideParams.minOddsOver25 !== undefined ? overrideParams.minOddsOver25 : null;
+            maxOddsOver25 = overrideParams.maxOddsOver25 !== undefined ? overrideParams.maxOddsOver25 : null;
+            minOddsUnder25 = overrideParams.minOddsUnder25 !== undefined ? overrideParams.minOddsUnder25 : null;
+            maxOddsUnder25 = overrideParams.maxOddsUnder25 !== undefined ? overrideParams.maxOddsUnder25 : null;
+            dataSource = overrideParams.data_source || window.currentDataSource;
+            API_key = overrideParams.futpython_api_key || window.futpythonApiKey;
+        } else {
+            leagues = Array.from(document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]:checked')).map(cb => cb.value);
+            startDate = document.getElementById('start-date') ? document.getElementById('start-date').value : '';
+            endDate = document.getElementById('end-date') ? document.getElementById('end-date').value : '';
+            markets = Array.from(document.querySelectorAll('#market-checkboxes-container input[type="checkbox"]:checked')).map(cb => cb.value);
+            
+            valThreshold = parseFloat(document.getElementById('val-threshold') ? document.getElementById('val-threshold').value : 1.0) || 1.0;
+            initialBankroll = parseFloat(document.getElementById('init-bankroll') ? document.getElementById('init-bankroll').value : 1000.0) || 1000.0;
+            stakeRule = document.getElementById('stake-rule') ? document.getElementById('stake-rule').value : 'fixed';
+            stakeValue = stakeRule === 'kelly' ? parseFloat(document.getElementById('kelly-fraction') ? document.getElementById('kelly-fraction').value : 0.25) || 0.25 : parseFloat(document.getElementById('stake-value') ? document.getElementById('stake-value').value : 10.0) || 10.0;
+            oddsSource = document.getElementById('odds-source') ? document.getElementById('odds-source').value : 'B365';
+            minOdds = parseFloat(document.getElementById('min-odds') ? document.getElementById('min-odds').value : 1.0) || 1.0;
+            maxOdds = parseFloat(document.getElementById('max-odds') ? document.getElementById('max-odds').value : 2.50) || 2.50;
+            exchangeCommission = parseFloat(document.getElementById('exchange-commission') ? document.getElementById('exchange-commission').value : 0.0) || 0.0;
+            
+            const oosToggle = document.getElementById('oos-toggle');
+            oos = oosToggle ? oosToggle.checked : false;
+
+            const useMLToggle = document.getElementById('use-ml-toggle');
+            useMl = useMLToggle ? useMLToggle.checked : false;
+
+            minOddsH = document.getElementById('min-odds-h') && document.getElementById('min-odds-h').value ? parseFloat(document.getElementById('min-odds-h').value) : null;
+            maxOddsH = document.getElementById('max-odds-h') && document.getElementById('max-odds-h').value ? parseFloat(document.getElementById('max-odds-h').value) : null;
+            minOddsD = document.getElementById('min-odds-d') && document.getElementById('min-odds-d').value ? parseFloat(document.getElementById('min-odds-d').value) : null;
+            maxOddsD = document.getElementById('max-odds-d') && document.getElementById('max-odds-d').value ? parseFloat(document.getElementById('max-odds-d').value) : null;
+            minOddsA = document.getElementById('min-odds-a') && document.getElementById('min-odds-a').value ? parseFloat(document.getElementById('min-odds-a').value) : null;
+            maxOddsA = document.getElementById('max-odds-a') && document.getElementById('max-odds-a').value ? parseFloat(document.getElementById('max-odds-a').value) : null;
+            minOddsOver25 = document.getElementById('min-odds-over25') && document.getElementById('min-odds-over25').value ? parseFloat(document.getElementById('min-odds-over25').value) : null;
+            maxOddsOver25 = document.getElementById('max-odds-over25') && document.getElementById('max-odds-over25').value ? parseFloat(document.getElementById('max-odds-over25').value) : null;
+            minOddsUnder25 = document.getElementById('min-odds-under25') && document.getElementById('min-odds-under25').value ? parseFloat(document.getElementById('min-odds-under25').value) : null;
+            maxOddsUnder25 = document.getElementById('max-odds-under25') && document.getElementById('max-odds-under25').value ? parseFloat(document.getElementById('max-odds-under25').value) : null;
+            dataSource = window.currentDataSource;
+            API_key = window.futpythonApiKey;
+        }
         const payload = {
             leagues: leagues,
             startDate: startDate,
@@ -8624,8 +8732,8 @@ window.runBacktest = async function() {
             exchange_commission: exchangeCommission,
             out_of_sample: oos,
             use_ml: useMl,
-            data_source: window.currentDataSource,
-            futpython_api_key: window.futpythonApiKey,
+            data_source: dataSource,
+            futpython_api_key: API_key,
             minOddsH: minOddsH,
             maxOddsH: maxOddsH,
             minOddsD: minOddsD,
@@ -8643,6 +8751,9 @@ window.runBacktest = async function() {
             body: JSON.stringify(payload)
         });
         const data = await response.json();
+        console.log("Backtest Response Status:", response.status);
+        console.log("Backtest Response Summary:", JSON.stringify(data.summary || {}));
+        if (data.error) console.error("Backtest Response Error:", data.error);
 
         if (response.ok && !data.error) {
             lastBacktestSummary = data;
