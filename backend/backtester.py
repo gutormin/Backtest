@@ -441,16 +441,22 @@ class ChronologicalBacktester:
                 if pd.isna(avg_h_sot) or avg_h_sot == 0: avg_h_sot = 4.5
                 if pd.isna(avg_a_sot) or avg_a_sot == 0: avg_a_sot = 3.5
                 
-                h_sot_att = (weighted_mean(h_sot_scored, 0.06) / avg_h_sot) if h_sot_scored else 1.0
-                h_sot_def = (weighted_mean(h_sot_conceded, 0.06) / avg_a_sot) if h_sot_conceded else 1.0
-                a_sot_att = (weighted_mean(a_sot_scored, 0.06) / avg_a_sot) if a_sot_scored else 1.0
-                a_sot_def = (weighted_mean(a_sot_conceded, 0.06) / avg_h_sot) if a_sot_conceded else 1.0
+                h_sot_att_raw = (weighted_mean(h_sot_scored, 0.06) / avg_h_sot) if h_sot_scored else 1.0
+                h_sot_def_raw = (weighted_mean(h_sot_conceded, 0.06) / avg_a_sot) if h_sot_conceded else 1.0
+                a_sot_att_raw = (weighted_mean(a_sot_scored, 0.06) / avg_a_sot) if a_sot_scored else 1.0
+                a_sot_def_raw = (weighted_mean(a_sot_conceded, 0.06) / avg_h_sot) if a_sot_conceded else 1.0
+                
+                # Shrinkage
+                h_sot_att = 0.70 * h_sot_att_raw + 0.30 * 1.0
+                h_sot_def = 0.70 * h_sot_def_raw + 0.30 * 1.0
+                a_sot_att = 0.70 * a_sot_att_raw + 0.30 * 1.0
+                a_sot_def = 0.70 * a_sot_def_raw + 0.30 * 1.0
                 
                 # Verify and cap SOT ratings
-                h_sot_att = 1.0 if pd.isna(h_sot_att) else max(0.2, min(4.0, h_sot_att))
-                h_sot_def = 1.0 if pd.isna(h_sot_def) else max(0.2, min(4.0, h_sot_def))
-                a_sot_att = 1.0 if pd.isna(a_sot_att) else max(0.2, min(4.0, a_sot_att))
-                a_sot_def = 1.0 if pd.isna(a_sot_def) else max(0.2, min(4.0, a_sot_def))
+                h_sot_att = 1.0 if pd.isna(h_sot_att) else max(0.4, min(2.5, h_sot_att))
+                h_sot_def = 1.0 if pd.isna(h_sot_def) else max(0.4, min(2.5, h_sot_def))
+                a_sot_att = 1.0 if pd.isna(a_sot_att) else max(0.4, min(2.5, a_sot_att))
+                a_sot_def = 1.0 if pd.isna(a_sot_def) else max(0.4, min(2.5, a_sot_def))
                 
                 exp_sot_home = avg_h_sot * h_sot_att * a_sot_def
                 exp_sot_away = avg_a_sot * a_sot_att * h_sot_def
@@ -482,15 +488,21 @@ class ChronologicalBacktester:
                     if pd.isna(avg_h_xg) or avg_h_xg == 0: avg_h_xg = 1.35
                     if pd.isna(avg_a_xg) or avg_a_xg == 0: avg_a_xg = 1.05
                     
-                    h_xg_att = (weighted_mean(h_xg_scored, 0.06) / avg_h_xg) if h_xg_scored else 1.0
-                    h_xg_def = (weighted_mean(h_xg_conceded, 0.06) / avg_a_xg) if h_xg_conceded else 1.0
-                    a_xg_att = (weighted_mean(a_xg_scored, 0.06) / avg_a_xg) if a_xg_scored else 1.0
-                    a_xg_def = (weighted_mean(a_xg_conceded, 0.06) / avg_h_xg) if a_xg_conceded else 1.0
+                    h_xg_att_raw = (weighted_mean(h_xg_scored, 0.06) / avg_h_xg) if h_xg_scored else 1.0
+                    h_xg_def_raw = (weighted_mean(h_xg_conceded, 0.06) / avg_a_xg) if h_xg_conceded else 1.0
+                    a_xg_att_raw = (weighted_mean(a_xg_scored, 0.06) / avg_a_xg) if a_xg_scored else 1.0
+                    a_xg_def_raw = (weighted_mean(a_xg_conceded, 0.06) / avg_h_xg) if a_xg_conceded else 1.0
                     
-                    h_xg_att = 1.0 if pd.isna(h_xg_att) else max(0.2, min(4.0, h_xg_att))
-                    h_xg_def = 1.0 if pd.isna(h_xg_def) else max(0.2, min(4.0, h_xg_def))
-                    a_xg_att = 1.0 if pd.isna(a_xg_att) else max(0.2, min(4.0, a_xg_att))
-                    a_xg_def = 1.0 if pd.isna(a_xg_def) else max(0.2, min(4.0, a_xg_def))
+                    # Shrinkage
+                    h_xg_att = 0.70 * h_xg_att_raw + 0.30 * 1.0
+                    h_xg_def = 0.70 * h_xg_def_raw + 0.30 * 1.0
+                    a_xg_att = 0.70 * a_xg_att_raw + 0.30 * 1.0
+                    a_xg_def = 0.70 * a_xg_def_raw + 0.30 * 1.0
+                    
+                    h_xg_att = 1.0 if pd.isna(h_xg_att) else max(0.4, min(2.5, h_xg_att))
+                    h_xg_def = 1.0 if pd.isna(h_xg_def) else max(0.4, min(2.5, h_xg_def))
+                    a_xg_att = 1.0 if pd.isna(a_xg_att) else max(0.4, min(2.5, a_xg_att))
+                    a_xg_def = 1.0 if pd.isna(a_xg_def) else max(0.4, min(2.5, a_xg_def))
                     
                     lambda_xg_home = avg_h_xg * h_xg_att * a_xg_def
                     lambda_xg_away = avg_a_xg * a_xg_att * h_xg_def
@@ -519,6 +531,12 @@ class ChronologicalBacktester:
                 elo_factor_a = 2.0 - elo_factor_h
                 lambda_home *= elo_factor_h
                 lambda_away *= elo_factor_a
+                
+            # HARD CAPS for final lambdas to prevent probability artifacts (underflow)
+            lambda_home = max(0.5, min(5.0, lambda_home))
+            lambda_away = max(0.5, min(5.0, lambda_away))
+            lambda_home_ht = max(0.35, min(2.5, lambda_home_ht))
+            lambda_away_ht = max(0.25, min(2.5, lambda_away_ht))
             
             # Predict outcome probabilities
             max_goals = 8

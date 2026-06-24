@@ -135,14 +135,23 @@ class PoissonModel:
         away_grouped = recent_matches.groupby('AwayTeam')
         
         # Home team offensive strength: avg goals scored / league avg goals scored at home
-        home_att = {team: weighted_avg(group, 'FTHG') / avg_home_goals for team, group in home_grouped}
+        home_att_raw = {team: weighted_avg(group, 'FTHG') / avg_home_goals for team, group in home_grouped}
         # Home team defensive strength: avg goals conceded / league avg goals conceded at home
-        home_def = {team: weighted_avg(group, 'FTAG') / avg_away_goals for team, group in home_grouped}
+        home_def_raw = {team: weighted_avg(group, 'FTAG') / avg_away_goals for team, group in home_grouped}
         
         # Away team offensive strength: avg goals scored / league avg goals scored away
-        away_att = {team: weighted_avg(group, 'FTAG') / avg_away_goals for team, group in away_grouped}
+        away_att_raw = {team: weighted_avg(group, 'FTAG') / avg_away_goals for team, group in away_grouped}
         # Away team defensive strength: avg goals conceded / league avg goals conceded away
-        away_def = {team: weighted_avg(group, 'FTHG') / avg_home_goals for team, group in away_grouped}
+        away_def_raw = {team: weighted_avg(group, 'FTHG') / avg_home_goals for team, group in away_grouped}
+        
+        # Apply Shrinkage (Regression to the mean) and Caps
+        def shrink_and_cap(ratings_dict):
+            return {team: max(0.4, min(2.5, 0.70 * val + 0.30 * 1.0)) for team, val in ratings_dict.items()}
+            
+        home_att = shrink_and_cap(home_att_raw)
+        home_def = shrink_and_cap(home_def_raw)
+        away_att = shrink_and_cap(away_att_raw)
+        away_def = shrink_and_cap(away_def_raw)
         
         return home_att, home_def, away_att, away_def, avg_home_goals, avg_away_goals
 
@@ -184,11 +193,19 @@ class PoissonModel:
         home_grouped = recent_matches.groupby('HomeTeam')
         away_grouped = recent_matches.groupby('AwayTeam')
         
-        home_sot_att = {team: weighted_avg(group, 'HST') / avg_home_sot for team, group in home_grouped}
-        home_sot_def = {team: weighted_avg(group, 'AST') / avg_away_sot for team, group in home_grouped}
+        home_sot_att_raw = {team: weighted_avg(group, 'HST') / avg_home_sot for team, group in home_grouped}
+        home_sot_def_raw = {team: weighted_avg(group, 'AST') / avg_away_sot for team, group in home_grouped}
         
-        away_sot_att = {team: weighted_avg(group, 'AST') / avg_away_sot for team, group in away_grouped}
-        away_sot_def = {team: weighted_avg(group, 'HST') / avg_home_sot for team, group in away_grouped}
+        away_sot_att_raw = {team: weighted_avg(group, 'AST') / avg_away_sot for team, group in away_grouped}
+        away_sot_def_raw = {team: weighted_avg(group, 'HST') / avg_home_sot for team, group in away_grouped}
+        
+        def shrink_and_cap(ratings_dict):
+            return {team: max(0.4, min(2.5, 0.70 * val + 0.30 * 1.0)) for team, val in ratings_dict.items()}
+            
+        home_sot_att = shrink_and_cap(home_sot_att_raw)
+        home_sot_def = shrink_and_cap(home_sot_def_raw)
+        away_sot_att = shrink_and_cap(away_sot_att_raw)
+        away_sot_def = shrink_and_cap(away_sot_def_raw)
         
         return {
             'home_sot_att': home_sot_att,
@@ -291,9 +308,9 @@ class PoissonModel:
                 lambda_home *= elo_factor_h
                 lambda_away *= elo_factor_a
                 
-        # Cap goal expectancies to avoid extreme projections
-        lambda_home = max(0.1, min(5.0, lambda_home))
-        lambda_away = max(0.1, min(5.0, lambda_away))
+        # Cap goal expectancies to avoid extreme projections (underflow/overflow probabilities)
+        lambda_home = max(0.5, min(5.0, lambda_home))
+        lambda_away = max(0.5, min(5.0, lambda_away))
         
         # Build score matrix (up to 8 goals each team)
         max_goals = 8
