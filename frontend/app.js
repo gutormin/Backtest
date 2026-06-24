@@ -8678,6 +8678,14 @@ window.runBacktest = async function(overrideParams) {
             initialBankroll = overrideParams.initialBankroll !== undefined ? overrideParams.initialBankroll : 1000.0;
             stakeRule = overrideParams.stakingRule || 'fixed';
             stakeValue = overrideParams.stakeValue !== undefined ? overrideParams.stakeValue : 10.0;
+            if (stakeRule && stakeRule.startsWith('kelly')) {
+                const origRule = stakeRule;
+                stakeRule = 'kelly';
+                if (origRule === 'kelly_half') stakeValue = 0.5;
+                else if (origRule === 'kelly_quarter') stakeValue = 0.25;
+                else if (origRule === 'kelly_eighth') stakeValue = 0.125;
+                else if (origRule === 'kelly_sixteenth') stakeValue = 0.0625;
+            }
             oddsSource = overrideParams.oddsSource || 'B365';
             minOdds = overrideParams.minOdds !== undefined ? overrideParams.minOdds : 1.0;
             maxOdds = overrideParams.maxOdds !== undefined ? overrideParams.maxOdds : 2.50;
