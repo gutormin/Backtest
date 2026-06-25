@@ -135,6 +135,20 @@ async def run_automatic_tips_scan():
                 print("[Scheduler Saved Strategies] Nenhuma estratégia salva encontrada para monitoramento.")
                 return {"status": "skipped", "message": "Nenhuma estratégia salva no histórico."}
                 
+            # Check for active portfolio
+            active_portfolio = next((s for s in saved_strategies if (s.get('type') == 'portfolio' or 'strategy_ids' in s.get('params', {})) and s.get('is_tg_active')), None)
+            
+            if active_portfolio:
+                active_strategy_ids = active_portfolio.get('params', {}).get('strategy_ids', [])
+                strategies_to_process = [s for s in saved_strategies if s.get('id') in active_strategy_ids]
+            else:
+                # If no portfolio is active, process all individual strategies
+                strategies_to_process = [s for s in saved_strategies if s.get('type') != 'portfolio' and 'strategy_ids' not in s.get('params', {})]
+
+            if not strategies_to_process:
+                print("[Scheduler Saved Strategies] Nenhuma estratégia ativa encontrada para monitoramento.")
+                return {"status": "skipped", "message": "Nenhuma estratégia ativa encontrada."}
+                
             poisson = PoissonModel()
             all_leagues = get_all_available_leagues()
             code_to_name = {l['code']: l['name'] for l in all_leagues}
@@ -183,7 +197,7 @@ async def run_automatic_tips_scan():
                 
                 est_odds = estimate_bookmaker_odds(odds_over25, odds_under25, pred['lambda_home'], pred['lambda_away'])
                 
-                for strategy in saved_strategies:
+                for strategy in strategies_to_process:
                     strategy_name = strategy.get('name', 'Estratégia Salva')
                     params = strategy.get('params', {})
                     
@@ -202,9 +216,35 @@ async def run_automatic_tips_scan():
                     value_threshold = float(params.get('valueThreshold') or params.get('valThreshold', 1.05))
                     min_odds = float(params.get('minOdds', 1.0))
                     max_odds = float(params.get('maxOdds', 50.0))
-                    staking_rule = params.get('stakingRule', 'fixed')
-                    stake_value = float(params.get('stakeValue', 10.0))
-                    initial_bankroll = float(params.get('initialBankroll', 1000.0))
+                    
+                    # Override management if active portfolio is present
+                    if active_portfolio:
+                        port_params = active_portfolio.get('params', {})
+                        portfolio_risk = port_params.get('risk_method', 'fixed_2.0')
+                        portfolio_bankroll = float(port_params.get('initial_bankroll', 1000.0))
+                        
+                        if portfolio_risk.startswith('fixed_'):
+                            try:
+                                pct = float(portfolio_risk.split('_')[1])
+                            except:
+                                pct = 2.0
+                            staking_rule = 'fixed'
+                            stake_value = pct
+                        elif portfolio_risk == 'fixed':
+                            staking_rule = 'fixed'
+                            stake_value = 2.0
+                        elif portfolio_risk == 'kelly_quarter':
+                            staking_rule = 'kelly'
+                            stake_value = 0.25
+                        else:
+                            staking_rule = 'fixed'
+                            stake_value = 2.0
+                            
+                        initial_bankroll = portfolio_bankroll
+                    else:
+                        staking_rule = params.get('stakingRule', 'fixed')
+                        stake_value = float(params.get('stakeValue', 10.0))
+                        initial_bankroll = float(params.get('initialBankroll', 1000.0))
                     
                     for market in s_markets:
                         market_prob = 0.0

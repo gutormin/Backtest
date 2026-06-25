@@ -29,6 +29,7 @@ def add_strategy(data: dict):
         "created_at": data.get("created_at") or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "name": data.get("name", "Nova Estratégia"),
         "type": data.get("type", "strategy"),
+        "is_tg_active": data.get("is_tg_active", False),
         "params": data.get("params", {}),
         "summary": data.get("summary", {})
     }

@@ -9623,13 +9623,19 @@ async function savePortfolio() {
     const betsText = document.getElementById('port-metric-bets')?.innerText || '0';
     const drawdownText = document.getElementById('port-metric-dd')?.innerText || '0';
     
+    let riskMethod = document.getElementById('portfolio-risk-method')?.value || 'kelly_quarter';
+    if (riskMethod === 'fixed') {
+        const pct = document.getElementById('portfolio-fixed-stake')?.value || '2.0';
+        riskMethod = `fixed_${pct}`;
+    }
+    
     const portfolioObj = {
         name: name,
         type: 'portfolio',
         created_at: new Date().toISOString(),
         params: {
             strategy_ids: strategyIds,
-            risk_method: document.getElementById('portfolio-risk-method')?.value || 'kelly_quarter',
+            risk_method: riskMethod,
             initial_bankroll: parseFloat(document.getElementById('portfolio-bankroll-input')?.value || 1000)
         },
         summary: {
