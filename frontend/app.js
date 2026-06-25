@@ -8766,6 +8766,7 @@ window.runBacktest = async function(overrideParams) {
             minOddsUnder25: minOddsUnder25,
             maxOddsUnder25: maxOddsUnder25
         };
+        console.log("Backtest Request Payload:", JSON.stringify(payload));
         const response = await fetch('/api/backtest', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
@@ -9319,14 +9320,21 @@ function togglePortfolioStakeInput() {
     }
 }
 
-async function runPortfolioBacktest() {
-    const checkboxes = document.querySelectorAll('.portfolio-checkbox:checked');
-    const strategyIds = Array.from(checkboxes).map(cb => cb.value);
+async function runPortfolioBacktest(overrideStrategyIds) {
+    let strategyIds;
+    if (overrideStrategyIds && overrideStrategyIds.length > 0) {
+        strategyIds = overrideStrategyIds;
+    } else {
+        const checkboxes = document.querySelectorAll('.portfolio-checkbox:checked');
+        strategyIds = Array.from(checkboxes).map(cb => cb.value);
+    }
     
-    if (strategyIds.length === 0) {
+    if (!strategyIds || strategyIds.length === 0) {
         showToast('Selecione pelo menos uma estratégia para rodar o Portfólio.', 'warning');
         return;
     }
+    
+    window.lastPortfolioStrategyIds = strategyIds;
     
     let riskMethod = document.getElementById('portfolio-risk-method').value;
     if (riskMethod === 'fixed') {
@@ -9533,6 +9541,8 @@ async function loadPortfolio(id) {
             return;
         }
         
+        window.lastPortfolioStrategyIds = portfolio.params.strategy_ids;
+        
         document.querySelectorAll('.portfolio-checkbox').forEach(cb => cb.checked = false);
         
         if (portfolio.params && portfolio.params.strategy_ids) {
@@ -9568,13 +9578,15 @@ async function loadPortfolio(id) {
                 if (bk) bk.value = portfolio.params.initial_bankroll;
             }
             
-            showToast(`${foundCount} estratégias do portfólio selecionadas com sucesso.`, 'success');
+            if (foundCount > 0) {
+                showToast(`${foundCount} estratégias do portfólio selecionadas com sucesso.`, 'success');
+            }
             
             // Switch to laboratory tab
             switchTab('tab-laboratory');
             
-            // Automatically run the portfolio
-            runPortfolioBacktest();
+            // Automatically run the portfolio with the strategy IDs
+            runPortfolioBacktest(portfolio.params.strategy_ids);
         }
     } catch (e) {
         console.error(e);
@@ -9583,10 +9595,14 @@ async function loadPortfolio(id) {
 }
 
 async function savePortfolio() {
-    const checkboxes = document.querySelectorAll('.portfolio-checkbox:checked');
-    const strategyIds = Array.from(checkboxes).map(cb => cb.value);
+    let strategyIds = window.lastPortfolioStrategyIds;
     
-    if (strategyIds.length === 0) {
+    if (!strategyIds || strategyIds.length === 0) {
+        const checkboxes = document.querySelectorAll('.portfolio-checkbox:checked');
+        strategyIds = Array.from(checkboxes).map(cb => cb.value);
+    }
+    
+    if (!strategyIds || strategyIds.length === 0) {
         showToast('Selecione pelo menos uma estratégia para salvar no portfólio.', 'warning');
         return;
     }
