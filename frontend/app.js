@@ -9787,12 +9787,35 @@ async function toggleActivePortfolio(id) {
         
         if (res.ok) {
             const data = await res.json();
+            
+            // Synchronize local state and localStorage directly to avoid any caching/timing issues
+            const history = lsLoadHistory();
+            const target = history.find(x => x.id === id);
+            if (target) {
+                const newStatus = !!data.is_tg_active;
+                target.is_tg_active = newStatus;
+                
+                // Only one portfolio can be active at a time, deactivate all other portfolios
+                if (newStatus) {
+                    history.forEach(x => {
+                        if (x.id !== id && (x.type === 'portfolio' || (x.params && x.params.strategy_ids))) {
+                            x.is_tg_active = false;
+                        }
+                    });
+                }
+                
+                lsSaveHistory(history);
+                window.loadedHistoryStrategies = history;
+            }
+            
             if (data.is_tg_active) {
                 showToast('Portfólio ativado! O robô do Telegram usará a banca e gestão deste portfólio.', 'success');
             } else {
                 showToast('Portfólio desativado.', 'success');
             }
-            loadHistoryTab(); // Refresh the history view
+            
+            // Re-render the grid immediately with the updated local state
+            applyHistoryFilters();
         } else {
             showToast('Falha ao alterar o status do portfólio.', 'error');
         }
