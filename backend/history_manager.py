@@ -15,7 +15,18 @@ def load_history():
     ensure_history_dir()
     try:
         with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            history = json.load(f)
+        
+        # Retrospective migration: ensure portfolios have type = 'portfolio'
+        modified = False
+        for s in history:
+            if s.get('type') != 'portfolio' and 'strategy_ids' in s.get('params', {}):
+                s['type'] = 'portfolio'
+                modified = True
+        if modified:
+            save_history(history)
+            
+        return history
     except Exception:
         return []
 
@@ -23,12 +34,16 @@ def add_strategy(data: dict):
     history = load_history()
     
     provided_id = data.get("id")
+    inferred_type = data.get("type", "strategy")
+    if 'strategy_ids' in data.get("params", {}):
+        inferred_type = "portfolio"
+        
     entry = {
         # Respect client-provided ID so localStorage sync works correctly
         "id": provided_id if provided_id else str(uuid.uuid4()),
         "created_at": data.get("created_at") or datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "name": data.get("name", "Nova Estratégia"),
-        "type": data.get("type", "strategy"),
+        "type": inferred_type,
         "is_tg_active": data.get("is_tg_active", False),
         "params": data.get("params", {}),
         "summary": data.get("summary", {})
