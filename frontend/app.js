@@ -7651,183 +7651,7 @@ async function loadHistoryTab() {
         lsSaveHistory(history);
         window.loadedHistoryStrategies = history;
 
-        if (!history || history.length === 0) {
-            grid.innerHTML = '';
-            emptyState.style.display = 'block';
-            return;
-        }
-
-        grid.innerHTML = '';
-
-        history.forEach(item => {
-            // Guarantee correct timezone parsing if it comes from the python backend without Z
-            let dtStr = item.created_at;
-            if (dtStr && !dtStr.endsWith('Z') && !dtStr.includes('+')) {
-                // If it contains a timezone-naive ISO string from Python, append 'Z' to treat as UTC
-                dtStr += 'Z';
-            }
-            const dateStr = new Date(dtStr).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
-
-            const s = item.summary || {};
-
-            const p = item.params || {};
-
-            
-
-            const card = document.createElement('div');
-
-            card.className = 'eval-card glassmorphism';
-
-            card.style.display = 'flex';
-
-            card.style.flexDirection = 'column';
-
-            card.style.justifyContent = 'space-between';
-
-            if (item.type === 'portfolio' || (p && p.strategy_ids)) {
-                // Portfolio Card
-                card.style.borderLeft = '4px solid #8b5cf6';
-                const isActive = item.is_tg_active === true;
-                const activeBadge = isActive ? `<span style="font-size: 11px; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3);"><i class="fa-brands fa-telegram"></i> Ativo no Robô</span>` : '';
-                const btnActiveHtml = isActive ? 
-                    `<button class="btn-clear" onclick="toggleActivePortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; color: var(--text-primary); background: rgba(255,255,255,0.05);"><i class="fa-solid fa-bell-slash"></i> Desativar</button>` :
-                    `<button class="btn-scanner" onclick="toggleActivePortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; margin: 0; background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #10b981;"><i class="fa-brands fa-telegram"></i> Ativar no Robô</button>`;
-
-                card.innerHTML = `
-                    <div>
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                            <div style="display: flex; flex-direction: column; gap: 5px;">
-                                <div style="display: flex; align-items: center; gap: 10px;">
-                                    <i class="fa-solid fa-layer-group" style="color: #8b5cf6; font-size: 18px;"></i>
-                                    <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
-                                </div>
-                                <div>${activeBadge}</div>
-                            </div>
-                            <span style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">${dateStr}</span>
-                        </div>
-                        
-                        <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">
-                            <div style="margin-bottom: 4px;"><strong>Tipo:</strong> <span style="color:#8b5cf6;">Portfólio Combinado</span></div>
-                            <div style="margin-bottom: 4px;"><strong>Estratégias:</strong> ${p.strategy_ids ? p.strategy_ids.length : 0} combinadas</div>
-                        </div>
-                        
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                            <div>
-                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Win Rate</div>
-                                <div style="font-size: 15px; font-weight: 700; color: ${s.win_rate > 50 ? 'var(--success)' : 'var(--text-primary)'};">${s.win_rate}%</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Lucro</div>
-                                <div style="font-size: 15px; font-weight: 700; color: ${s.net_profit > 0 ? 'var(--success)' : 'var(--danger)'};">$${s.net_profit}</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">ROI</div>
-                                <div style="font-size: 15px; font-weight: 700; color: ${s.roi > 0 ? 'var(--success)' : 'var(--danger)'};">${s.roi}%</div>
-                            </div>
-                            <div>
-                                <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Drawdown</div>
-                                <div style="font-size: 15px; font-weight: 700; color: var(--danger);">${s.max_drawdown}%</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; flex-wrap: wrap;">
-                        <button class="btn-clear" onclick="deleteHistoryStrategy('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; color: var(--danger);"><i class="fa-solid fa-trash"></i> Excluir</button>
-                        <button class="btn-scanner" onclick="loadPortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; margin: 0; background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #fff;"><i class="fa-solid fa-check-square"></i> Abrir</button>
-                        ${btnActiveHtml}
-                    </div>
-                `;
-                grid.appendChild(card);
-                return; // next iteration
-            }
-            
-            card.style.borderLeft = '4px solid var(--primary)';
-
-            // Leagues format
-            let leaguesTxt = "Todas";
-            if (p.leagues && p.leagues.length > 0) {
-                const names = p.leagues.map(code => {
-                    const found = window.AVAILABLE_LEAGUES ? window.AVAILABLE_LEAGUES.find(l => l.code === code) : null;
-                    return found ? found.name : code;
-                });
-                leaguesTxt = names.length > 3 ? `${names.slice(0,3).join(', ')} e +${names.length - 3}` : names.join(', ');
-            }
-
-            let ruleText = "Desconhecida";
-            if (p.stakingRule === 'fixed') {
-                ruleText = `Fixo ($${p.stakeValue || 10.0})`;
-            } else if (p.stakingRule === 'proportional') {
-                ruleText = `Proporcional (${p.stakeValue || 2.0}%)`;
-            } else if (p.stakingRule === 'kelly') {
-                const frac = p.stakeValue || 0.25;
-                let fracName = "";
-                if (frac === 1) fracName = "Full";
-                else {
-                    const inv = 1 / frac;
-                    fracName = `1/${inv.toFixed(0)}`;
-                }
-                ruleText = `Kelly (${fracName} - ${frac * 100}%)`;
-            }
-
-            let sourceText = "Football-Data CSV";
-            if (p.data_source === 'futpython') {
-                sourceText = "Futpython API";
-            }
-
-            card.innerHTML = `
-                <div>
-                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
-                        <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="checkbox" class="portfolio-checkbox" value="${item.id}" style="width: 18px; height: 18px; cursor: pointer;">
-                            <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
-                        </div>
-                        <span style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">${dateStr}</span>
-                    </div>
-                    
-                    <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px;">
-                        <div><strong>Mercado:</strong> <span style="color:var(--info);">${p.market || 'Desconhecido'}</span></div>
-                        <div><strong>Fonte:</strong> <span style="color:#a78bfa;">${sourceText}</span></div>
-                        <div style="grid-column: 1 / -1;"><strong>Ligas:</strong> ${leaguesTxt}</div>
-                        <div><strong>Odds:</strong> ${p.minOdds} a ${p.maxOdds}</div>
-                        <div><strong>Gestão:</strong> <span style="color:#fbbf24;">${ruleText}</span></div>
-                    </div>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted);">Win Rate</div>
-                            <div style="font-size: 14px; font-weight: bold; color: ${s.win_rate != null && s.win_rate >= 50 ? 'var(--success)' : 'var(--warning)'};">${s.win_rate != null ? s.win_rate.toFixed(1) + '%' : '--'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted);">Lucro</div>
-                            <div style="font-size: 14px; font-weight: bold; color: ${s.net_profit != null && s.net_profit >= 0 ? 'var(--success)' : 'var(--danger)'};">${s.net_profit != null ? '$' + s.net_profit.toFixed(2) : '--'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted);">ROI</div>
-                            <div style="font-size: 14px; font-weight: bold; color: ${s.roi != null && s.roi >= 0 ? 'var(--success)' : 'var(--danger)'};">${s.roi != null ? s.roi.toFixed(2) + '%' : '--'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted);">Drawdown</div>
-                            <div style="font-size: 14px; font-weight: bold; color: var(--danger);">${s.max_drawdown != null ? s.max_drawdown.toFixed(1) + '%' : '--'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted);">Sharpe</div>
-                            <div style="font-size: 14px; font-weight: bold; color: ${s.sharpe_ratio != null && s.sharpe_ratio >= 1 ? 'var(--success)' : 'var(--text-primary)'};">${s.sharpe_ratio != null ? s.sharpe_ratio.toFixed(2) : '--'}</div>
-                        </div>
-                        <div>
-                            <div style="font-size: 11px; color: var(--text-muted);">Apostas</div>
-                            <div style="font-size: 14px; font-weight: bold; color: var(--text-primary);">${s.total_bets != null ? s.total_bets : '--'}</div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div style="display: flex; gap: 10px; margin-top: auto;">
-                    <button class="btn-clear" onclick="deleteHistoryStrategy('${item.id}')" style="flex: 1; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-trash-can"></i> Excluir</button>
-                    <button class="btn-scanner" onclick="reloadStrategyById('${item.id}')" style="flex: 1; justify-content: center;"><i class="fa-solid fa-play"></i> Carregar</button>
-                </div>
-            `;
-
-            grid.appendChild(card);
-
-        });
+        applyHistoryFilters();
 
         
 
@@ -7841,7 +7665,292 @@ async function loadHistoryTab() {
 
 }
 
+function applyHistoryFilters() {
+    if (!window.loadedHistoryStrategies) return;
 
+    let items = [...window.loadedHistoryStrategies];
+
+    // 1. Filter by Type
+    const filterType = document.getElementById('history-filter-type')?.value || 'all';
+    if (filterType === 'strategy') {
+        items = items.filter(x => x.type !== 'portfolio' && (!x.params || !x.params.strategy_ids));
+    } else if (filterType === 'portfolio') {
+        items = items.filter(x => x.type === 'portfolio' || (x.params && x.params.strategy_ids));
+    }
+
+    // 2. Filter by Market
+    const filterMarket = document.getElementById('history-filter-market')?.value || 'all';
+    if (filterMarket !== 'all') {
+        items = items.filter(x => {
+            const p = x.params || {};
+            if (x.type === 'portfolio' || p.strategy_ids) {
+                // If it is a portfolio, check if any strategy in loaded history matches
+                const subIds = p.strategy_ids || [];
+                const subStrategies = window.loadedHistoryStrategies.filter(sub => subIds.includes(sub.id));
+                return subStrategies.some(sub => {
+                    const subMarket = sub.params?.market;
+                    if (Array.isArray(subMarket)) return subMarket.includes(filterMarket);
+                    return subMarket === filterMarket;
+                });
+            } else {
+                const mk = p.market;
+                if (Array.isArray(mk)) return mk.includes(filterMarket);
+                return mk === filterMarket;
+            }
+        });
+    }
+
+    // 3. Filter by Search Query (name / league / market)
+    const searchQuery = document.getElementById('history-filter-search')?.value.toLowerCase().trim() || '';
+    if (searchQuery) {
+        items = items.filter(x => {
+            const name = (x.name || '').toLowerCase();
+            const p = x.params || {};
+            
+            // Check leagues
+            let leaguesStr = '';
+            if (p.leagues && p.leagues.length > 0) {
+                leaguesStr = p.leagues.map(code => {
+                    const found = window.AVAILABLE_LEAGUES ? window.AVAILABLE_LEAGUES.find(l => l.code === code) : null;
+                    return found ? found.name : code;
+                }).join(', ').toLowerCase();
+            }
+
+            // Check markets
+            let marketsStr = '';
+            if (p.market) {
+                marketsStr = (Array.isArray(p.market) ? p.market.join(', ') : p.market).toLowerCase();
+            }
+
+            // Check sub-strategies leagues/markets if portfolio
+            if (x.type === 'portfolio' || p.strategy_ids) {
+                const subIds = p.strategy_ids || [];
+                const subStrategies = window.loadedHistoryStrategies.filter(sub => subIds.includes(sub.id));
+                const subLeagues = subStrategies.map(sub => {
+                    if (sub.params?.leagues) {
+                        return sub.params.leagues.map(code => {
+                            const found = window.AVAILABLE_LEAGUES ? window.AVAILABLE_LEAGUES.find(l => l.code === code) : null;
+                            return found ? found.name : code;
+                        }).join(' ');
+                    }
+                    return '';
+                }).join(' ').toLowerCase();
+                
+                const subMarkets = subStrategies.map(sub => {
+                    if (sub.params?.market) {
+                        return Array.isArray(sub.params.market) ? sub.params.market.join(' ') : sub.params.market;
+                    }
+                    return '';
+                }).join(' ').toLowerCase();
+
+                return name.includes(searchQuery) || subLeagues.includes(searchQuery) || subMarkets.includes(searchQuery);
+            }
+
+            return name.includes(searchQuery) || leaguesStr.includes(searchQuery) || marketsStr.includes(searchQuery);
+        });
+    }
+
+    // 4. Sort By
+    const sortBy = document.getElementById('history-sort-by')?.value || 'date-desc';
+    items.sort((a, b) => {
+        const sA = a.summary || {};
+        const sB = b.summary || {};
+        
+        switch (sortBy) {
+            case 'date-desc':
+                return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+            case 'date-asc':
+                return new Date(a.created_at || 0) - new Date(b.created_at || 0);
+            case 'name-asc':
+                return (a.name || '').localeCompare(b.name || '');
+            case 'profit-desc':
+                return (sB.net_profit || 0) - (sA.net_profit || 0);
+            case 'winrate-desc':
+                return (sB.win_rate || 0) - (sA.win_rate || 0);
+            case 'roi-desc':
+                return (sB.roi || 0) - (sA.roi || 0);
+            default:
+                return 0;
+        }
+    });
+
+    renderHistoryGrid(items);
+}
+
+function renderHistoryGrid(history) {
+    const grid = document.getElementById('history-grid');
+    const emptyState = document.getElementById('history-empty');
+    if (!grid) return;
+
+    if (!history || history.length === 0) {
+        grid.innerHTML = '';
+        emptyState.style.display = 'block';
+        return;
+    }
+    emptyState.style.display = 'none';
+    grid.innerHTML = '';
+
+    history.forEach(item => {
+        // Guarantee correct timezone parsing if it comes from the python backend without Z
+        let dtStr = item.created_at;
+        if (dtStr && !dtStr.endsWith('Z') && !dtStr.includes('+')) {
+            // If it contains a timezone-naive ISO string from Python, append 'Z' to treat as UTC
+            dtStr += 'Z';
+        }
+        const dateStr = new Date(dtStr).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
+        const s = item.summary || {};
+        const p = item.params || {};
+
+        const card = document.createElement('div');
+        card.className = 'eval-card glassmorphism';
+        card.style.display = 'flex';
+        card.style.flexDirection = 'column';
+        card.style.justifyContent = 'space-between';
+
+        if (item.type === 'portfolio' || (p && p.strategy_ids)) {
+            // Portfolio Card
+            card.style.borderLeft = '4px solid #8b5cf6';
+            const isActive = item.is_tg_active === true;
+            const activeBadge = isActive ? `<span style="font-size: 11px; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3);"><i class="fa-brands fa-telegram"></i> Ativo no Robô</span>` : '';
+            const btnActiveHtml = isActive ? 
+                `<button class="btn-clear" onclick="toggleActivePortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; color: var(--text-primary); background: rgba(255,255,255,0.05);"><i class="fa-solid fa-bell-slash"></i> Desativar</button>` :
+                `<button class="btn-scanner" onclick="toggleActivePortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; margin: 0; background: rgba(16, 185, 129, 0.2); border-color: #10b981; color: #10b981;"><i class="fa-brands fa-telegram"></i> Ativar no Robô</button>`;
+
+            card.innerHTML = `
+                <div>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                        <div style="display: flex; flex-direction: column; gap: 5px;">
+                            <div style="display: flex; align-items: center; gap: 10px;">
+                                <i class="fa-solid fa-layer-group" style="color: #8b5cf6; font-size: 18px;"></i>
+                                <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
+                            </div>
+                            <div>${activeBadge}</div>
+                        </div>
+                        <span style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">${dateStr}</span>
+                    </div>
+                    
+                    <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">
+                        <div style="margin-bottom: 4px;"><strong>Tipo:</strong> <span style="color:#8b5cf6;">Portfólio Combinado</span></div>
+                        <div style="margin-bottom: 4px;"><strong>Estratégias:</strong> ${p.strategy_ids ? p.strategy_ids.length : 0} combinadas</div>
+                    </div>
+                    
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Win Rate</div>
+                            <div style="font-size: 15px; font-weight: 700; color: ${s.win_rate > 50 ? 'var(--success)' : 'var(--text-primary)'};">${s.win_rate}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Lucro</div>
+                            <div style="font-size: 15px; font-weight: 700; color: ${s.net_profit > 0 ? 'var(--success)' : 'var(--danger)'};">$${s.net_profit}</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">ROI</div>
+                            <div style="font-size: 15px; font-weight: 700; color: ${s.roi > 0 ? 'var(--success)' : 'var(--danger)'};">${s.roi}%</div>
+                        </div>
+                        <div>
+                            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Drawdown</div>
+                            <div style="font-size: 15px; font-weight: 700; color: var(--danger);">${s.max_drawdown}%</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; flex-wrap: wrap;">
+                    <button class="btn-clear" onclick="deleteHistoryStrategy('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; color: var(--danger);"><i class="fa-solid fa-trash"></i> Excluir</button>
+                    <button class="btn-scanner" onclick="loadPortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; margin: 0; background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #fff;"><i class="fa-solid fa-check-square"></i> Abrir</button>
+                    ${btnActiveHtml}
+                </div>
+            `;
+            grid.appendChild(card);
+            return;
+        }
+
+        card.style.borderLeft = '4px solid var(--primary)';
+
+        // Leagues format
+        let leaguesTxt = "Todas";
+        if (p.leagues && p.leagues.length > 0) {
+            const names = p.leagues.map(code => {
+                const found = window.AVAILABLE_LEAGUES ? window.AVAILABLE_LEAGUES.find(l => l.code === code) : null;
+                return found ? found.name : code;
+            });
+            leaguesTxt = names.length > 3 ? `${names.slice(0,3).join(', ')} e +${names.length - 3}` : names.join(', ');
+        }
+
+        let ruleText = "Desconhecida";
+        if (p.stakingRule === 'fixed') {
+            ruleText = `Fixo ($${p.stakeValue || 10.0})`;
+        } else if (p.stakingRule === 'proportional') {
+            ruleText = `Proporcional (${p.stakeValue || 2.0}%)`;
+        } else if (p.stakingRule === 'kelly') {
+            const frac = p.stakeValue || 0.25;
+            let fracName = "";
+            if (frac === 1) fracName = "Full";
+            else {
+                const inv = 1 / frac;
+                fracName = `1/${inv.toFixed(0)}`;
+            }
+            ruleText = `Kelly (${fracName} - ${frac * 100}%)`;
+        }
+
+        let sourceText = "Football-Data CSV";
+        if (p.data_source === 'futpython') {
+            sourceText = "Futpython API";
+        }
+
+        card.innerHTML = `
+            <div>
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <input type="checkbox" class="portfolio-checkbox" value="${item.id}" style="width: 18px; height: 18px; cursor: pointer;">
+                        <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
+                    </div>
+                    <span style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">${dateStr}</span>
+                </div>
+                
+                <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary); display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px;">
+                    <div><strong>Mercado:</strong> <span style="color:var(--info);">${p.market || 'Desconhecido'}</span></div>
+                    <div><strong>Fonte:</strong> <span style="color:#a78bfa;">${sourceText}</span></div>
+                    <div style="grid-column: 1 / -1;"><strong>Ligas:</strong> ${leaguesTxt}</div>
+                    <div><strong>Odds:</strong> ${p.minOdds} a ${p.maxOdds}</div>
+                    <div><strong>Gestão:</strong> <span style="color:#fbbf24;">${ruleText}</span></div>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Win Rate</div>
+                        <div style="font-size: 14px; font-weight: bold; color: ${s.win_rate != null && s.win_rate >= 50 ? 'var(--success)' : 'var(--warning)'};">${s.win_rate != null ? s.win_rate.toFixed(1) + '%' : '--'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Lucro</div>
+                        <div style="font-size: 14px; font-weight: bold; color: ${s.net_profit != null && s.net_profit >= 0 ? 'var(--success)' : 'var(--danger)'};">${s.net_profit != null ? '$' + s.net_profit.toFixed(2) : '--'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">ROI</div>
+                        <div style="font-size: 14px; font-weight: bold; color: ${s.roi != null && s.roi >= 0 ? 'var(--success)' : 'var(--danger)'};">${s.roi != null ? s.roi.toFixed(2) + '%' : '--'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Drawdown</div>
+                        <div style="font-size: 14px; font-weight: bold; color: var(--danger);">${s.max_drawdown != null ? s.max_drawdown.toFixed(1) + '%' : '--'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Sharpe</div>
+                        <div style="font-size: 14px; font-weight: bold; color: ${s.sharpe_ratio != null && s.sharpe_ratio >= 1 ? 'var(--success)' : 'var(--text-primary)'};">${s.sharpe_ratio != null ? s.sharpe_ratio.toFixed(2) : '--'}</div>
+                    </div>
+                    <div>
+                        <div style="font-size: 11px; color: var(--text-muted);">Apostas</div>
+                        <div style="font-size: 14px; font-weight: bold; color: var(--text-primary);">${s.total_bets != null ? s.total_bets : '--'}</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-top: auto;">
+                <button class="btn-clear" onclick="deleteHistoryStrategy('${item.id}')" style="flex: 1; justify-content: center; color: var(--danger); border-color: rgba(239, 68, 68, 0.2);"><i class="fa-solid fa-trash-can"></i> Excluir</button>
+                <button class="btn-scanner" onclick="reloadStrategyById('${item.id}')" style="flex: 1; justify-content: center;"><i class="fa-solid fa-play"></i> Carregar</button>
+            </div>
+        `;
+        grid.appendChild(card);
+    });
+}
 
 async function deleteHistoryStrategy(id) {
 

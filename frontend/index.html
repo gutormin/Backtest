@@ -2488,6 +2488,62 @@
 
             </div>
 
+            <!-- History Filter and Sort Panel -->
+            <div class="glassmorphism" style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap; padding: 15px; margin-bottom: 20px; border-radius: var(--border-radius); background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.05);">
+                <!-- Filter by Type -->
+                <div style="display: flex; flex-direction: column; gap: 5px; min-width: 150px;">
+                    <label style="font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Visualizar</label>
+                    <select id="history-filter-type" onchange="applyHistoryFilters()" style="background-color: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); padding: 8px 12px; font-size: 13px; outline: none; height: 38px;">
+                        <option value="all">Todos (Estratégias e Portfólios)</option>
+                        <option value="strategy">Apenas Estratégias</option>
+                        <option value="portfolio">Apenas Portfólios</option>
+                    </select>
+                </div>
+                
+                <!-- Filter by Market -->
+                <div style="display: flex; flex-direction: column; gap: 5px; min-width: 150px;">
+                    <label style="font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Mercado</label>
+                    <select id="history-filter-market" onchange="applyHistoryFilters()" style="background-color: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); padding: 8px 12px; font-size: 13px; outline: none; height: 38px;">
+                        <option value="all">Todos os Mercados</option>
+                        <option value="home">Mandante (1)</option>
+                        <option value="away">Visitante (2)</option>
+                        <option value="draw">Empate (X)</option>
+                        <option value="btts_yes">BTTS Sim</option>
+                        <option value="btts_no">BTTS Não</option>
+                        <option value="over15">Over 1.5</option>
+                        <option value="over25">Over 2.5</option>
+                        <option value="under25">Under 2.5</option>
+                        <option value="over35">Over 3.5</option>
+                        <option value="under35">Under 3.5</option>
+                        <option value="lay_home">Contra Mandante (X2)</option>
+                        <option value="lay_away">Contra Visitante (1X)</option>
+                        <option value="lay_draw">Contra Empate (12)</option>
+                    </select>
+                </div>
+
+                <!-- Filter by League Search -->
+                <div style="display: flex; flex-direction: column; gap: 5px; flex-grow: 1; min-width: 180px;">
+                    <label style="font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Buscar Liga / Nome</label>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <input id="history-filter-search" type="text" placeholder="Ex: Serie A, Ucrânia, BTTS..." oninput="applyHistoryFilters()" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); padding: 8px 12px 8px 32px; font-size: 13px; outline: none; height: 38px;" />
+                        <i class="fa-solid fa-magnifying-glass" style="position: absolute; left: 12px; color: var(--text-muted); font-size: 13px;"></i>
+                    </div>
+                </div>
+
+                <!-- Sort By -->
+                <div style="display: flex; flex-direction: column; gap: 5px; min-width: 180px;">
+                    <label style="font-size: 11px; color: var(--text-secondary); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Ordenar por</label>
+                    <select id="history-sort-by" onchange="applyHistoryFilters()" style="background-color: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); padding: 8px 12px; font-size: 13px; outline: none; height: 38px;">
+                        <option value="date-desc">Mais Recentes</option>
+                        <option value="date-asc">Mais Antigos</option>
+                        <option value="name-asc">Nome (A - Z)</option>
+                        <option value="profit-desc">Lucro (Maior primeiro)</option>
+                        <option value="winrate-desc">Win Rate (Maior primeiro)</option>
+                        <option value="roi-desc">ROI (Maior primeiro)</option>
+                    </select>
+                </div>
+            </div>
+
             <div id="history-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;">
                 <!-- Cards renderizados dinamicamente pelo JS -->
             </div>
@@ -2615,7 +2671,7 @@
     </div>
 
     <!-- Custom Script com Cache Buster para evitar problemas de atualização -->
-    <script src="app.js?v=45"></script>
+    <script src="app.js?v=46"></script>
 
 <script>
 window.toggleGroup = function(groupEl, event) {
