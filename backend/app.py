@@ -1314,6 +1314,21 @@ from datetime import datetime
 def api_get_history():
     return load_history()
 
+@app.get("/api/debug_db")
+def api_debug_db():
+    try:
+        import os
+        from .history_manager import load_history
+        h = load_history()
+        return {
+            "file_exists": os.path.exists("data/history_strategies.json"),
+            "file_size": os.path.getsize("data/history_strategies.json") if os.path.exists("data/history_strategies.json") else 0,
+            "items_count": len(h),
+            "items": [{"id": x.get("id"), "name": x.get("name"), "type": x.get("type"), "created_at": x.get("created_at")} for x in h]
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 @app.post("/api/history")
 def api_save_history(payload: dict):
     try:

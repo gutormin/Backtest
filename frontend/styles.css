@@ -5,6 +5,8 @@
     --bg-base: #0a0b10;
     --bg-surface: rgba(18, 20, 29, 0.7);
     --bg-surface-hover: rgba(26, 29, 41, 0.85);
+    --bg-dark: #12141d;
+    --bg-darker: #0a0b10;
     
     --primary: #6366f1;
     --primary-glow: rgba(99, 102, 241, 0.35);
@@ -204,6 +206,11 @@ input[type="number"]:focus,
 select:focus {
     border-color: var(--border-color-focus);
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+select option {
+    background-color: #12141d !important;
+    color: #f3f4f6 !important;
 }
 
 /* Leagues Checkbox Container */
