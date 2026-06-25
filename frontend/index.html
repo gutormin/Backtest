@@ -2484,6 +2484,9 @@
                     <input type="number" id="portfolio-fixed-stake" value="2.0" step="0.1" min="0.1" max="100" style="display: none; width: 80px; background-color: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: var(--border-radius-sm); padding: 8px; font-size: 13px; height: 38px;" title="Porcentagem Fixa">
                     <button class="btn-scanner" onclick="runPortfolioBacktest()" style="background: var(--primary); border-color: var(--primary); color: white; padding: 8px 15px; margin-top: 0; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado</button>
                     <button class="btn-clear" onclick="loadHistoryTab()" style="padding: 8px 15px;"><i class="fa-solid fa-rotate-right"></i> Atualizar</button>
+                    <button class="btn-clear" onclick="exportHistory()" style="padding: 8px 15px; background: rgba(52, 211, 153, 0.1); border-color: rgb(52, 211, 153); color: rgb(52, 211, 153);" title="Exportar Histórico para arquivo JSON"><i class="fa-solid fa-download"></i> Exportar</button>
+                    <button class="btn-clear" onclick="triggerImportHistory()" style="padding: 8px 15px; background: rgba(99, 102, 241, 0.1); border-color: rgb(99, 102, 241); color: rgb(99, 102, 241);" title="Importar Histórico de arquivo JSON"><i class="fa-solid fa-upload"></i> Importar</button>
+                    <input type="file" id="import-history-file" style="display: none;" onchange="importHistory(event)" accept=".json" />
                 </div>
 
             </div>
@@ -2671,7 +2674,7 @@
     </div>
 
     <!-- Custom Script com Cache Buster para evitar problemas de atualização -->
-    <script src="app.js?v=49"></script>
+    <script src="app.js?v=50"></script>
 
 <script>
 window.toggleGroup = function(groupEl, event) {

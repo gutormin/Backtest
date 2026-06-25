@@ -9815,3 +9815,81 @@ async function toggleActivePortfolio(id) {
         showToast('Erro ao alterar status.', 'error');
     }
 }
+
+function exportHistory() {
+    const history = lsLoadHistory();
+    if (!history || history.length === 0) {
+        showToast('Nenhum item no histórico para exportar.', 'warning');
+        return;
+    }
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(history, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    const dateStr = new Date().toISOString().slice(0, 10);
+    downloadAnchor.setAttribute("download", `historico_estrategias_${dateStr}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
+    showToast('Histórico exportado com sucesso!', 'success');
+}
+
+function triggerImportHistory() {
+    const input = document.getElementById('import-history-file');
+    if (input) input.click();
+}
+
+async function importHistory(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async function(e) {
+        try {
+            const imported = JSON.parse(e.target.result);
+            if (!Array.isArray(imported)) {
+                showToast('Arquivo inválido. Deve ser um array JSON de estratégias.', 'error');
+                return;
+            }
+            
+            // Load current history
+            const current = lsLoadHistory();
+            
+            let addedCount = 0;
+            let updatedCount = 0;
+            
+            for (const item of imported) {
+                if (!item.id || !item.name) continue;
+                
+                // Add to local list
+                const idx = current.findIndex(x => x.id === item.id);
+                if (idx >= 0) {
+                    current[idx] = item;
+                    updatedCount++;
+                } else {
+                    current.unshift(item);
+                    addedCount++;
+                }
+            }
+            
+            // Save to localStorage
+            lsSaveHistory(current);
+            window.loadedHistoryStrategies = current;
+            
+            // Sync all to server
+            showToast(`Sincronizando ${addedCount + updatedCount} itens com o servidor...`, 'info');
+            await lsSyncToServer(current);
+            
+            showToast(`Importação concluída: ${addedCount} novos, ${updatedCount} atualizados!`, 'success');
+            
+            // Reload tab
+            await loadHistoryTab();
+            
+            // Clear file input
+            event.target.value = '';
+        } catch (err) {
+            console.error(err);
+            showToast('Erro ao ler ou processar o arquivo JSON.', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
