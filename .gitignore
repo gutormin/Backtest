@@ -37,3 +37,6 @@ test_*.txt
 compare_backtests.py
 verify_blend_fix.py
 compare_bets_detailed.py
+
+# Backups
+backups/

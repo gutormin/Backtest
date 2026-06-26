@@ -238,5 +238,29 @@
         "profit_margin": 1.07,
         "status": "Pendente",
         "created_at": "2026-06-21 18:42:48"
+    },
+    {
+        "id": "b1ab72d1-5409-4f78-b82f-94aa7d4e27d0",
+        "match": "Curaçao vs Ivory Coast",
+        "date": "25/06/2026 20:00",
+        "profit_margin": 1.15,
+        "status": "Pendente",
+        "created_at": "2026-06-25 12:12:56"
+    },
+    {
+        "id": "0be60547-fe7a-47f1-94a0-60d2565c8097",
+        "match": "Paraguay vs Australia",
+        "date": "26/06/2026 02:00",
+        "profit_margin": 2.14,
+        "status": "Pendente",
+        "created_at": "2026-06-25 22:13:11"
+    },
+    {
+        "id": "6894d775-095c-4495-8289-79f58b0527e8",
+        "match": "Samsung Lions vs KT Wiz",
+        "date": "26/06/2026 09:30",
+        "profit_margin": 1.25,
+        "status": "Pendente",
+        "created_at": "2026-06-26 06:13:29"
     }
 ]

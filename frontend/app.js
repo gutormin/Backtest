@@ -1,3 +1,16 @@
+// Import modular functions
+import { showToast, switchTab, toggleGroup, toggleStakeLabel, formatCurrency, formatPct } from './js/utils.js';
+import { checkDatabaseStatus, syncDatabase, loadLeagues, fetchServerHistory, saveToServer, deleteFromServer, toggleServerActiveState } from './js/api.js';
+
+// Bind imports to window so index.html and dynamic elements can call them
+window.showToast = showToast;
+window.switchTab = switchTab;
+window.toggleGroup = toggleGroup;
+window.toggleStakeLabel = toggleStakeLabel;
+window.checkDatabaseStatus = checkDatabaseStatus;
+window.syncDatabase = syncDatabase;
+window.loadLeagues = loadLeagues;
+
 // Global variables to store Chart instances
 
 let equityChart = null;
@@ -23,6 +36,7 @@ let lastBacktestParams = null;
 let appliedOptimizationSuggestions = new Set(); // Track applied suggestions to prevent re-rendering
 
 const API_BASE_URL = window.location.origin;
+window.API_BASE_URL = API_BASE_URL;
 window.currentDataSource = 'footballdata';
 window.futpythonApiKey = 'cmqa6oz0p01i1wq6lzxknltmd';
 
@@ -34,37 +48,15 @@ window.futpythonApiKey = 'cmqa6oz0p01i1wq6lzxknltmd';
 // ============================================================
 const LS_HISTORY_KEY = 'predictive_history_v3';
 
-function lsLoadHistory() {
-    try { return JSON.parse(localStorage.getItem(LS_HISTORY_KEY) || '[]'); } catch { return []; }
-}
 
-function lsSaveHistory(data) {
-    try { localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(data)); } catch {}
-}
 
-function lsAddItem(item) {
-    const h = lsLoadHistory();
-    const idx = h.findIndex(x => x.id === item.id);
-    if (idx >= 0) h[idx] = item; else h.unshift(item);
-    lsSaveHistory(h);
-}
 
-function lsDeleteItem(id) {
-    lsSaveHistory(lsLoadHistory().filter(x => x.id !== id));
-}
 
-async function lsSyncToServer(localItems) {
-    // Re-POST any local items not present on server (after Render redeployment)
-    for (const item of localItems) {
-        try {
-            await fetch(`${API_BASE_URL}/api/history`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(item)
-            });
-        } catch {}
-    }
-}
+
+
+
+
+
 
 async function handleDataSourceChange() {
     window.currentDataSource = document.getElementById('data-source-select').value;
@@ -98,7 +90,7 @@ function saveFutpythonKey(val) {
 }
 
 
-document.addEventListener('DOMContentLoaded', () => {
+function runInitApp() {
     // Sync currentDataSource with whatever the browser restored in the select
     const sourceSelect = document.getElementById('data-source-select');
     if (sourceSelect) {
@@ -121,12 +113,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Close modal when clicking outside of modal container
     const modal = document.getElementById('match-details-modal');
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            closeMatchDetailsModal();
-        }
-    });
-});
+    if (modal) {
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                closeMatchDetailsModal();
+            }
+        });
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runInitApp);
+} else {
+    runInitApp();
+}
 
 async function initApp() {
     await checkDatabaseStatus();
@@ -148,137 +148,15 @@ async function initApp() {
     }
 }
 
-// Display Toast Notifications
-function showToast(message, type = 'info') {
-    const toast = document.getElementById('toast');
-    const icon = document.getElementById('toast-icon');
-    const msgSpan = document.getElementById('toast-message');
-    
-    // Set icon classes based on type
-    icon.className = 'fa-solid';
-    if (type === 'success') {
-        icon.classList.add('fa-circle-check');
-        toast.className = 'toast show success';
-    } else if (type === 'error') {
-        icon.classList.add('fa-circle-xmark');
-        toast.className = 'toast show error';
-    } else {
-        icon.classList.add('fa-circle-info');
-        toast.className = 'toast show info';
-    }
-    
-    msgSpan.innerText = message;
-    
-    // Hide toast after 4 seconds
-    setTimeout(() => {
-        toast.classList.remove('show');
-    }, 4000);
-}
 
-// Fetch database status and update header stats
-async function checkDatabaseStatus() {
-    const badge = document.getElementById('db-status-badge');
-    const timeSpan = document.getElementById('db-update-time');
-    
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/status`);
-        if (!res.ok) throw new Error("Status query failed");
-        
-        const data = await res.json();
-        
-        if (data.synced && data.files_count > 0) {
-            badge.innerText = `${data.files_count} Campeonatos`;
-            badge.className = 'badge badge-success';
-            timeSpan.innerText = `Último Sync: ${data.last_updated}`;
-        } else {
-            badge.innerText = 'Sem Dados';
-            badge.className = 'badge badge-error';
-            timeSpan.innerText = 'Por favor, sincronize os dados.';
-            showToast("A base de dados de odds está vazia. Clique em 'Sincronizar'!", "info");
-        }
-    } catch (err) {
-        console.error("Error fetching db status:", err);
-        badge.innerText = 'Desconectado';
-        badge.className = 'badge badge-error';
-        timeSpan.innerText = 'Não foi possível conectar ao servidor.';
-    }
-}
 
-// Sync database triggers download in backend
-async function syncDatabase() {
-    const btn = document.getElementById('btn-sync-db');
-    btn.classList.add('spinning');
-    btn.disabled = true;
-    
-    const source = document.getElementById('db-sync-source').value || 'csv';
-    showToast(`Baixando odds e resultados históricos via ${source === 'api' ? 'API DataFootball' : 'Football-Data'}... Isso pode levar de 1 a 2 minutos.`, "info");
-    
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/sync?source=${source}`, { method: 'POST' });
-        if (!res.ok) throw new Error("Sync failed");
-        
-        showToast("Dados sincronizados com sucesso!", "success");
-        await checkDatabaseStatus();
-    } catch (err) {
-        console.error(err);
-        showToast("Falha ao sincronizar dados. Tente novamente.", "error");
-    } finally {
-        btn.classList.remove('spinning');
-        btn.disabled = false;
-    }
-}
 
-// Fetch available leagues and populate form list
-async function loadLeagues() {
-    const listContainer = document.getElementById('leagues-checkbox-list');
-    listContainer.innerHTML = '';
-    
-    try {
-        const res = await fetch(`${API_BASE_URL}/api/leagues?source=${window.currentDataSource}&t=${Date.now()}`, { cache: 'no-store' });
-        if (!res.ok) throw new Error("Failed to load leagues");
-        const leagues = await res.json();
-        
-        window.AVAILABLE_LEAGUES = leagues;
-        
-        // Sort leagues: European seasonal first, then extra international
-        leagues.sort((a, b) => a.name.localeCompare(b.name));
-        
-        leagues.forEach(league => {
-            const item = document.createElement('div');
-            item.className = 'league-item';
-            
-            // Check default major leagues
-            const checked = ['E0', 'SP1', 'I1', 'D1', 'F1', 'BRA'].includes(league.code) ? 'checked' : '';
-            
-            item.innerHTML = `<input type="checkbox" id="league-${league.code}" value="${league.code}" ${checked}><label for="league-${league.code}">${league.name}</label>`;
-            listContainer.appendChild(item);
-        });
-    } catch (err) {
-        listContainer.innerHTML = '<div class="text-center text-loss">Falha ao carregar as ligas.</div>';
-        showToast("Erro ao carregar a lista de ligas do backend.", "error");
-    }
-}
 
-function toggleStakeLabel() {
-    const rule = document.getElementById('stake-rule').value;
-    const label = document.getElementById('stake-val-label');
-    const stakeInput = document.getElementById('stake-value');
-    const stakeValGroup = document.getElementById('stake-val-group');
-    const kellySliderContainer = document.getElementById('kelly-slider-container');
-    
-    if (rule === 'fixed') {
-        if (label) label.innerText = 'Valor Fixo ($):';
-        if (stakeValGroup) stakeValGroup.style.display = 'block';
-        if (kellySliderContainer) kellySliderContainer.style.display = 'none';
-    } else if (rule === 'proportional') {
-        if (label) label.innerText = 'Risco na Banca (%):';
-        if (stakeValGroup) stakeValGroup.style.display = 'block';
-        if (kellySliderContainer) kellySliderContainer.style.display = 'none';
-    } else {
-        if (stakeValGroup) stakeValGroup.style.display = 'none';
-        if (kellySliderContainer) kellySliderContainer.style.display = 'flex';
-    }
-}
+
+
+
+
+
 
 function updateCharts(dates, bankrolls, fixedData, propData, kellyData, leagueStats, monthlyStats, oddsStats, optimizedData) {
     if (equityChart) equityChart.destroy();
@@ -5595,68 +5473,6 @@ function exportTipsToCsv() {
 
 
 
-function renderProbValue(prob, barType) {
-
-    if (prob === undefined || isNaN(prob)) return '-';
-
-    let colorClass = 'bar-draw'; // default
-
-    
-
-    if (['home', 'ht_home', 'over', 'over15', 'over25', 'over35', 'over45', 'over55', 'btts_yes', 'yes', 'ht_over05', 'ht_over15'].includes(barType)) {
-
-        colorClass = 'bar-home';
-
-    } else if (['away', 'ht_away', 'under', 'under25', 'under35', 'under45', 'under55', 'btts_no', 'no', 'ht_under05', 'ht_under15'].includes(barType)) {
-
-        colorClass = 'bar-away';
-
-    } else if (barType.startsWith('cs_')) {
-
-        const scores = barType.replace('cs_', '').split('');
-
-        if (scores.length === 2) {
-
-            const h = parseInt(scores[0]);
-
-            const a = parseInt(scores[1]);
-
-            if (h > a) colorClass = 'bar-home';
-
-            else if (h < a) colorClass = 'bar-away';
-
-            else colorClass = 'bar-draw';
-
-        }
-
-    } else if (barType.startsWith('lay_')) {
-
-        if (barType === 'lay_home') colorClass = 'bar-away';
-
-        else if (barType === 'lay_away') colorClass = 'bar-home';
-
-        else colorClass = 'bar-draw';
-
-    }
-
-    
-
-    return `
-
-        <div class="prob-bar-container" title="${prob.toFixed(1)}%">
-
-            <div class="prob-bar-fill ${colorClass}" style="width: ${prob.toFixed(1)}%"></div>
-
-        </div>
-
-        <span>${prob.toFixed(1)}%</span>
-
-    `;
-
-}
-
-
-
 function displayStakingComparison(results) {
 
     const panel = document.getElementById('staking-comparison-panel');
@@ -6600,99 +6416,7 @@ function renderDriftValidation(aiAnalysis, results) {
 
 
 
-function switchTab(tabId) {
 
-    // Esconder todas as abas
-
-    document.querySelectorAll('.tab-pane').forEach(el => {
-
-        el.style.display = 'none';
-
-        el.classList.remove('active');
-
-    });
-
-    
-
-    // Remover classe active de todos os botões
-
-    document.querySelectorAll('.tab-btn').forEach(el => {
-
-        el.classList.remove('active');
-
-        el.style.borderBottomColor = 'transparent';
-
-        el.style.color = 'var(--text-muted)';
-
-    });
-
-    
-
-    // Mostrar a aba selecionada
-
-    const targetTab = document.getElementById(tabId);
-
-    if (targetTab) {
-
-        targetTab.style.display = 'block';
-
-        targetTab.classList.add('active');
-
-    }
-
-    
-
-    // Ativar o botão selecionado
-
-    const targetBtn = document.getElementById(`tab-btn-${tabId.replace('tab-', '')}`);
-
-    if (targetBtn) {
-
-        targetBtn.classList.add('active');
-
-        targetBtn.style.borderBottomColor = 'var(--primary)';
-
-        targetBtn.style.color = 'var(--text-primary)';
-
-    }
-
-    
-
-    // Load history if switching to it
-
-    if (tabId === 'tab-history') {
-
-        loadHistoryTab();
-
-    }
-
-    
-
-    // Toggle sidebar filters depending on the tab
-
-    const groupEv = document.getElementById('group-ev');
-
-    const groupDrop = document.getElementById('group-drop');
-
-    if (groupEv && groupDrop) {
-
-        if (tabId === 'tab-radar') {
-
-            groupEv.style.display = 'none';
-
-            groupDrop.style.display = 'block';
-
-        } else {
-
-            groupEv.style.display = 'block';
-
-            groupDrop.style.display = 'none';
-
-        }
-
-    }
-
-}
 
 
 
@@ -8513,8 +8237,7 @@ async function testArbitrageTelegramAlert() {
 }
 
 
-// Bookie Filter Local Storage Logic
-document.addEventListener('DOMContentLoaded', () => {
+function runBookieInit() {
     const savedBookies = localStorage.getItem('arbBookies');
     if (savedBookies) {
         const bookieArray = JSON.parse(savedBookies);
@@ -8529,7 +8252,13 @@ document.addEventListener('DOMContentLoaded', () => {
             localStorage.setItem('arbBookies', JSON.stringify(selectedBookies));
         });
     });
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', runBookieInit);
+} else {
+    runBookieInit();
+}
 
 window.selectAllLeagues = function(check) {
     document.querySelectorAll('#leagues-checkbox-list input[type="checkbox"]').forEach(cb => {
@@ -9931,3 +9660,51 @@ async function importHistory(event) {
     };
     reader.readAsText(file);
 }
+
+
+// Expose remaining functions to global scope for HTML event handlers
+window.runRealtimePrediction = runRealtimePrediction;
+window.filterTable = filterTable;
+window.toggleBetsSort = toggleBetsSort;
+window.prevPage = prevPage;
+window.nextPage = nextPage;
+window.saveTelegramConfig = saveTelegramConfig;
+window.testTelegramConnection = testTelegramConnection;
+window.saveSchedulerConfigUi = saveSchedulerConfigUi;
+window.runSchedulerNow = runSchedulerNow;
+window.broadcastAllTips = broadcastAllTips;
+window.loadUpcomingMatches = loadUpcomingMatches;
+window.filterTipsTable = filterTipsTable;
+window.exportTipsToCsv = exportTipsToCsv;
+window.clearTipsLog = clearTipsLog;
+window.togglePortfolioStakeInput = togglePortfolioStakeInput;
+window.runPortfolioBacktest = runPortfolioBacktest;
+window.loadHistoryTab = loadHistoryTab;
+window.exportHistory = exportHistory;
+window.triggerImportHistory = triggerImportHistory;
+window.importHistory = importHistory;
+window.applyHistoryFilters = applyHistoryFilters;
+window.closeMatchDetailsModal = closeMatchDetailsModal;
+window.closeSaveStrategyModal = closeSaveStrategyModal;
+window.submitSaveStrategy = submitSaveStrategy;
+window.saveFutpythonKey = saveFutpythonKey;
+window.handleDataSourceChange = handleDataSourceChange;
+window.runBacktest = runBacktest;
+window.runScanner = runScanner;
+window.exportScannerResults = exportScannerResults;
+window.exportBacktestReport = exportBacktestReport;
+window.runEqsScanner = runEqsScanner;
+window.runSteamScan = runSteamScan;
+window.clearSteamScan = clearSteamScan;
+window.runArbitrageScan = runArbitrageScan;
+window.loadArbitrageBotConfig = loadArbitrageBotConfig;
+window.saveArbitrageBotConfig = saveArbitrageBotConfig;
+window.testArbitrageTelegramAlert = testArbitrageTelegramAlert;
+window.runClustering = runClustering;
+window.saveClusterAiConfig = saveClusterAiConfig;
+window.loadClusterAiConfig = loadClusterAiConfig;
+window.deleteHistoryStrategy = deleteHistoryStrategy;
+window.reloadStrategyById = reloadStrategyById;
+window.reloadStrategy = reloadStrategy;
+window.toggleActivePortfolio = toggleActivePortfolio;
+window.onCalculatorLeagueChange = onCalculatorLeagueChange;

@@ -1,0 +1,759 @@
+import os
+import json
+import math
+import numpy as np
+import pandas as pd
+from datetime import datetime, timezone
+from typing import List, Optional, Union, Dict, Any
+from fastapi import APIRouter, HTTPException
+from pydantic import BaseModel
+
+from ..data_loader import (
+    DATA_DIR, sync_fixtures, get_all_available_leagues, load_league_data,
+    get_api_token, load_upcoming_from_api, LEAGUES_SEASONAL
+)
+from ..backtester import ChronologicalBacktester
+from ..smart_money import SmartMoneyBacktester, calculate_confidence_score
+from ..arbitrage_scanner import fetch_arbitrage_opportunities
+from ..telegram_bot import (
+    get_telegram_config, save_telegram_config, send_test_message,
+    send_telegram_message, format_telegram_tip, get_telegram_tips,
+    add_telegram_tip, update_telegram_tip_status, clear_telegram_tips,
+    format_telegram_arbitrage_tip
+)
+from ..scheduler import (
+    get_scheduler_config, save_scheduler_config, run_automatic_tips_scan,
+    get_arbitrage_scheduler_config, save_arbitrage_scheduler_config
+)
+from ..cluster_ai_tracker import get_cluster_ai_config, save_cluster_ai_config
+from ..ml_clustering import extract_league_features, cluster_leagues
+from ..history_manager import load_history
+from ..models import PoissonModel, estimate_bookmaker_odds
+from ..elo_model import build_elo_tracker_from_history
+
+router = APIRouter()
+
+# Request schemas
+class ClusterRequest(BaseModel):
+    leagues: List[str]
+    startDate: str
+    endDate: str
+    data_source: str = "football-data"
+    futpython_api_key: str = ""
+    n_clusters: Optional[int] = None
+
+class ScanRequest(BaseModel):
+    leagues: List[str]
+    startDate: str
+    endDate: str
+    market: Union[List[str], str]
+    valueThreshold: float
+    initialBankroll: float
+    stakingRule: str
+    stakeValue: float
+    oddsSource: str
+    scanType: str  # 'markets' or 'leagues'
+    minOdds: Optional[float] = 1.0
+    maxOdds: Optional[float] = 2.50
+    use_ml: bool = False
+    data_source: str = "footballdata"
+    futpython_api_key: str = ""
+
+class SteamMovesRequest(BaseModel):
+    leagues: List[str]
+    startDate: str
+    endDate: str
+    markets: List[str]
+    minDropPct: float = 5.0
+    stakeValue: float = 10.0
+    data_source: str = "footballdata"
+    futpython_api_key: str = ""
+
+class ArbitrageRequest(BaseModel):
+    min_profit_pct: float = 0.5
+
+class ArbitrageSchedulerConfig(BaseModel):
+    enabled: bool
+    check_interval_hours: float
+    min_profit_pct: float
+
+class TelegramConfigRequest(BaseModel):
+    token: str
+    chat_id: str
+    enabled: bool
+
+class TelegramTipSendRequest(BaseModel):
+    league_name: str
+    date_str: str
+    time_str: str
+    home_team: str
+    away_team: str
+    market_label: str
+    prob: float
+    fair_odds: float
+    bookie_odds: float
+    ev: float
+    stake_pct: float
+
+class CreateTipRequest(BaseModel):
+    league_name: str
+    date_str: str
+    time_str: str
+    home_team: str
+    away_team: str
+    market_label: str
+    bookie_odds: float
+    stake_pct: float
+
+class UpdateTipStatusRequest(BaseModel):
+    status: str
+
+class TelegramSchedulerRequest(BaseModel):
+    enabled: bool
+    mode: Optional[str] = 'manual'
+    check_interval_hours: int
+    leagues: List[str]
+    market: Union[List[str], str]
+    value_threshold: float
+    min_odds: float
+    max_odds: float
+    staking_rule: str
+    stake_value: float
+    initial_bankroll: float
+    upcoming_source: Optional[str] = 'api'
+
+class LiveSteamRequest(BaseModel):
+    minDropPct: float = 5.0
+    markets: List[str] = ['home']
+    leagues: List[str] = []
+
+class ClusterAIConfigReq(BaseModel):
+    enabled: bool
+    check_interval_hours: float
+    value_threshold: float
+    min_odds: float
+    max_odds: float
+    leagues: List[str]
+
+
+@router.post("/cluster_leagues")
+def api_cluster_leagues(req: ClusterRequest):
+    try:
+        features_list = []
+        for league in req.leagues:
+            df = load_league_data(league, start_date=req.startDate, data_source=req.data_source, api_key=req.futpython_api_key)
+            features = extract_league_features(league, df)
+            if features:
+                features_list.append(features)
+                
+        if not features_list:
+            raise ValueError("Não foi possível extrair dados para nenhuma das ligas selecionadas.")
+            
+        cluster_results = cluster_leagues(features_list, req.n_clusters)
+        if 'error' in cluster_results:
+            raise ValueError(cluster_results['error'])
+            
+        return cluster_results
+        
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/status")
+def get_status():
+    try:
+        if not os.path.exists(DATA_DIR):
+            return {"synced": False, "files_count": 0, "last_updated": None}
+            
+        files = [f for f in os.listdir(DATA_DIR) if f.endswith('.csv')]
+        if not files:
+            return {"synced": False, "files_count": 0, "last_updated": None}
+            
+        latest_file = max([os.path.join(DATA_DIR, f) for f in files])
+        mtime = os.path.getmtime(latest_file)
+        last_updated = datetime.fromtimestamp(mtime).strftime('%Y-%m-%d %H:%M:%S')
+        
+        return {
+            "synced": True,
+            "files_count": len(files),
+            "last_updated": last_updated
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/scan_steam_moves")
+def run_steam_moves_scan(req: SteamMovesRequest):
+    try:
+        def loader(code, start_date='2021-01-01'):
+            return load_league_data(code, start_date=start_date, data_source=req.data_source, api_key=req.futpython_api_key)
+            
+        backtester = SmartMoneyBacktester(loader)
+        
+        all_results = []
+        for league in req.leagues:
+            results = backtester.scan_steam_moves(
+                league_code=league,
+                min_drop_pct=req.minDropPct,
+                markets=req.markets,
+                start_date=req.startDate,
+                end_date=req.endDate,
+                stake_value=req.stakeValue
+            )
+            all_results.extend(results)
+            
+        return {"status": "success", "scan_results": all_results}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/scan_arbitrage")
+def scan_arbitrage(bookies: str = None):
+    try:
+        allowed_bookies = None
+        if bookies:
+            allowed_bookies = [b.strip() for b in bookies.split(',') if b.strip()]
+        return fetch_arbitrage_opportunities(allowed_bookies=allowed_bookies)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/arbitrage_scheduler/config")
+def get_arb_scheduler_config_api():
+    try:
+        return get_arbitrage_scheduler_config()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/arbitrage_scheduler/config")
+def save_arb_scheduler_config_api(req: ArbitrageSchedulerConfig):
+    try:
+        config = req.dict()
+        return save_arbitrage_scheduler_config(config)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/scan")
+def run_scan(req: ScanRequest):
+    try:
+        backtester = ChronologicalBacktester()
+        scan_results = []
+        
+        all_markets_def = [
+            {'code': 'home', 'name': 'Mandante (1)'},
+            {'code': 'away', 'name': 'Visitante (2)'},
+            {'code': 'draw', 'name': 'Empate (X)'},
+            {'code': 'ht_home', 'name': 'HT Mandante'},
+            {'code': 'ht_away', 'name': 'HT Visitante'},
+            {'code': 'ht_draw', 'name': 'HT Empate'},
+            {'code': 'ht_over05', 'name': 'HT Over 0.5'},
+            {'code': 'ht_under05', 'name': 'HT Under 0.5'},
+            {'code': 'ht_over15', 'name': 'HT Over 1.5'},
+            {'code': 'ht_under15', 'name': 'HT Under 1.5'},
+            {'code': 'over15', 'name': 'Over 1.5 Gols'},
+            {'code': 'over25', 'name': 'Over 2.5 Gols'},
+            {'code': 'under25', 'name': 'Under 2.5 Gols'},
+            {'code': 'over35', 'name': 'Over 3.5 Gols'},
+            {'code': 'under35', 'name': 'Under 3.5 Gols'},
+            {'code': 'over45', 'name': 'Over 4.5 Gols'},
+            {'code': 'under45', 'name': 'Under 4.5 Gols'},
+            {'code': 'over55', 'name': 'Over 5.5 Gols'},
+            {'code': 'under55', 'name': 'Under 5.5 Gols'},
+            {'code': 'lay_home', 'name': 'Contra Mandante (X2)'},
+            {'code': 'lay_away', 'name': 'Contra Visitante (1X)'},
+            {'code': 'lay_draw', 'name': 'Contra Empate (12)'},
+            {'code': 'btts_yes', 'name': 'Ambas Marcam Sim'},
+            {'code': 'btts_no', 'name': 'Ambas Marcam Não'},
+            {'code': 'cs_10', 'name': 'Placar Exato 1-0'},
+            {'code': 'cs_20', 'name': 'Placar Exato 2-0'},
+            {'code': 'cs_21', 'name': 'Placar Exato 2-1'},
+            {'code': 'cs_00', 'name': 'Placar Exato 0-0'},
+            {'code': 'cs_11', 'name': 'Placar Exato 1-1'},
+            {'code': 'cs_01', 'name': 'Placar Exato 0-1'},
+            {'code': 'cs_02', 'name': 'Placar Exato 0-2'},
+            {'code': 'cs_12', 'name': 'Placar Exato 1-2'},
+            {'code': 'lay_cs_10', 'name': 'Lay Placar Exato 1-0'},
+            {'code': 'lay_cs_20', 'name': 'Lay Placar Exato 2-0'},
+            {'code': 'lay_cs_21', 'name': 'Lay Placar Exato 2-1'},
+            {'code': 'lay_cs_00', 'name': 'Lay Placar Exato 0-0'},
+            {'code': 'lay_cs_11', 'name': 'Lay Placar Exato 1-1'},
+            {'code': 'lay_cs_01', 'name': 'Lay Placar Exato 0-1'},
+            {'code': 'lay_cs_02', 'name': 'Lay Placar Exato 0-2'},
+            {'code': 'lay_cs_12', 'name': 'Lay Placar Exato 1-2'}
+        ]
+
+        if req.scanType == 'markets':
+            user_markets = req.market if isinstance(req.market, list) else [req.market]
+            if not user_markets or len(user_markets) == 0:
+                markets_to_scan = all_markets_def
+            else:
+                markets_to_scan = [m for m in all_markets_def if m['code'] in user_markets or m['code'].replace('home', '1x2_home').replace('away', '1x2_away').replace('draw', '1x2_draw') in user_markets]
+                
+            market_codes = [m['code'] for m in markets_to_scan]
+
+            for m in markets_to_scan:
+                try:
+                    res = backtester.run(
+                        leagues=req.leagues,
+                        start_date=req.startDate,
+                        end_date=req.endDate,
+                        market=m['code'],
+                        value_threshold=req.valueThreshold,
+                        initial_bankroll=req.initialBankroll,
+                        staking_rule=req.stakingRule,
+                        stake_value=req.stakeValue,
+                        odds_source=req.oddsSource,
+                        min_odds=req.minOdds,
+                        max_odds=req.maxOdds,
+                        data_source=req.data_source,
+                        futpython_api_key=req.futpython_api_key
+                    )
+                    
+                    if "error" not in res and res.get('summary', {}).get('total_bets', 0) > 0:
+                        sum_data = res['summary']
+                        scan_results.append({
+                            'parameter': m['name'],
+                            'total_bets': sum_data.get('total_bets', 0),
+                            'win_rate': f"{sum_data.get('win_rate', 0):.1f}%",
+                            'net_profit': f"${sum_data.get('net_profit', 0):.2f}",
+                            'roi': f"{sum_data.get('roi', 0):.2f}%",
+                            'payload': {**req.dict(), 'market': m['code']}
+                        })
+                except Exception:
+                    continue
+        else:
+            for l in req.leagues:
+                try:
+                    res = backtester.run(
+                        leagues=[l],
+                        start_date=req.startDate,
+                        end_date=req.endDate,
+                        market=req.market,
+                        value_threshold=req.valueThreshold,
+                        initial_bankroll=req.initialBankroll,
+                        staking_rule=req.stakingRule,
+                        stake_value=req.stakeValue,
+                        odds_source=req.oddsSource,
+                        min_odds=req.minOdds,
+                        max_odds=req.maxOdds,
+                        data_source=req.data_source,
+                        futpython_api_key=req.futpython_api_key
+                    )
+                    
+                    if "error" not in res and res.get('summary', {}).get('total_bets', 0) > 0:
+                        sum_data = res['summary']
+                        scan_results.append({
+                            'parameter': l,
+                            'total_bets': sum_data.get('total_bets', 0),
+                            'win_rate': f"{sum_data.get('win_rate', 0):.1f}%",
+                            'net_profit': f"${sum_data.get('net_profit', 0):.2f}",
+                            'roi': f"{sum_data.get('roi', 0):.2f}%",
+                            'payload': {**req.dict(), 'leagues': [l]}
+                        })
+                except Exception:
+                    continue
+                    
+        return {"status": "success", "scan_results": scan_results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/telegram/config")
+def get_tg_config():
+    try:
+        return get_telegram_config()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/config")
+def set_tg_config(req: TelegramConfigRequest):
+    try:
+        return save_telegram_config(req.token, req.chat_id, req.enabled)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/test")
+def test_tg_connection():
+    try:
+        ok, msg = send_test_message()
+        if not ok:
+            raise HTTPException(status_code=400, detail=msg)
+        return {"status": "success", "message": msg}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/test_arbitrage")
+def test_tg_arbitrage_connection():
+    try:
+        msg_text = format_telegram_arbitrage_tip(
+            match_name="Real Madrid vs Barcelona",
+            match_date="12/10/2026 16:00",
+            bookies_dict={'1': 'Bet365', 'X': 'Pinnacle', '2': 'Betfair'},
+            profit_margin=4.20,
+            odds_dict={'1': 3.10, 'X': 3.50, '2': 3.20}
+        )
+        ok, msg = send_telegram_message(msg_text)
+        if not ok:
+            raise HTTPException(status_code=400, detail=msg)
+        return {"status": "success", "message": msg}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/send_tips")
+def send_match_tip(req: TelegramTipSendRequest):
+    try:
+        leagues = get_all_available_leagues()
+        allowed_names = {l['name'] for l in leagues}
+        if req.league_name not in allowed_names:
+            raise HTTPException(status_code=400, detail="Esta liga não faz parte do sistema de backtesting.")
+            
+        msg_text = format_telegram_tip(
+            req.league_name, req.date_str, req.time_str,
+            req.home_team, req.away_team, req.market_label,
+            req.prob, req.fair_odds, req.bookie_odds,
+            req.ev, req.stake_pct
+        )
+        ok, msg = send_telegram_message(msg_text)
+        if not ok:
+            raise HTTPException(status_code=400, detail=msg)
+        
+        add_telegram_tip(
+            req.league_name, req.date_str, req.time_str,
+            req.home_team, req.away_team, req.market_label,
+            req.bookie_odds, req.stake_pct
+        )
+        
+        return {"status": "success", "message": msg}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/telegram/tips")
+def list_telegram_tips():
+    try:
+        return get_telegram_tips()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/tips")
+def create_telegram_tip(req: CreateTipRequest):
+    try:
+        leagues = get_all_available_leagues()
+        allowed_names = {l['name'] for l in leagues}
+        if req.league_name not in allowed_names:
+            raise HTTPException(status_code=400, detail="Esta liga não faz parte do sistema de backtesting.")
+            
+        return add_telegram_tip(
+            req.league_name, req.date_str, req.time_str,
+            req.home_team, req.away_team, req.market_label,
+            req.bookie_odds, req.stake_pct
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.put("/telegram/tips/{tip_id}")
+def update_tip_status(tip_id: str, req: UpdateTipStatusRequest):
+    try:
+        return update_telegram_tip_status(tip_id, req.status)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.delete("/telegram/tips")
+def delete_all_tips():
+    try:
+        return clear_telegram_tips()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/telegram/scheduler")
+def get_tg_scheduler():
+    try:
+        return get_scheduler_config()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/scheduler")
+def set_tg_scheduler(req: TelegramSchedulerRequest):
+    try:
+        return save_scheduler_config(req.dict())
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/scheduler/run")
+async def run_tg_scheduler_now():
+    try:
+        results = await run_automatic_tips_scan()
+        return results
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/live_steam_moves")
+def get_live_steam_moves(req: LiveSteamRequest):
+    tracker_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'live_odds_tracker.json')
+    if not os.path.exists(tracker_file):
+        return {"status": "success", "scan_results": []}
+        
+    try:
+        with open(tracker_file, 'r', encoding='utf-8') as f:
+            data = json.load(f)
+            
+        results = []
+        for match_id, match_info in data.items():
+            title = match_info.get('title', 'Desconhecido')
+            commence_time = match_info.get('commence_time', '')
+            
+            try:
+                dt = datetime.fromisoformat(commence_time.replace('Z', '+00:00'))
+                dt_local = dt.astimezone()
+                date_str = dt_local.strftime('%d/%m %H:%M')
+            except:
+                date_str = commence_time
+            
+            for bookie, markets_data in match_info.get('bookmakers', {}).items():
+                for comp_key, odds_data in markets_data.items():
+                    norm_market = odds_data['norm_market']
+                    if norm_market not in req.markets:
+                        continue
+                        
+                    opening = odds_data['opening']
+                    current = odds_data['current']
+                    
+                    if opening > 1.0 and current > 0.0 and current < opening:
+                        drop_pct = ((opening / current) - 1.0) * 100
+                        if drop_pct >= req.minDropPct:
+                            sport_key = match_info.get('sport', '')
+                            score, confidence_level, tier_name = calculate_confidence_score(drop_pct, sport_key)
+                            results.append({
+                                'match': title,
+                                'date': date_str,
+                                'bookmaker': bookie,
+                                'market': norm_market.upper(),
+                                'opening_odd': opening,
+                                'current_odd': current,
+                                'drop_pct': round(drop_pct, 1),
+                                'liquidity_tier': tier_name,
+                                'confidence_score': score,
+                                'confidence_level': confidence_level
+                            })
+                            
+        results = sorted(results, key=lambda x: x['drop_pct'], reverse=True)
+        return {"status": "success", "scan_results": results}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get('/autopilot')
+def get_autopilot_predictions(source: str = 'api'):
+    try:
+        history = load_history()
+        active_portfolios = [s for s in history if (s.get('type') == 'portfolio' or 'strategy_ids' in s.get('params', {})) and s.get('is_tg_active')]
+        active_strategy_ids = set()
+        for p_item in active_portfolios:
+            ids = p_item.get('params', {}).get('strategy_ids', [])
+            active_strategy_ids.update(ids)
+            
+        valid_strategies = []
+        for s in history:
+            if s.get('type') == 'portfolio' or 'strategy_ids' in s.get('params', {}):
+                continue
+                
+            net_profit = s.get('summary', {}).get('net_profit', 0)
+            if net_profit > 0:
+                valid_strategies.append(s)
+                
+        if not valid_strategies:
+            return []
+            
+        df_fixtures = pd.DataFrame()
+        if source == 'api':
+            token = get_api_token()
+            if token:
+                df_fixtures = load_upcoming_from_api(token)
+                
+        if df_fixtures.empty:
+            sync_fixtures(force=False)
+            fixtures_path = os.path.join(DATA_DIR, 'fixtures.csv')
+            if os.path.exists(fixtures_path):
+                df_fixtures = pd.read_csv(fixtures_path, encoding='latin1')
+                df_fixtures.columns = [c.replace('ï»¿', '').replace('\ufeff', '').strip() for c in df_fixtures.columns]
+            else:
+                return []
+                
+        all_leagues = get_all_available_leagues()
+        league_codes = [l['code'] for l in all_leagues]
+        poisson = PoissonModel()
+        league_cache = {}
+        elo_cache = {}
+        
+        autopilot_matches = []
+        
+        for row in df_fixtures.to_dict('records'):
+            league_code = row.get('Div')
+            if not league_code or league_code not in league_codes:
+                continue
+                
+            home_team = row.get('HomeTeam')
+            away_team = row.get('AwayTeam')
+            if pd.isna(home_team) or pd.isna(away_team):
+                continue
+                
+            if league_code not in league_cache:
+                hist = load_league_data(league_code, start_date='2020-08-01')
+                league_cache[league_code] = hist
+                elo_cache[league_code] = build_elo_tracker_from_history(hist)
+                
+            hist_df = league_cache[league_code]
+            elo_tracker = elo_cache[league_code]
+            if hist_df.empty:
+                continue
+                
+            try:
+                match_date = pd.to_datetime(row.get('Date'), dayfirst=True)
+            except:
+                match_date = datetime.now()
+                
+            pred = poisson.predict_match(home_team, away_team, hist_df, match_date, elo_tracker=elo_tracker)
+            
+            odds_h = float(row.get('B365H', np.nan))
+            odds_d = float(row.get('B365D', np.nan))
+            odds_a = float(row.get('B365A', np.nan))
+            odds_over25 = float(row.get('B365>2.5', np.nan))
+            odds_under25 = float(row.get('B365<2.5', np.nan))
+            
+            est_odds = estimate_bookmaker_odds(odds_over25, odds_under25, pred['lambda_home'], pred['lambda_away'])
+            
+            for strategy in valid_strategies:
+                p = strategy.get('params', {})
+                s_leagues = p.get('leagues', [])
+                if league_code not in s_leagues:
+                    continue
+                    
+                s_markets_raw = p.get('markets') or p.get('market', 'home')
+                if isinstance(s_markets_raw, str):
+                    s_markets = [m.strip() for m in s_markets_raw.split(',')]
+                elif isinstance(s_markets_raw, list):
+                    s_markets = [str(m).strip() for m in s_markets_raw]
+                else:
+                    s_markets = ['home']
+                
+                s_min = float(p.get('minOdds', 1.0))
+                s_max = float(p.get('maxOdds', 2.50))
+                s_val = float(p.get('valThreshold', 1.05))
+                
+                strategy_name_prefix = ""
+                stakingRule = p.get('stakingRule', 'fixed')
+                stakeValue = float(p.get('stakeValue', 10.0))
+                initialBankroll = float(p.get('initialBankroll', 1000.0))
+                
+                containing_portfolio = next((p_item for p_item in active_portfolios if strategy.get('id') in p_item.get('params', {}).get('strategy_ids', [])), None) if active_portfolios else None
+                
+                if containing_portfolio:
+                    port_params = containing_portfolio.get('params', {})
+                    port_rm = port_params.get('risk_method', 'kelly_quarter')
+                    if port_rm == 'kelly_quarter':
+                        stakingRule = 'kelly_quarter'
+                        stakeValue = 0.0
+                    elif port_rm.startswith('fixed_'):
+                        stakingRule = 'fixed'
+                        try:
+                            stakeValue = float(port_rm.split('_')[1])
+                        except:
+                            stakeValue = 1.0
+                    else:
+                        stakingRule = 'kelly_quarter'
+                        stakeValue = 0.0
+                        
+                    initialBankroll = float(port_params.get('initial_bankroll', 1000.0))
+                    strategy_name_prefix = f"[Portfólio: {containing_portfolio.get('name')}] "
+                
+                for s_m in s_markets:
+                    market_prob = 0.0
+                    bookie_odds = np.nan
+                    market_label = ''
+                    
+                    if s_m == 'home': market_prob = pred['prob_home']; bookie_odds = odds_h; market_label = '1 (Mandante)'
+                    elif s_m == 'away': market_prob = pred['prob_away']; bookie_odds = odds_a; market_label = '2 (Visitante)'
+                    elif s_m == 'draw': market_prob = pred['prob_draw']; bookie_odds = odds_d; market_label = 'X (Empate)'
+                    elif s_m == 'btts_yes': market_prob = pred['prob_btts_yes']; bookie_odds = est_odds.get('bookie_btts_yes', np.nan); market_label = 'BTTS Sim'
+                    elif s_m == 'btts_no': market_prob = pred['prob_btts_no']; bookie_odds = est_odds.get('bookie_btts_no', np.nan); market_label = 'BTTS Não'
+                    elif s_m == 'over15': market_prob = pred['prob_over_15']; bookie_odds = est_odds.get('bookie_over_15', np.nan); market_label = 'Over 1.5'
+                    elif s_m == 'over25': market_prob = pred['prob_over_25']; bookie_odds = odds_over25; market_label = 'Over 2.5'
+                    elif s_m == 'under25': market_prob = pred['prob_under_25']; bookie_odds = odds_under25; market_label = 'Under 2.5'
+                    elif s_m.startswith('cs_'): market_prob = pred.get(f"prob_{s_m}", 0.0); bookie_odds = est_odds.get(f"bookie_{s_m}", np.nan); market_label = f"Placar Exato {s_m[3]}-{s_m[4]}"
+                    elif s_m == 'lay_home': market_prob = pred['prob_draw'] + pred['prob_away']; bookie_odds = 1.0 / (1.0/odds_d + 1.0/odds_a) if (odds_d > 1.0 and odds_a > 1.0) else np.nan; market_label = "Contra Mandante (X2)"
+                    elif s_m == 'lay_away': market_prob = pred['prob_home'] + pred['prob_draw']; bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_d) if (odds_h > 1.0 and odds_d > 1.0) else np.nan; market_label = "Contra Visitante (1X)"
+                    elif s_m == 'lay_draw': market_prob = pred['prob_home'] + pred['prob_away']; bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_a) if (odds_h > 1.0 and odds_a > 1.0) else np.nan; market_label = "Contra Empate (12)"
+                    elif s_m == 'dnb_h': market_prob = pred['prob_home'] / (pred['prob_home'] + pred['prob_away']) if (pred['prob_home'] + pred['prob_away']) > 0 else 0.5; bookie_odds = odds_h * (odds_d - 1.0) / odds_d if (odds_h and odds_d and odds_d > 1.0) else np.nan; market_label = "DNB Mandante"
+                    elif s_m == 'dnb_a': market_prob = pred['prob_away'] / (pred['prob_home'] + pred['prob_away']) if (pred['prob_home'] + pred['prob_away']) > 0 else 0.5; bookie_odds = odds_a * (odds_d - 1.0) / odds_d if (odds_a and odds_d and odds_d > 1.0) else np.nan; market_label = "DNB Visitante"
+
+                    if pd.isna(bookie_odds) or bookie_odds <= 1.0:
+                        continue
+                        
+                    ev = market_prob * bookie_odds
+                    if ev >= s_val and s_min <= bookie_odds <= s_max:
+                        stake_pct = 0.0
+                        if stakingRule.startswith('kelly'):
+                            mult_k = 1.0
+                            if stakingRule == 'kelly_half': mult_k = 0.5
+                            elif stakingRule == 'kelly_quarter': mult_k = 0.25
+                            elif stakingRule == 'kelly_eighth': mult_k = 0.125
+                            elif stakingRule == 'kelly_sixteenth': mult_k = 0.0625
+                            elif stakingRule == 'kelly': mult_k = stakeValue
+                            else: mult_k = stakeValue
+                            f_star = (market_prob * bookie_odds - 1.0) / (bookie_odds - 1.0)
+                            stake_pct = max(0.0, f_star) * mult_k * 100.0
+                            stake_pct = min(stake_pct, 5.0)
+                        elif stakingRule == 'proportional':
+                            stake_pct = stakeValue
+                        else:
+                            stake_pct = (stakeValue / initialBankroll) * 100.0
+                            
+                        league_name = row.get('LeagueName') or LEAGUES_SEASONAL.get(league_code, league_code)
+                        
+                        def clean_odd(val):
+                            try:
+                                v = float(val)
+                                return round(v, 2) if not pd.isna(v) and v > 0 else None
+                            except:
+                                return None
+                                
+                        odds_comp = {
+                            'Bet365': {'H': clean_odd(row.get('B365H')), 'D': clean_odd(row.get('B365D')), 'A': clean_odd(row.get('B365A'))}
+                        }
+                        
+                        autopilot_matches.append({
+                            'league_code': league_code,
+                            'league_name': league_name,
+                            'date': str(row.get('Date')),
+                            'time': str(row.get('Time')) if not pd.isna(row.get('Time')) else '00:00',
+                            'home_team': home_team,
+                            'away_team': away_team,
+                            'market_label': market_label,
+                            'prob': round(market_prob * 100, 1),
+                            'fair_odds': round(1.0 / market_prob, 2) if market_prob > 0.001 else 99.0,
+                            'bookie_odds': round(bookie_odds, 2),
+                            'ev': round(ev, 2),
+                            'is_tip': True,
+                            'stake_pct': round(stake_pct, 1),
+                            'odds_comparison': odds_comp,
+                            'strategy_name': strategy_name_prefix + strategy.get('name', 'Autopilot Strategy')
+                        })
+                    
+        autopilot_matches.sort(key=lambda x: (x['date'], x['time']))
+        return autopilot_matches
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/telegram/cluster_ai_config")
+def api_get_cluster_ai_config():
+    return get_cluster_ai_config()
+
+@router.post("/telegram/cluster_ai_config")
+def api_save_cluster_ai_config(req: ClusterAIConfigReq):
+    save_cluster_ai_config(req.dict())
+    return {"status": "success"}

@@ -12,7 +12,6 @@ from .telegram_bot import (
     format_contrarian_tip, 
     format_dna_shift_alert
 )
-from .app import get_autopilot_predictions
 
 CONFIG_PATH = os.path.join(DATA_DIR, 'cluster_ai_config.json')
 HISTORY_PATH = os.path.join(DATA_DIR, 'cluster_history.json')
@@ -134,6 +133,7 @@ async def run_cluster_ai_alerts():
             
     # Checar Pure Blood e Contrarian usando Autopilot
     if config.get("pure_blood_enabled") or config.get("contrarian_enabled"):
+        from .api.router_scanner import get_autopilot_predictions
         auto_matches = get_autopilot_predictions("api")
         if isinstance(auto_matches, dict) and auto_matches.get("status") == "error":
             print(f"[Cluster AI] Erro ao buscar predições: {auto_matches.get('message')}")
