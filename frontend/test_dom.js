@@ -62,7 +62,31 @@ dom.window.HTMLCanvasElement.prototype.getContext = function () {
     };
 };
 
-const appJs = fs.readFileSync('app.js', 'utf8');
+// Mock imported utils functions
+dom.window.showToast = () => {};
+dom.window.switchTab = () => {};
+dom.window.toggleGroup = () => {};
+dom.window.toggleStakeLabel = () => {};
+dom.window.formatCurrency = () => {};
+dom.window.formatPct = () => {};
+
+// Mock imported api functions
+dom.window.checkDatabaseStatus = () => {};
+dom.window.syncDatabase = () => {};
+dom.window.loadLeagues = () => {};
+dom.window.fetchServerHistory = () => {};
+dom.window.saveToServer = () => {};
+dom.window.deleteFromServer = () => {};
+dom.window.toggleServerActiveState = () => {};
+
+// Mock imported chart functions
+dom.window.updateCharts = () => {};
+dom.window.renderPortfolioChart = () => {};
+dom.window.clearCharts = () => {};
+
+let appJs = fs.readFileSync('app.js', 'utf8');
+// Strip import statements for evaluation in JSDOM
+appJs = appJs.replace(/import\s+{[^}]+}\s+from\s+['"].*?['"];?/g, '');
 
 try {
     dom.window.eval(appJs);

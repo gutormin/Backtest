@@ -1,6 +1,7 @@
 // Import modular functions
 import { showToast, switchTab, toggleGroup, toggleStakeLabel, formatCurrency, formatPct } from './js/utils.js';
 import { checkDatabaseStatus, syncDatabase, loadLeagues, fetchServerHistory, saveToServer, deleteFromServer, toggleServerActiveState } from './js/api.js';
+import { updateCharts, renderPortfolioChart, clearCharts } from './js/charts.js';
 
 // Bind imports to window so index.html and dynamic elements can call them
 window.showToast = showToast;
@@ -10,16 +11,9 @@ window.toggleStakeLabel = toggleStakeLabel;
 window.checkDatabaseStatus = checkDatabaseStatus;
 window.syncDatabase = syncDatabase;
 window.loadLeagues = loadLeagues;
-
-// Global variables to store Chart instances
-
-let equityChart = null;
-
-let leagueChart = null;
-
-let monthlyChart = null;
-
-let oddsChart = null;
+window.updateCharts = updateCharts;
+window.renderPortfolioChart = renderPortfolioChart;
+window.clearCharts = clearCharts;
 
 let allBets = []; // Cache for filtering in table
 
@@ -171,489 +165,6 @@ async function initApp() {
 }
 
 
-
-
-
-
-
-
-
-
-
-function updateCharts(dates, bankrolls, fixedData, propData, kellyData, leagueStats, monthlyStats, oddsStats, optimizedData) {
-    if (equityChart) equityChart.destroy();
-    if (leagueChart) leagueChart.destroy();
-    if (monthlyChart) monthlyChart.destroy();
-    if (oddsChart) oddsChart.destroy();
-
-    const ctxEquity = document.getElementById('equity-chart').getContext('2d');
-const gradient = ctxEquity.createLinearGradient(0, 0, 0, 400);
-gradient.addColorStop(0, 'rgba(99, 102, 241, 0.4)');
-gradient.addColorStop(1, 'rgba(99, 102, 241, 0.0)');
-    const rule = document.getElementById('stake-rule').value;
-    const stakeValueInput = rule === 'kelly' ? parseFloat(document.getElementById('kelly-fraction').value) || 0.25 : parseFloat(document.getElementById('stake-value').value) || 10;
-
-    const fixedStakeVal = rule === 'fixed' ? stakeValueInput : 10;
-
-    const propStakePct = rule === 'proportional' ? stakeValueInput : 2;
-
-       let kellyFractionText = rule === 'kelly' ? stakeValueInput.toFixed(2) + (stakeValueInput == 1 ? ' (Full)' : ' (' + (1/stakeValueInput).toFixed(0) + ')') : '1/4';
-
-    const datasets = [{
-
-        label: 'Geral (Selecionado) ($)',
-
-        data: bankrolls,
-
-        borderColor: '#6366f1',
-
-        borderWidth: 2.5,
-
-        fill: true,
-
-        backgroundColor: gradient,
-
-        tension: 0.15,
-
-        pointRadius: dates.length > 200 ? 0 : 2,
-
-        pointHoverRadius: 5
-
-    }];
-
-    
-
-    if (fixedData) {
-
-        datasets.push({
-
-            label: `Fixed Staking ($${fixedStakeVal})`,
-
-            data: fixedData,
-
-            borderColor: '#f59e0b',
-
-            borderWidth: 1.5,
-
-            borderDash: [4, 4],
-
-            fill: false,
-
-            tension: 0.15,
-
-            pointRadius: dates.length > 200 ? 0 : 1,
-
-            pointHoverRadius: 4
-
-        });
-
-    }
-
-
-
-    if (propData) {
-
-        datasets.push({
-
-            label: `Proportional (${propStakePct}%) ($)`,
-
-            data: propData,
-
-            borderColor: '#06b6d4',
-
-            borderWidth: 1.5,
-
-            borderDash: [4, 4],
-
-            fill: false,
-
-            tension: 0.15,
-
-            pointRadius: dates.length > 200 ? 0 : 1,
-
-            pointHoverRadius: 4
-
-        });
-
-    }
-
-
-
-    if (kellyData) {
-
-        datasets.push({
-
-            label: `Kelly Staking (${kellyFractionText}) ($)`,
-
-            data: kellyData,
-
-            borderColor: '#ec4899',
-
-            borderWidth: 1.5,
-
-            borderDash: [4, 4],
-
-            fill: false,
-
-            tension: 0.15,
-
-            pointRadius: dates.length > 200 ? 0 : 1,
-
-            pointHoverRadius: 4
-
-        });
-
-    }
-
-    
-
-    if (optimizedData) {
-
-        datasets.push({
-
-            label: 'Banca Otimizada IA ($)',
-
-            data: optimizedData,
-
-            borderColor: '#10b981',
-
-            borderWidth: 2,
-
-            borderDash: [6, 4],
-
-            fill: false,
-
-            tension: 0.15,
-
-            pointRadius: dates.length > 200 ? 0 : 2,
-
-            pointHoverRadius: 5
-
-        });
-
-    }
-
-    
-
-    equityChart = new Chart(ctxEquity, {
-
-        type: 'line',
-
-        data: {
-
-            labels: dates,
-
-            datasets: datasets
-
-        },
-
-        options: {
-
-            responsive: true,
-
-            maintainAspectRatio: false,
-
-            plugins: {
-
-                legend: {
-
-                    display: true,
-
-                    position: 'top',
-
-                    labels: {
-
-                        color: '#9ca3af',
-
-                        font: { family: 'Outfit', size: 11 },
-
-                        usePointStyle: true,
-
-                        boxWidth: 8
-
-                    }
-
-                }
-
-            },
-
-            scales: {
-
-                x: {
-
-                    grid: { color: 'rgba(255, 255, 255, 0.02)' },
-
-                    ticks: { color: '#9ca3af', font: { size: 10 }, maxTicksLimit: 12 }
-
-                },
-
-                y: {
-
-                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
-
-                    ticks: { color: '#9ca3af', font: { size: 11 } }
-
-                }
-
-            }
-
-        }
-
-    });
-
-
-
-    // 2. League Performance Chart (Using friendly league names instead of codes!)
-
-    const ctxLeague = document.getElementById('league-chart').getContext('2d');
-
-    if (leagueChart) leagueChart.destroy();
-
-    
-
-    leagueStats.sort((a, b) => b.profit - a.profit);
-
-    
-
-    const leagueNames = leagueStats.map(item => item.league || item.name || 'Desconhecida'); // Full friendly name!
-
-    const profits = leagueStats.map(item => item.profit);
-
-    const colors = profits.map(val => val >= 0 ? 'rgba(16, 185, 129, 0.75)' : 'rgba(239, 68, 68, 0.75)');
-
-    const borderColors = profits.map(val => val >= 0 ? '#10b981' : '#ef4444');
-
-    
-
-    leagueChart = new Chart(ctxLeague, {
-
-        type: 'bar',
-
-        data: {
-
-            labels: leagueNames,
-
-            datasets: [{
-
-                label: 'Lucro Líquido ($)',
-
-                data: profits,
-
-                backgroundColor: colors,
-
-                borderColor: borderColors,
-
-                borderWidth: 1.5,
-
-                borderRadius: 4
-
-            }]
-
-        },
-
-        options: {
-
-            responsive: true,
-
-            maintainAspectRatio: false,
-
-            plugins: {
-
-                legend: { display: false }
-
-            },
-
-            scales: {
-
-                x: {
-
-                    grid: { display: false },
-
-                    ticks: { color: '#9ca3af', font: { size: 10 } }
-
-                },
-
-                y: {
-
-                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
-
-                    ticks: { color: '#9ca3af', font: { size: 11 } }
-
-                }
-
-            }
-
-        }
-
-    });
-
-
-
-    // 3. Monthly Performance Chart
-
-    const ctxMonthly = document.getElementById('monthly-chart').getContext('2d');
-
-    if (monthlyChart) monthlyChart.destroy();
-
-    
-
-    const months = monthlyStats.map(item => item.month);
-
-    const monthlyProfits = monthlyStats.map(item => item.profit);
-
-    const monthlyColors = monthlyProfits.map(val => val >= 0 ? 'rgba(16, 185, 129, 0.75)' : 'rgba(239, 68, 68, 0.75)');
-
-    const monthlyBorderColors = monthlyProfits.map(val => val >= 0 ? '#10b981' : '#ef4444');
-
-    
-
-    monthlyChart = new Chart(ctxMonthly, {
-
-        type: 'bar',
-
-        data: {
-
-            labels: months,
-
-            datasets: [{
-
-                label: 'Lucro por Mês ($)',
-
-                data: monthlyProfits,
-
-                backgroundColor: monthlyColors,
-
-                borderColor: monthlyBorderColors,
-
-                borderWidth: 1.5,
-
-                borderRadius: 4
-
-            }]
-
-        },
-
-        options: {
-
-            responsive: true,
-
-            maintainAspectRatio: false,
-
-            plugins: {
-
-                legend: { display: false }
-
-            },
-
-            scales: {
-
-                x: {
-
-                    grid: { display: false },
-
-                    ticks: { color: '#9ca3af', font: { size: 10 }, maxTicksLimit: 18 }
-
-                },
-
-                y: {
-
-                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
-
-                    ticks: { color: '#9ca3af', font: { size: 11 } }
-
-                }
-
-            }
-
-        }
-
-    });
-
-
-
-    // 4. Odds Range Performance Chart
-
-    const ctxOdds = document.getElementById('odds-chart').getContext('2d');
-
-    if (oddsChart) oddsChart.destroy();
-
-    
-
-    // Backend returns 'odds_band' for portfolio and 'range' for individual backtest
-
-    const ranges = oddsStats.map(item => item.odds_band || item.range || item.label || 'N/A');
-
-    const oddsProfits = oddsStats.map(item => item.profit);
-
-    const oddsColors = oddsProfits.map(val => val >= 0 ? 'rgba(16, 185, 129, 0.75)' : 'rgba(239, 68, 68, 0.75)');
-
-    const oddsBorderColors = oddsProfits.map(val => val >= 0 ? '#10b981' : '#ef4444');
-
-    
-
-    oddsChart = new Chart(ctxOdds, {
-
-        type: 'bar',
-
-        data: {
-
-            labels: ranges,
-
-            datasets: [{
-
-                label: 'Lucro por Odds ($)',
-
-                data: oddsProfits,
-
-                backgroundColor: oddsColors,
-
-                borderColor: oddsBorderColors,
-
-                borderWidth: 1.5,
-
-                borderRadius: 4
-
-            }]
-
-        },
-
-        options: {
-
-            responsive: true,
-
-            maintainAspectRatio: false,
-
-            plugins: {
-
-                legend: { display: false }
-
-            },
-
-            scales: {
-
-                x: {
-
-                    grid: { display: false },
-
-                    ticks: { color: '#9ca3af', font: { size: 10 } }
-
-                },
-
-                y: {
-
-                    grid: { color: 'rgba(255, 255, 255, 0.04)' },
-
-                    ticks: { color: '#9ca3af', font: { size: 11 } }
-
-                }
-
-            }
-
-        }
-
-    });
-
-}
 
 
 
@@ -2060,117 +1571,70 @@ function displayAiAnalysis(aiAnalysis, results, isPortfolio = false) {
     
 
     // Fill text and values
-
-    document.getElementById('ai-ml-probability').innerText = `${aiAnalysis.ml_probability.toFixed(1)}%`;
+    const mlProb = aiAnalysis.ml_probability || 0;
+    document.getElementById('ai-ml-probability').innerText = `${mlProb.toFixed(1)}%`;
 
     const mlProgress = document.getElementById('ai-ml-progress');
+    mlProgress.style.width = `${mlProb}%`;
 
-    mlProgress.style.width = `${aiAnalysis.ml_probability}%`;
-
-    
-
-    document.getElementById('ai-bayesian-confidence').innerText = `${aiAnalysis.bayesian_confidence.toFixed(1)}%`;
+    const bayesConf = aiAnalysis.bayesian_confidence || 0;
+    document.getElementById('ai-bayesian-confidence').innerText = `${bayesConf.toFixed(1)}%`;
 
     const bayesianProgress = document.getElementById('ai-bayesian-progress');
-
-    bayesianProgress.style.width = `${aiAnalysis.bayesian_confidence}%`;
-
-    
+    bayesianProgress.style.width = `${bayesConf}%`;
 
     // Drift
-
     const driftVal = document.getElementById('ai-drift-value');
-
-    const sign = aiAnalysis.drift_ratio >= 0 ? '+' : '';
-
-    driftVal.innerText = `${sign}${aiAnalysis.drift_ratio.toFixed(1)}%`;
-
-    
+    const driftRatio = aiAnalysis.drift_ratio || 0;
+    const sign = driftRatio >= 0 ? '+' : '';
+    driftVal.innerText = `${sign}${driftRatio.toFixed(1)}%`;
 
     // Color of drift value
-
-    if (aiAnalysis.drift_ratio >= 0) {
-
+    if (driftRatio >= 0) {
         driftVal.className = 'widget-value text-profit';
-
-    } else if (aiAnalysis.drift_ratio < -8) {
-
+    } else if (driftRatio < -8) {
         driftVal.className = 'widget-value text-loss';
-
     } else {
-
         driftVal.className = 'widget-value'; // neutral or light decay
-
     }
 
-    
-
-    document.getElementById('ai-roi-first').innerText = `${aiAnalysis.roi_first_half.toFixed(1)}%`;
-
-    document.getElementById('ai-roi-second').innerText = `${aiAnalysis.roi_second_half.toFixed(1)}%`;
-
-    
+    const roiFirst = aiAnalysis.roi_first_half || 0;
+    const roiSecond = aiAnalysis.roi_second_half || 0;
+    document.getElementById('ai-roi-first').innerText = `${roiFirst.toFixed(1)}%`;
+    document.getElementById('ai-roi-second').innerText = `${roiSecond.toFixed(1)}%`;
 
     // Colors of first/second ROI
-
     const roiFirstSpan = document.getElementById('ai-roi-first');
-
     const roiSecondSpan = document.getElementById('ai-roi-second');
-
-    roiFirstSpan.className = aiAnalysis.roi_first_half >= 0 ? 'half-val text-profit' : 'half-val text-loss';
-
-    roiSecondSpan.className = aiAnalysis.roi_second_half >= 0 ? 'half-val text-profit' : 'half-val text-loss';
-
-
+    roiFirstSpan.className = roiFirst >= 0 ? 'half-val text-profit' : 'half-val text-loss';
+    roiSecondSpan.className = roiSecond >= 0 ? 'half-val text-profit' : 'half-val text-loss';
 
     // Set Verdict badge and report text
-
     const badge = document.getElementById('ai-verdict-badge');
-
     const reportText = document.getElementById('ai-report-text');
 
-    
-
     // Simple markdown interpreter for report text (converting **bold** to <strong> and newlines to <br>)
-
-    let formattedReport = aiAnalysis.report
-
+    let formattedReport = (aiAnalysis.report || '')
         .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-
         .replace(/\n/g, '<br>');
-
-        
 
     reportText.innerHTML = formattedReport;
 
     
 
     // Classify badge based on ML probability & Bayesian confidence & Drift
-
-    if (aiAnalysis.ml_probability >= 65 && aiAnalysis.bayesian_confidence >= 70 && aiAnalysis.drift_ratio >= -3) {
-
+    if (mlProb >= 65 && bayesConf >= 70 && driftRatio >= -3) {
         badge.innerText = 'Excelente / Sustentável';
-
         badge.className = 'badge badge-high';
-
-    } else if (aiAnalysis.ml_probability < 50 && aiAnalysis.bayesian_confidence < 60) {
-
+    } else if (mlProb < 50 && bayesConf < 60) {
         badge.innerText = 'Risco Alto / Overfitting';
-
         badge.className = 'badge badge-low';
-
-    } else if (aiAnalysis.drift_ratio < -8) {
-
+    } else if (driftRatio < -8) {
         badge.innerText = 'Alerta de Decaimento';
-
         badge.className = 'badge badge-medium';
-
     } else {
-
         badge.innerText = 'Moderação / Estável';
-
         badge.className = 'badge badge-medium';
-
     }
 
     
@@ -2315,93 +1779,52 @@ function renderChecklist(aiAnalysis, results) {
     
 
     const summary = results.summary;
-
     const mc = aiAnalysis.monte_carlo;
-
-    
+    const mlProb = aiAnalysis.ml_probability || 0;
+    const bayesConf = aiAnalysis.bayesian_confidence || 0;
+    const driftRatio = aiAnalysis.drift_ratio || 0;
 
     const checklistItems = [
-
         {
-
             title: "Volume de Apostas (Amostra)",
-
             value: `${summary.total_bets} apostas`,
-
             desc: summary.total_bets >= 500 ? "Aprovado: Amostra estatisticamente robusta." : 
-
                   (summary.total_bets >= 200 ? "Alerta: Amostra moderada, sujeita a alguma variância." : "Risco: Amostra muito pequena para garantir consistência."),
-
             status: summary.total_bets >= 500 ? "success" : (summary.total_bets >= 200 ? "warning" : "danger"),
-
             icon: summary.total_bets >= 500 ? "fa-circle-check" : (summary.total_bets >= 200 ? "fa-triangle-exclamation" : "fa-circle-xmark")
-
         },
-
         {
-
             title: "Retorno sobre Investimento (ROI)",
-
             value: `${summary.roi.toFixed(2)}%`,
-
             desc: summary.roi >= 3.0 ? "Aprovado: Retorno profissional e sustentável." :
-
                   (summary.roi >= 0.0 ? "Alerta: Margem muito baixa, vulnerável a custos." : "Perigo: Estratégia deficitária no período analisado."),
-
             status: summary.roi >= 3.0 ? "success" : (summary.roi >= 0.0 ? "warning" : "danger"),
-
             icon: summary.roi >= 3.0 ? "fa-circle-check" : (summary.roi >= 0.0 ? "fa-triangle-exclamation" : "fa-circle-xmark")
-
         },
-
         {
-
             title: "Previsão de Sucesso ML (Classificador)",
-
-            value: `${aiAnalysis.ml_probability.toFixed(1)}%`,
-
-            desc: aiAnalysis.ml_probability >= 70.0 ? "Aprovado: Alta chance de continuidade nos próximos ciclos." :
-
-                  (aiAnalysis.ml_probability >= 50.0 ? "Alerta: Estabilidade moderada com alguma oscilação prevista." : "Perigo: Alta probabilidade de inversão ou decaimento."),
-
-            status: aiAnalysis.ml_probability >= 70.0 ? "success" : (aiAnalysis.ml_probability >= 50.0 ? "warning" : "danger"),
-
-            icon: aiAnalysis.ml_probability >= 70.0 ? "fa-circle-check" : (aiAnalysis.ml_probability >= 50.0 ? "fa-triangle-exclamation" : "fa-circle-xmark")
-
+            value: `${mlProb.toFixed(1)}%`,
+            desc: mlProb >= 70.0 ? "Aprovado: Alta chance de continuidade nos próximos ciclos." :
+                  (mlProb >= 50.0 ? "Alerta: Estabilidade moderada com alguma oscilação prevista." : "Perigo: Alta probabilidade de inversão ou decaimento."),
+            status: mlProb >= 70.0 ? "success" : (mlProb >= 50.0 ? "warning" : "danger"),
+            icon: mlProb >= 70.0 ? "fa-circle-check" : (mlProb >= 50.0 ? "fa-triangle-exclamation" : "fa-circle-xmark")
         },
-
         {
-
             title: "Confiança Bayesiana do Edge",
-
-            value: `${aiAnalysis.bayesian_confidence.toFixed(1)}% de certeza`,
-
-            desc: aiAnalysis.bayesian_confidence >= 80.0 ? "Aprovado: Edge matemático real comprovado cientificamente." :
-
-                  (aiAnalysis.bayesian_confidence >= 60.0 ? "Alerta: Indícios fracos de edge, pode ser ruído estatístico." : "Perigo: Desempenho muito próximo da sorte/azar no longo prazo."),
-
-            status: aiAnalysis.bayesian_confidence >= 80.0 ? "success" : (aiAnalysis.bayesian_confidence >= 60.0 ? "warning" : "danger"),
-
-            icon: aiAnalysis.bayesian_confidence >= 80.0 ? "fa-circle-check" : (aiAnalysis.bayesian_confidence >= 60.0 ? "fa-triangle-exclamation" : "fa-circle-xmark")
-
+            value: `${bayesConf.toFixed(1)}% de certeza`,
+            desc: bayesConf >= 80.0 ? "Aprovado: Edge matemático real comprovado cientificamente." :
+                  (bayesConf >= 60.0 ? "Alerta: Indícios fracos de edge, pode ser ruído estatístico." : "Perigo: Desempenho muito próximo da sorte/azar no longo prazo."),
+            status: bayesConf >= 80.0 ? "success" : (bayesConf >= 60.0 ? "warning" : "danger"),
+            icon: bayesConf >= 80.0 ? "fa-circle-check" : (bayesConf >= 60.0 ? "fa-triangle-exclamation" : "fa-circle-xmark")
         },
-
         {
-
             title: "Estabilidade Temporal (Drift de ROI)",
-
-            value: `${aiAnalysis.drift_ratio >= 0 ? '+' : ''}${aiAnalysis.drift_ratio.toFixed(1)}% de desvio`,
-
-            desc: aiAnalysis.drift_ratio >= -3.0 ? "Aprovado: Estratégia muito estável entre a 1ª e 2ª metades." :
-
-                  (aiAnalysis.drift_ratio >= -8.0 ? "Alerta: Leve decaimento de performance detectado." : "Perigo: Forte perda de rendimento recente (decaimento estatístico)."),
-
-            status: aiAnalysis.drift_ratio >= -3.0 ? "success" : (aiAnalysis.drift_ratio >= -8.0 ? "warning" : "danger"),
-
-            icon: aiAnalysis.drift_ratio >= -3.0 ? "fa-circle-check" : (aiAnalysis.drift_ratio >= -8.0 ? "fa-triangle-exclamation" : "fa-circle-xmark")
-
+            value: `${driftRatio >= 0 ? '+' : ''}${driftRatio.toFixed(1)}% de desvio`,
+            desc: driftRatio >= -3.0 ? "Aprovado: Estratégia muito estável entre a 1ª e 2ª metades." :
+                  (driftRatio >= -8.0 ? "Alerta: Leve decaimento de performance detectado." : "Perigo: Forte perda de rendimento recente (decaimento estatístico)."),
+            status: driftRatio >= -3.0 ? "success" : (driftRatio >= -8.0 ? "warning" : "danger"),
+            icon: driftRatio >= -3.0 ? "fa-circle-check" : (driftRatio >= -8.0 ? "fa-triangle-exclamation" : "fa-circle-xmark")
         }
-
     ];
 
     
@@ -3328,10 +2751,7 @@ function clearDashboard() {
         }
 
         // 2. Clear charts
-        if (typeof equityChart !== 'undefined' && equityChart) { equityChart.destroy(); equityChart = null; }
-        if (typeof leagueChart !== 'undefined' && leagueChart) { leagueChart.destroy(); leagueChart = null; }
-        if (typeof monthlyChart !== 'undefined' && monthlyChart) { monthlyChart.destroy(); monthlyChart = null; }
-        if (typeof oddsChart !== 'undefined' && oddsChart) { oddsChart.destroy(); oddsChart = null; }
+        clearCharts();
 
         // 3. Clear bets cache and table
         if (typeof allBets !== 'undefined') { allBets = []; }
@@ -8526,6 +7946,7 @@ window.runSteamScan = function() {
 
 
 window.runBacktest = async function(overrideParams) {
+    let btn = null;
     try {
         // --- Portfolio Fix: Restore standard UI panels ---
         const pPanel = document.getElementById('portfolio-results-panel');
@@ -8554,7 +7975,7 @@ window.runBacktest = async function(overrideParams) {
             }
         });
 
-        const btn = document.getElementById('btn-run-backtest');
+        btn = document.getElementById('btn-run-backtest');
         if(btn) btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Rodando...';
 
         let leagues, startDate, endDate, markets, valThreshold, initialBankroll, stakeRule, stakeValue, oddsSource, minOdds, maxOdds, exchangeCommission, oos, useMl;
@@ -8733,12 +8154,14 @@ window.runBacktest = async function(overrideParams) {
             if (banner) banner.style.display = 'flex';
             const leagueNames = leagues.map(code => {
                 const lbl = document.querySelector(`label[for="league-${code}"]`) || document.querySelector(`label:has(input[value="${code}"])`);
-                return lbl ? lbl.innerText.trim() : code;
+                const text = lbl ? (lbl.innerText || lbl.textContent || "") : "";
+                return text.trim() ? text.trim() : code;
             }).join(', ');
             
             const marketNames = markets.map(code => {
                 const lbl = document.querySelector(`label:has(input[value="${code}"])`);
-                return lbl ? lbl.innerText.trim() : code;
+                const text = lbl ? (lbl.innerText || lbl.textContent || "") : "";
+                return text.trim() ? text.trim() : code;
             }).join(', ');
             
             if(document.getElementById('active-leagues-text')) document.getElementById('active-leagues-text').innerText = leagueNames || 'N/A';
@@ -9200,7 +8623,6 @@ setTimeout(loadClusterAiConfig, 2000);
 
 
 // --- Portfolio Backtesting ---
-let portfolioEquityChart = null;
 
 function togglePortfolioStakeInput() {
     const method = document.getElementById('portfolio-risk-method').value;
@@ -9374,46 +8796,7 @@ async function runPortfolioBacktest(overrideStrategyIds) {
     }
 }
 
-function renderPortfolioChart(equityCurve) {
-    const ctx = document.getElementById('portfolio-equity-chart').getContext('2d');
-    
-    if (portfolioEquityChart) {
-        portfolioEquityChart.destroy();
-    }
-    
-    const dates = equityCurve.map(e => e.date);
-    const bankrolls = equityCurve.map(e => e.bankroll);
-    
-    portfolioEquityChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: dates,
-            datasets: [{
-                label: 'Banca Total do Portfólio',
-                data: bankrolls,
-                borderColor: '#8b5cf6',
-                backgroundColor: 'rgba(139, 92, 246, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                pointRadius: 0,
-                pointHoverRadius: 4,
-                tension: 0.1
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: true, labels: { color: '#e2e8f0' } },
-                tooltip: { mode: 'index', intersect: false }
-            },
-            scales: {
-                x: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } },
-                y: { ticks: { color: '#94a3b8' }, grid: { color: 'rgba(255,255,255,0.05)' } }
-            }
-        }
-    });
-}
+
 
 async function loadPortfolio(id) {
     try {
