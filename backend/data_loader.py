@@ -341,6 +341,8 @@ def sync_data_from_api(force=False):
 def load_league_data(league_code, start_date='2021-01-01', data_source="footballdata", api_key=""):
     """Loads and standardizes data for a given league starting from a specific date."""
     if data_source == "futpython":
+        if not api_key:
+            api_key = get_futpython_api_key()
         return fetch_futpython_data(league_code, start_date, api_key)
         
     global _LEAGUE_DATA_CACHE
@@ -612,6 +614,21 @@ def get_api_token():
         except Exception as e:
             print(f"Error loading API token from config: {e}")
     return None
+
+def get_futpython_api_key():
+    """Loads the FutPythonTrader API key from data/futpython_config.json, falling back to default."""
+    config_path = os.path.join(DATA_DIR, 'futpython_config.json')
+    if os.path.exists(config_path):
+        try:
+            import json
+            with open(config_path, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                key = config.get('api_key')
+                if key and key.strip():
+                    return key.strip()
+        except Exception as e:
+            print(f"Error loading FutPythonTrader API key: {e}")
+    return "cmqa6oz0p01i1wq6lzxknltmd"
 
 def load_upcoming_from_api(token):
     """

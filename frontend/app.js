@@ -9730,3 +9730,14 @@ window.reloadStrategyById = reloadStrategyById;
 window.reloadStrategy = reloadStrategy;
 window.toggleActivePortfolio = toggleActivePortfolio;
 window.onCalculatorLeagueChange = onCalculatorLeagueChange;
+
+// Expose missing UI event handlers to global scope
+window.clearDashboard = clearDashboard;
+window.onMarketSelectionChange = onMarketSelectionChange;
+window.openSaveStrategyModal = openSaveStrategyModal;
+window.requestNotificationPermission = requestNotificationPermission;
+window.savePortfolio = savePortfolio;
+window.selectAllMarkets = selectAllMarkets;
+window.testNotificationAlert = testNotificationAlert;
+window.toggleMarketDropdown = toggleMarketDropdown;
+

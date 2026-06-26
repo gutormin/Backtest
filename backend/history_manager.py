@@ -38,6 +38,15 @@ def add_strategy(data: dict):
     if 'strategy_ids' in data.get("params", {}):
         inferred_type = "portfolio"
         
+    params = data.get("params", {})
+    if params.get("data_source") == "futpython":
+        if not params.get("futpython_api_key"):
+            try:
+                from .data_loader import get_futpython_api_key
+                params["futpython_api_key"] = get_futpython_api_key()
+            except Exception:
+                params["futpython_api_key"] = "cmqa6oz0p01i1wq6lzxknltmd"
+
     entry = {
         # Respect client-provided ID so localStorage sync works correctly
         "id": provided_id if provided_id else str(uuid.uuid4()),
@@ -45,7 +54,7 @@ def add_strategy(data: dict):
         "name": data.get("name", "Nova Estratégia"),
         "type": inferred_type,
         "is_tg_active": data.get("is_tg_active", False),
-        "params": data.get("params", {}),
+        "params": params,
         "summary": data.get("summary", {})
     }
     
