@@ -48,15 +48,37 @@ window.futpythonApiKey = 'cmqa6oz0p01i1wq6lzxknltmd';
 // ============================================================
 const LS_HISTORY_KEY = 'predictive_history_v3';
 
+function lsLoadHistory() {
+    try { return JSON.parse(localStorage.getItem(LS_HISTORY_KEY) || '[]'); } catch { return []; }
+}
 
+function lsSaveHistory(data) {
+    try { localStorage.setItem(LS_HISTORY_KEY, JSON.stringify(data)); } catch {}
+}
 
+function lsAddItem(item) {
+    const h = lsLoadHistory();
+    const idx = h.findIndex(x => x.id === item.id);
+    if (idx >= 0) h[idx] = item; else h.unshift(item);
+    lsSaveHistory(h);
+}
 
+function lsDeleteItem(id) {
+    lsSaveHistory(lsLoadHistory().filter(x => x.id !== id));
+}
 
-
-
-
-
-
+async function lsSyncToServer(localItems) {
+    // Re-POST any local items not present on server (after Render redeployment)
+    for (const item of localItems) {
+        try {
+            await fetch(`${API_BASE_URL}/api/history`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(item)
+            });
+        } catch {}
+    }
+}
 
 async function handleDataSourceChange() {
     window.currentDataSource = document.getElementById('data-source-select').value;
