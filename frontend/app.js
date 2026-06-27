@@ -98,7 +98,26 @@ async function handleDataSourceChange() {
     if (typeof populateCalculatorLeagues === 'function') {
         await populateCalculatorLeagues();
     }
+    updateMarketBadgesUI();
 }
+
+function updateMarketBadgesUI() {
+    const activeSource = window.currentDataSource;
+    const badgesFd = document.querySelectorAll('.mkt-badge-fd');
+    const badgesFp = document.querySelectorAll('.mkt-badge-fp');
+    
+    if (activeSource === 'footballdata') {
+        badgesFd.forEach(b => b.classList.remove('mkt-badge-dimmed'));
+        badgesFp.forEach(b => b.classList.add('mkt-badge-dimmed'));
+    } else if (activeSource === 'futpython') {
+        badgesFd.forEach(b => b.classList.add('mkt-badge-dimmed'));
+        badgesFp.forEach(b => b.classList.remove('mkt-badge-dimmed'));
+    } else {
+        badgesFd.forEach(b => b.classList.remove('mkt-badge-dimmed'));
+        badgesFp.forEach(b => b.classList.remove('mkt-badge-dimmed'));
+    }
+}
+
 
 function saveFutpythonKey(val) {
     window.futpythonApiKey = val;
@@ -126,6 +145,7 @@ function runInitApp() {
     }
     
     initApp();
+    updateMarketBadgesUI();
     
     // Close modal when clicking outside of modal container
     const modal = document.getElementById('match-details-modal');

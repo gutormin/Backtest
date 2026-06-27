@@ -88,61 +88,67 @@
 <button onclick="selectAllMarkets(true, event)" type="button">Todos</button>
 <button onclick="selectAllMarkets(false, event)" type="button">Limpar</button>
 </div>
-<div class="multiselect-options" id="market-checkboxes-container">
+<div class="mkt-badge-legend">
+                                    <span>Legenda:</span>
+                                    <span><span class="mkt-badge mkt-real">✓</span> Real</span>
+                                    <span><span class="mkt-badge mkt-est">~</span> Estimado</span>
+                                    <span style="margin-left:auto; font-weight:600; font-size: 8.5px; color:var(--text-muted);">FD: FootballData | FP: FutPython</span>
+                                </div>
+                                <div class="multiselect-options" id="market-checkboxes-container">
 <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Resultado 1X2</div>
 <label class="multiselect-option-item">
-<input checked="" onchange="onMarketSelectionChange()" type="checkbox" value="home"/> Mandante (1)
+<input checked="" onchange="onMarketSelectionChange()" type="checkbox" value="home"/> Mandante (1) <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="away"/> Visitante (2)
+<input onchange="onMarketSelectionChange()" type="checkbox" value="away"/> Visitante (2) <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="draw"/> Empate (X)
+<input onchange="onMarketSelectionChange()" type="checkbox" value="draw"/> Empate (X) <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Dupla Chance (Lay)</div>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_home"/> Contra Mandante (X2)
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_home"/> Contra Mandante (X2) <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_away"/> Contra Visitante (1X)
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_away"/> Contra Visitante (1X) <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_draw"/> Contra Empate (12)
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_draw"/> Contra Empate (12) <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Gols (Over/Under)</div>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="over15"/> Over 1.5 Gols
+<input onchange="onMarketSelectionChange()" type="checkbox" value="over15"/> Over 1.5 Gols <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="over25"/> Over 2.5 Gols
+<input onchange="onMarketSelectionChange()" type="checkbox" value="over25"/> Over 2.5 Gols <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="under25"/> Under 2.5 Gols
+<input onchange="onMarketSelectionChange()" type="checkbox" value="under25"/> Under 2.5 Gols <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="over35"/> Over 3.5 Gols
+<input onchange="onMarketSelectionChange()" type="checkbox" value="over35"/> Over 3.5 Gols <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="under35"/> Under 3.5 Gols
+<input onchange="onMarketSelectionChange()" type="checkbox" value="under35"/> Under 3.5 Gols <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="over45"/> Over 4.5 Gols
+<input onchange="onMarketSelectionChange()" type="checkbox" value="over45"/> Over 4.5 Gols <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="under45"/> Under 4.5 Gols
+<input onchange="onMarketSelectionChange()" type="checkbox" value="under45"/> Under 4.5 Gols <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="over55"/> Over 5.5 Gols
+<input onchange="onMarketSelectionChange()" type="checkbox" value="over55"/> Over 5.5 Gols <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="under55"/> Under 5.5 Gols
+<input onchange="onMarketSelectionChange()" type="checkbox" value="under55"/> Under 5.5 Gols <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Ambas Marcam</div>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="btts_yes"/> Ambas Marcam Sim
+<input onchange="onMarketSelectionChange()" type="checkbox" value="btts_yes"/> Ambas Marcam Sim <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="btts_no"/> Ambas Marcam Não
+<input onchange="onMarketSelectionChange()" type="checkbox" value="btts_no"/> Ambas Marcam Não <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Empate Anula (DNB)</div>
                                     <label class="multiselect-option-item">
@@ -154,25 +160,25 @@
 
                                     <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">1º Tempo (HT)</div>
                                     <label class="multiselect-option-item">
-                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_home"/> HT Mandante
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_home"/> HT Mandante <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <label class="multiselect-option-item">
-                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_draw"/> HT Empate
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_draw"/> HT Empate <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <label class="multiselect-option-item">
-                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_away"/> HT Visitante
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_away"/> HT Visitante <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <label class="multiselect-option-item">
-                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_over05"/> HT Over 0.5
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_over05"/> HT Over 0.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <label class="multiselect-option-item">
-                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_under05"/> HT Under 0.5
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_under05"/> HT Under 0.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <label class="multiselect-option-item">
-                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_over15"/> HT Over 1.5
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_over15"/> HT Over 1.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <label class="multiselect-option-item">
-                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_under15"/> HT Under 1.5
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_under15"/> HT Under 1.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Handicap Asiático (Main Spread)</div>
                                     <label class="multiselect-option-item">
@@ -184,53 +190,53 @@
 
                                     <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Placar Exato</div>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_10"/> Placar Exato 1-0
+<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_10"/> Placar Exato 1-0 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_20"/> Placar Exato 2-0
+<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_20"/> Placar Exato 2-0 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_21"/> Placar Exato 2-1
+<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_21"/> Placar Exato 2-1 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_00"/> Placar Exato 0-0
+<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_00"/> Placar Exato 0-0 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_11"/> Placar Exato 1-1
+<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_11"/> Placar Exato 1-1 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_01"/> Placar Exato 0-1
+<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_01"/> Placar Exato 0-1 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_02"/> Placar Exato 0-2
+<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_02"/> Placar Exato 0-2 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_12"/> Placar Exato 1-2
+<input onchange="onMarketSelectionChange()" type="checkbox" value="cs_12"/> Placar Exato 1-2 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Lay Placar Exato</div>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_10"/> Lay Placar 1-0
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_10"/> Lay Placar 1-0 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_20"/> Lay Placar 2-0
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_20"/> Lay Placar 2-0 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_21"/> Lay Placar 2-1
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_21"/> Lay Placar 2-1 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_00"/> Lay Placar 0-0
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_00"/> Lay Placar 0-0 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_11"/> Lay Placar 1-1
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_11"/> Lay Placar 1-1 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_01"/> Lay Placar 0-1
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_01"/> Lay Placar 0-1 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_02"/> Lay Placar 0-2
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_02"/> Lay Placar 0-2 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 <label class="multiselect-option-item">
-<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_12"/> Lay Placar 1-2
+<input onchange="onMarketSelectionChange()" type="checkbox" value="lay_cs_12"/> Lay Placar 1-2 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 </div>
 </div>

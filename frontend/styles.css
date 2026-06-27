@@ -2397,7 +2397,69 @@ tbody tr:hover {
     margin: 0;
 }
 
-/* Custom Portfolio Allocator Styles */
+/* ── Market Status Badges (odds quality indicator in dropdown) ── */
+.multiselect-option-item {
+    justify-content: space-between;
+}
+
+.mkt-status-badges {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-left: auto;
+    flex-shrink: 0;
+}
+
+.mkt-badge {
+    display: inline-flex;
+    align-items: center;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    line-height: 1.4;
+    cursor: default;
+    user-select: none;
+    transition: opacity 0.2s;
+}
+
+.mkt-badge.mkt-real {
+    background: rgba(34, 197, 94, 0.18);
+    color: #4ade80;
+    border: 1px solid rgba(74, 222, 128, 0.3);
+}
+
+.mkt-badge.mkt-est {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.28);
+}
+
+.mkt-badge.mkt-badge-dimmed {
+    opacity: 0.22;
+    filter: grayscale(80%);
+}
+
+
+/* Legend row inside the dropdown header */
+.mkt-badge-legend {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 8px 3px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 4px;
+    font-size: 9.5px;
+    color: var(--text-muted);
+}
+.mkt-badge-legend span {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+
 .allocator-market-row {
     margin-bottom: 12px;
 }
