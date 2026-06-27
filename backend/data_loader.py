@@ -801,7 +801,11 @@ def fetch_futpython_data(league_code, start_date, api_key):
                     'Over_HT_1_5': 'B365>1.5HT',
                     'Under_HT_1_5': 'B365<1.5HT',
                     'Over_HT_2_5': 'B365>2.5HT',
-                    'Under_HT_2_5': 'B365<2.5HT'
+                    'Under_HT_2_5': 'B365<2.5HT',
+                    'Shots_On_Target_Home_FT': 'HST',
+                    'Shots_On_Target_Away_FT': 'AST',
+                    'xG_Home_FT': 'HomeXG',
+                    'xG_Away_FT': 'AwayXG'
                 })
                 
                 # Fix comma-separated decimals for all numeric columns in FutPythonTrader

@@ -256,6 +256,12 @@ class ChronologicalBacktester:
                 odds_under15 = row.get('Under_FT_1_5')
                 odds_over35 = row.get('Over_FT_3_5')
                 odds_under35 = row.get('Under_FT_3_5')
+                odds_over45 = row.get('Over_FT_4_5')
+                odds_under45 = row.get('Under_FT_4_5')
+                # Real Double Chance odds from FutPythonTrader
+                odds_dc_x2 = row.get('DC_X2')
+                odds_dc_1x = row.get('DC_1X')
+                odds_dc_12 = row.get('DC_12')
             elif odds_source == 'Avg':
                 odds_h = row.get('AvgH')
                 odds_d = row.get('AvgD')
@@ -730,15 +736,23 @@ class ChronologicalBacktester:
                     bet_won = (fthg + ftag < 4)
                     market_label = "Under 3.5"
                 elif mkt == 'over45':
-                    if est_odds is None: est_odds = estimate_bookmaker_odds(odds_over25, odds_under25, lambda_home, lambda_away)
                     model_prob = prob_over_45
-                    bookie_odds = est_odds['bookie_over_45']
+                    try:
+                        _o45 = float(str(odds_over45).replace(',', '.')) if odds_over45 is not None and not pd.isna(odds_over45) else np.nan
+                        bookie_odds = _o45 if _o45 > 1.0 else (estimate_bookmaker_odds(odds_over25, odds_under25, lambda_home, lambda_away) if est_odds is None else est_odds)['bookie_over_45']
+                    except Exception:
+                        if est_odds is None: est_odds = estimate_bookmaker_odds(odds_over25, odds_under25, lambda_home, lambda_away)
+                        bookie_odds = est_odds['bookie_over_45']
                     bet_won = (fthg + ftag > 4)
                     market_label = "Over 4.5"
                 elif mkt == 'under45':
-                    if est_odds is None: est_odds = estimate_bookmaker_odds(odds_over25, odds_under25, lambda_home, lambda_away)
                     model_prob = 1.0 - prob_over_45
-                    bookie_odds = est_odds['bookie_under_45']
+                    try:
+                        _u45 = float(str(odds_under45).replace(',', '.')) if odds_under45 is not None and not pd.isna(odds_under45) else np.nan
+                        bookie_odds = _u45 if _u45 > 1.0 else (estimate_bookmaker_odds(odds_over25, odds_under25, lambda_home, lambda_away) if est_odds is None else est_odds)['bookie_under_45']
+                    except Exception:
+                        if est_odds is None: est_odds = estimate_bookmaker_odds(odds_over25, odds_under25, lambda_home, lambda_away)
+                        bookie_odds = est_odds['bookie_under_45']
                     bet_won = (fthg + ftag < 5)
                     market_label = "Under 4.5"
                 elif mkt == 'over55':
@@ -755,17 +769,29 @@ class ChronologicalBacktester:
                     market_label = "Under 5.5"
                 elif mkt == 'lay_home':
                     model_prob = prob_d + prob_a
-                    bookie_odds = 1.0 / (1.0/odds_d + 1.0/odds_a) if (odds_d > 1.0 and odds_a > 1.0) else np.nan
+                    try:
+                        _dc = float(str(odds_dc_x2).replace(',', '.')) if odds_dc_x2 is not None and not pd.isna(odds_dc_x2) else np.nan
+                        bookie_odds = _dc if _dc > 1.0 else (1.0 / (1.0/odds_d + 1.0/odds_a) if (odds_d > 1.0 and odds_a > 1.0) else np.nan)
+                    except Exception:
+                        bookie_odds = 1.0 / (1.0/odds_d + 1.0/odds_a) if (odds_d > 1.0 and odds_a > 1.0) else np.nan
                     bet_won = (ftr != 'H')
                     market_label = "Contra Mandante (X2)"
                 elif mkt == 'lay_away':
                     model_prob = prob_h + prob_d
-                    bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_d) if (odds_h > 1.0 and odds_d > 1.0) else np.nan
+                    try:
+                        _dc = float(str(odds_dc_1x).replace(',', '.')) if odds_dc_1x is not None and not pd.isna(odds_dc_1x) else np.nan
+                        bookie_odds = _dc if _dc > 1.0 else (1.0 / (1.0/odds_h + 1.0/odds_d) if (odds_h > 1.0 and odds_d > 1.0) else np.nan)
+                    except Exception:
+                        bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_d) if (odds_h > 1.0 and odds_d > 1.0) else np.nan
                     bet_won = (ftr != 'A')
                     market_label = "Contra Visitante (1X)"
                 elif mkt == 'lay_draw':
                     model_prob = prob_h + prob_a
-                    bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_a) if (odds_h > 1.0 and odds_a > 1.0) else np.nan
+                    try:
+                        _dc = float(str(odds_dc_12).replace(',', '.')) if odds_dc_12 is not None and not pd.isna(odds_dc_12) else np.nan
+                        bookie_odds = _dc if _dc > 1.0 else (1.0 / (1.0/odds_h + 1.0/odds_a) if (odds_h > 1.0 and odds_a > 1.0) else np.nan)
+                    except Exception:
+                        bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_a) if (odds_h > 1.0 and odds_a > 1.0) else np.nan
                     bet_won = (ftr != 'D')
                     market_label = "Contra Empate (12)"
                 elif mkt == 'btts_yes':
@@ -796,44 +822,52 @@ class ChronologicalBacktester:
                     market_label = "BTTS Não"
                 elif mkt.startswith('cs_'):
                     if est_odds is None: est_odds = estimate_bookmaker_odds(odds_over25, odds_under25, lambda_home, lambda_away)
+                    def _get_cs_odd(api_col, fallback_key):
+                        """Returns real bookmaker odd from API column, falling back to Poisson estimate."""
+                        raw = row.get(api_col)
+                        try:
+                            v = float(str(raw).replace(',', '.')) if raw is not None and not pd.isna(raw) else np.nan
+                            return v if v > 1.0 else est_odds[fallback_key]
+                        except Exception:
+                            return est_odds[fallback_key]
                     if mkt == 'cs_10':
                         model_prob = float(prob_matrix[1, 0])
-                        bookie_odds = est_odds['bookie_cs_10']
+                        bookie_odds = _get_cs_odd('CS_1_0', 'bookie_cs_10')
                         bet_won = (fthg == 1 and ftag == 0)
                         market_label = "Placar Exato 1-0"
                     elif mkt == 'cs_20':
                         model_prob = float(prob_matrix[2, 0])
-                        bookie_odds = est_odds['bookie_cs_20']
+                        bookie_odds = _get_cs_odd('CS_2_0', 'bookie_cs_20')
                         bet_won = (fthg == 2 and ftag == 0)
                         market_label = "Placar Exato 2-0"
                     elif mkt == 'cs_21':
                         model_prob = float(prob_matrix[2, 1])
-                        bookie_odds = est_odds['bookie_cs_21']
+                        bookie_odds = _get_cs_odd('CS_2_1', 'bookie_cs_21')
                         bet_won = (fthg == 2 and ftag == 1)
                         market_label = "Placar Exato 2-1"
                     elif mkt == 'cs_00':
                         model_prob = float(prob_matrix[0, 0])
-                        bookie_odds = est_odds['bookie_cs_00']
+                        bookie_odds = _get_cs_odd('CS_0_0', 'bookie_cs_00')
                         bet_won = (fthg == 0 and ftag == 0)
                         market_label = "Placar Exato 0-0"
                     elif mkt == 'cs_11':
                         model_prob = float(prob_matrix[1, 1])
-                        bookie_odds = est_odds['bookie_cs_11']
+                        bookie_odds = _get_cs_odd('CS_1_1', 'bookie_cs_11')
                         bet_won = (fthg == 1 and ftag == 1)
                         market_label = "Placar Exato 1-1"
                     elif mkt == 'cs_01':
                         model_prob = float(prob_matrix[0, 1])
-                        bookie_odds = est_odds['bookie_cs_01']
+                        bookie_odds = _get_cs_odd('CS_0_1', 'bookie_cs_01')
                         bet_won = (fthg == 0 and ftag == 1)
                         market_label = "Placar Exato 0-1"
                     elif mkt == 'cs_02':
                         model_prob = float(prob_matrix[0, 2])
-                        bookie_odds = est_odds['bookie_cs_02']
+                        bookie_odds = _get_cs_odd('CS_0_2', 'bookie_cs_02')
                         bet_won = (fthg == 0 and ftag == 2)
                         market_label = "Placar Exato 0-2"
                     elif mkt == 'cs_12':
                         model_prob = float(prob_matrix[1, 2])
-                        bookie_odds = est_odds['bookie_cs_12']
+                        bookie_odds = _get_cs_odd('CS_1_2', 'bookie_cs_12')
                         bet_won = (fthg == 1 and ftag == 2)
                         market_label = "Placar Exato 1-2"
                     elif mkt.startswith('lay_cs_'):
@@ -1541,6 +1575,12 @@ class ChronologicalBacktester:
             odds_under15 = row.get('Under_FT_1_5')
             odds_over35 = row.get('Over_FT_3_5')
             odds_under35 = row.get('Under_FT_3_5')
+            odds_over45 = row.get('Over_FT_4_5')
+            odds_under45 = row.get('Under_FT_4_5')
+            # Real Double Chance odds from FutPythonTrader
+            odds_dc_x2 = row.get('DC_X2')
+            odds_dc_1x = row.get('DC_1X')
+            odds_dc_12 = row.get('DC_12')
             
             # Asian Handicap (Main Spread)
             ahh_line = row.get('AHh')
@@ -1917,11 +1957,19 @@ class ChronologicalBacktester:
                         bet_won = (fthg + ftag < 4)
                     elif mkt == 'over45':
                         model_prob = prob_over_45
-                        bookie_odds = est_odds['bookie_over_45']
+                        try:
+                            _o45 = float(str(odds_over45).replace(',', '.')) if odds_over45 is not None and not pd.isna(odds_over45) else np.nan
+                            bookie_odds = _o45 if _o45 > 1.0 else est_odds['bookie_over_45']
+                        except Exception:
+                            bookie_odds = est_odds['bookie_over_45']
                         bet_won = (fthg + ftag > 4)
                     elif mkt == 'under45':
                         model_prob = 1.0 - prob_over_45
-                        bookie_odds = est_odds['bookie_under_45']
+                        try:
+                            _u45 = float(str(odds_under45).replace(',', '.')) if odds_under45 is not None and not pd.isna(odds_under45) else np.nan
+                            bookie_odds = _u45 if _u45 > 1.0 else est_odds['bookie_under_45']
+                        except Exception:
+                            bookie_odds = est_odds['bookie_under_45']
                         bet_won = (fthg + ftag < 5)
                     elif mkt == 'over55':
                         model_prob = prob_over_55
@@ -1933,15 +1981,27 @@ class ChronologicalBacktester:
                         bet_won = (fthg + ftag < 6)
                     elif mkt == 'lay_home':
                         model_prob = prob_d + prob_a
-                        bookie_odds = 1.0 / (1.0/odds_d + 1.0/odds_a) if (odds_d > 1.0 and odds_a > 1.0) else np.nan
+                        try:
+                            _dc = float(str(odds_dc_x2).replace(',', '.')) if odds_dc_x2 is not None and not pd.isna(odds_dc_x2) else np.nan
+                            bookie_odds = _dc if _dc > 1.0 else (1.0 / (1.0/odds_d + 1.0/odds_a) if (odds_d > 1.0 and odds_a > 1.0) else np.nan)
+                        except Exception:
+                            bookie_odds = 1.0 / (1.0/odds_d + 1.0/odds_a) if (odds_d > 1.0 and odds_a > 1.0) else np.nan
                         bet_won = (ftr != 'H')
                     elif mkt == 'lay_away':
                         model_prob = prob_h + prob_d
-                        bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_d) if (odds_h > 1.0 and odds_d > 1.0) else np.nan
+                        try:
+                            _dc = float(str(odds_dc_1x).replace(',', '.')) if odds_dc_1x is not None and not pd.isna(odds_dc_1x) else np.nan
+                            bookie_odds = _dc if _dc > 1.0 else (1.0 / (1.0/odds_h + 1.0/odds_d) if (odds_h > 1.0 and odds_d > 1.0) else np.nan)
+                        except Exception:
+                            bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_d) if (odds_h > 1.0 and odds_d > 1.0) else np.nan
                         bet_won = (ftr != 'A')
                     elif mkt == 'lay_draw':
                         model_prob = prob_h + prob_a
-                        bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_a) if (odds_h > 1.0 and odds_a > 1.0) else np.nan
+                        try:
+                            _dc = float(str(odds_dc_12).replace(',', '.')) if odds_dc_12 is not None and not pd.isna(odds_dc_12) else np.nan
+                            bookie_odds = _dc if _dc > 1.0 else (1.0 / (1.0/odds_h + 1.0/odds_a) if (odds_h > 1.0 and odds_a > 1.0) else np.nan)
+                        except Exception:
+                            bookie_odds = 1.0 / (1.0/odds_h + 1.0/odds_a) if (odds_h > 1.0 and odds_a > 1.0) else np.nan
                         bet_won = (ftr != 'D')
                     elif mkt == 'btts_yes':
                         model_prob = prob_btts_yes
@@ -1966,37 +2026,45 @@ class ChronologicalBacktester:
                             
                         bet_won = (fthg == 0 or ftag == 0)
                     elif mkt.startswith('cs_'):
+                        def _get_cs_odd_scan(api_col, fallback_key):
+                            """Returns real bookmaker odd from API column, falling back to Poisson estimate."""
+                            raw = row.get(api_col)
+                            try:
+                                v = float(str(raw).replace(',', '.')) if raw is not None and not pd.isna(raw) else np.nan
+                                return v if v > 1.0 else est_odds[fallback_key]
+                            except Exception:
+                                return est_odds[fallback_key]
                         if mkt == 'cs_10':
                             model_prob = float(prob_matrix[1, 0])
-                            bookie_odds = est_odds['bookie_cs_10']
+                            bookie_odds = _get_cs_odd_scan('CS_1_0', 'bookie_cs_10')
                             bet_won = (fthg == 1 and ftag == 0)
                         elif mkt == 'cs_20':
                             model_prob = float(prob_matrix[2, 0])
-                            bookie_odds = est_odds['bookie_cs_20']
+                            bookie_odds = _get_cs_odd_scan('CS_2_0', 'bookie_cs_20')
                             bet_won = (fthg == 2 and ftag == 0)
                         elif mkt == 'cs_21':
                             model_prob = float(prob_matrix[2, 1])
-                            bookie_odds = est_odds['bookie_cs_21']
+                            bookie_odds = _get_cs_odd_scan('CS_2_1', 'bookie_cs_21')
                             bet_won = (fthg == 2 and ftag == 1)
                         elif mkt == 'cs_00':
                             model_prob = float(prob_matrix[0, 0])
-                            bookie_odds = est_odds['bookie_cs_00']
+                            bookie_odds = _get_cs_odd_scan('CS_0_0', 'bookie_cs_00')
                             bet_won = (fthg == 0 and ftag == 0)
                         elif mkt == 'cs_11':
                             model_prob = float(prob_matrix[1, 1])
-                            bookie_odds = est_odds['bookie_cs_11']
+                            bookie_odds = _get_cs_odd_scan('CS_1_1', 'bookie_cs_11')
                             bet_won = (fthg == 1 and ftag == 1)
                         elif mkt == 'cs_01':
                             model_prob = float(prob_matrix[0, 1])
-                            bookie_odds = est_odds['bookie_cs_01']
+                            bookie_odds = _get_cs_odd_scan('CS_0_1', 'bookie_cs_01')
                             bet_won = (fthg == 0 and ftag == 1)
                         elif mkt == 'cs_02':
                             model_prob = float(prob_matrix[0, 2])
-                            bookie_odds = est_odds['bookie_cs_02']
+                            bookie_odds = _get_cs_odd_scan('CS_0_2', 'bookie_cs_02')
                             bet_won = (fthg == 0 and ftag == 2)
                         elif mkt == 'cs_12':
                             model_prob = float(prob_matrix[1, 2])
-                            bookie_odds = est_odds['bookie_cs_12']
+                            bookie_odds = _get_cs_odd_scan('CS_1_2', 'bookie_cs_12')
                             bet_won = (fthg == 1 and ftag == 2)
                         elif mkt.startswith('lay_cs_'):
                             cs_code = mkt.replace('lay_', '')
