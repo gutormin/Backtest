@@ -5,7 +5,7 @@ import pandas as pd
 from datetime import datetime
 from typing import List, Optional, Union, Dict, Any
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from ..data_loader import (
     sync_data, get_all_available_leagues, load_league_data, DATA_DIR, sync_fixtures,
@@ -48,6 +48,93 @@ class BacktestRequest(BaseModel):
     minOddsUnder25: Optional[float] = None
     maxOddsUnder25: Optional[float] = None
 
+    @validator('startDate', 'endDate')
+    def validate_date_format(cls, v):
+        try:
+            datetime.strptime(v, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("As datas devem estar no formato YYYY-MM-DD")
+        return v
+
+    @validator('endDate')
+    def validate_dates_relation(cls, v, values):
+        start_date_str = values.get('startDate')
+        if start_date_str:
+            try:
+                start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
+                end_dt = datetime.strptime(v, "%Y-%m-%d")
+                if start_dt > end_dt:
+                    raise ValueError("A data de início (startDate) deve ser igual ou anterior à data de fim (endDate)")
+            except ValueError as e:
+                if "formato" not in str(e):
+                    raise e
+        return v
+
+    @validator('initialBankroll')
+    def validate_bankroll(cls, v):
+        if v <= 0:
+            raise ValueError("A banca inicial (initialBankroll) deve ser maior que zero")
+        return v
+
+    @validator('minOdds')
+    def validate_min_odds(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("As odds mínimas devem ser maiores que zero")
+        return v
+
+    @validator('maxOdds')
+    def validate_max_odds(cls, v, values):
+        min_odds = values.get('minOdds')
+        if v is not None and min_odds is not None and v < min_odds:
+            raise ValueError("As odds máximas não podem ser menores que as odds mínimas")
+        return v
+
+    @validator('maxOddsH')
+    def validate_odds_h(cls, v, values):
+        min_h = values.get('minOddsH')
+        if v is not None and min_h is not None and v < min_h:
+            raise ValueError("odds máxima H não pode ser menor que odds mínima H")
+        return v
+
+    @validator('maxOddsD')
+    def validate_odds_d(cls, v, values):
+        min_d = values.get('minOddsD')
+        if v is not None and min_d is not None and v < min_d:
+            raise ValueError("odds máxima D não pode ser menor que odds mínima D")
+        return v
+
+    @validator('maxOddsA')
+    def validate_odds_a(cls, v, values):
+        min_a = values.get('minOddsA')
+        if v is not None and min_a is not None and v < min_a:
+            raise ValueError("odds máxima A não pode ser menor que odds mínima A")
+        return v
+
+    @validator('maxOddsOver25')
+    def validate_odds_over25(cls, v, values):
+        min_over = values.get('minOddsOver25')
+        if v is not None and min_over is not None and v < min_over:
+            raise ValueError("odds máxima Over 2.5 não pode ser menor que odds mínima Over 2.5")
+        return v
+
+    @validator('maxOddsUnder25')
+    def validate_odds_under25(cls, v, values):
+        min_under = values.get('minOddsUnder25')
+        if v is not None and min_under is not None and v < min_under:
+            raise ValueError("odds máxima Under 2.5 não pode ser menor que odds mínima Under 2.5")
+        return v
+
+    @validator('stakeValue')
+    def validate_stake_value(cls, v, values):
+        rule = values.get('stakingRule')
+        if rule in ['kelly', 'kelly_quarter', 'kelly_half', 'kelly_eighth']:
+            if v <= 0 or v > 1.0:
+                raise ValueError("Para regras Kelly, o stakeValue representa a porcentagem limite e deve estar entre 0.0 e 1.0 (ex: 0.25 para 25%)")
+        else:
+            if v <= 0:
+                raise ValueError("O stakeValue deve ser maior que zero")
+        return v
+
 class PredictRequest(BaseModel):
     league: str
     homeTeam: str
@@ -55,10 +142,35 @@ class PredictRequest(BaseModel):
     data_source: str = "footballdata"
     futpython_api_key: str = ""
 
+    @validator('league', 'homeTeam', 'awayTeam')
+    def validate_non_empty(cls, v):
+        if not v or not v.strip():
+            raise ValueError("O campo não pode ser vazio")
+        return v.strip()
+
+    @validator('awayTeam')
+    def validate_different_teams(cls, v, values):
+        home = values.get('homeTeam')
+        if home and home.strip().lower() == v.strip().lower():
+            raise ValueError("O time visitante (awayTeam) deve ser diferente do time mandante (homeTeam)")
+        return v
+
 class PortfolioRequest(BaseModel):
     strategy_ids: List[str]
     initial_bankroll: float = 1000.0
     risk_method: str = "kelly_quarter"
+
+    @validator('strategy_ids')
+    def validate_strategies_list(cls, v):
+        if not v:
+            raise ValueError("A lista de strategy_ids não pode estar vazia")
+        return v
+
+    @validator('initial_bankroll')
+    def validate_portfolio_bankroll(cls, v):
+        if v <= 0:
+            raise ValueError("A banca inicial deve ser maior que zero")
+        return v
 
 
 @router.get("/leagues")

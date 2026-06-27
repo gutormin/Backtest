@@ -6,7 +6,7 @@ import pandas as pd
 from datetime import datetime, timezone
 from typing import List, Optional, Union, Dict, Any
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, validator
 
 from ..data_loader import (
     DATA_DIR, sync_fixtures, get_all_available_leagues, load_league_data,
@@ -60,6 +60,58 @@ class ScanRequest(BaseModel):
     data_source: str = "footballdata"
     futpython_api_key: str = ""
 
+    @validator('startDate', 'endDate')
+    def validate_date_format(cls, v):
+        try:
+            datetime.strptime(v, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("As datas devem estar no formato YYYY-MM-DD")
+        return v
+
+    @validator('endDate')
+    def validate_dates_relation(cls, v, values):
+        start_date_str = values.get('startDate')
+        if start_date_str:
+            try:
+                start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
+                end_dt = datetime.strptime(v, "%Y-%m-%d")
+                if start_dt > end_dt:
+                    raise ValueError("A data de início (startDate) deve ser igual ou anterior à data de fim (endDate)")
+            except ValueError as e:
+                if "formato" not in str(e):
+                    raise e
+        return v
+
+    @validator('initialBankroll')
+    def validate_bankroll(cls, v):
+        if v <= 0:
+            raise ValueError("A banca inicial (initialBankroll) deve ser maior que zero")
+        return v
+
+    @validator('minOdds')
+    def validate_min_odds(cls, v):
+        if v is not None and v <= 0:
+            raise ValueError("As odds mínimas devem ser maiores que zero")
+        return v
+
+    @validator('maxOdds')
+    def validate_max_odds(cls, v, values):
+        min_odds = values.get('minOdds')
+        if v is not None and min_odds is not None and v < min_odds:
+            raise ValueError("As odds máximas não podem ser menores que as odds mínimas")
+        return v
+
+    @validator('stakeValue')
+    def validate_stake_value(cls, v, values):
+        rule = values.get('stakingRule')
+        if rule in ['kelly', 'kelly_quarter', 'kelly_half', 'kelly_eighth']:
+            if v <= 0 or v > 1.0:
+                raise ValueError("Para regras Kelly, o stakeValue representa a porcentagem limite e deve estar entre 0.0 e 1.0 (ex: 0.25 para 25%)")
+        else:
+            if v <= 0:
+                raise ValueError("O stakeValue deve ser maior que zero")
+        return v
+
 class SteamMovesRequest(BaseModel):
     leagues: List[str]
     startDate: str
@@ -70,8 +122,48 @@ class SteamMovesRequest(BaseModel):
     data_source: str = "footballdata"
     futpython_api_key: str = ""
 
+    @validator('startDate', 'endDate')
+    def validate_date_format(cls, v):
+        try:
+            datetime.strptime(v, "%Y-%m-%d")
+        except ValueError:
+            raise ValueError("As datas devem estar no formato YYYY-MM-DD")
+        return v
+
+    @validator('endDate')
+    def validate_dates_relation(cls, v, values):
+        start_date_str = values.get('startDate')
+        if start_date_str:
+            try:
+                start_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
+                end_dt = datetime.strptime(v, "%Y-%m-%d")
+                if start_dt > end_dt:
+                    raise ValueError("A data de início (startDate) deve ser igual ou anterior à data de fim (endDate)")
+            except ValueError as e:
+                if "formato" not in str(e):
+                    raise e
+        return v
+
+    @validator('minDropPct')
+    def validate_min_drop(cls, v):
+        if v <= 0:
+            raise ValueError("O percentual de queda mínima (minDropPct) deve ser maior que zero")
+        return v
+
+    @validator('stakeValue')
+    def validate_stake(cls, v):
+        if v <= 0:
+            raise ValueError("O stakeValue deve ser maior que zero")
+        return v
+
 class ArbitrageRequest(BaseModel):
     min_profit_pct: float = 0.5
+
+    @validator('min_profit_pct')
+    def validate_min_profit(cls, v):
+        if v < 0:
+            raise ValueError("O lucro mínimo percentual (min_profit_pct) não pode ser negativo")
+        return v
 
 class ArbitrageSchedulerConfig(BaseModel):
     enabled: bool
@@ -79,9 +171,17 @@ class ArbitrageSchedulerConfig(BaseModel):
     min_profit_pct: float
 
 class TelegramConfigRequest(BaseModel):
+    enabled: bool
     token: str
     chat_id: str
-    enabled: bool
+
+    @validator('token', 'chat_id')
+    def validate_telegram_params(cls, v, values):
+        enabled = values.get('enabled')
+        if enabled:
+            if not v or not v.strip():
+                raise ValueError("O token e o chat_id não podem ser vazios quando o bot do Telegram está ativado")
+        return v.strip() if v else v
 
 class TelegramTipSendRequest(BaseModel):
     league_name: str
