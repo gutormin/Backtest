@@ -920,8 +920,13 @@ class ChronologicalBacktester:
                         bet_won = not is_cs
                     elif mkt == 'dnb_h':
                         model_prob = prob_h / (prob_h + prob_a) if (prob_h + prob_a) > 0 else 0.5
+                        try:
+                            _dnb_h = float(str(row.get('DNB_1')).replace(',', '.')) if row.get('DNB_1') is not None and not pd.isna(row.get('DNB_1')) else np.nan
+                            odds_dnb_h_real = _dnb_h if _dnb_h > 1.0 else np.nan
+                        except Exception:
+                            odds_dnb_h_real = np.nan
                         odds_dnb_h_synth = odds_h * (odds_d - 1.0) / odds_d if (odds_h and odds_d and odds_d > 1.0) else np.nan
-                        bookie_odds = odds_dnb_h_synth
+                        bookie_odds = odds_dnb_h_real if not pd.isna(odds_dnb_h_real) else odds_dnb_h_synth
                         
                         kelly_probs = [prob_h, prob_d, prob_a]
                         kelly_outcomes = [bookie_odds - 1.0, 0.0, -1.0] if not pd.isna(bookie_odds) else [0.0, 0.0, 0.0]
@@ -939,8 +944,13 @@ class ChronologicalBacktester:
                         
                     elif mkt == 'dnb_a':
                         model_prob = prob_a / (prob_h + prob_a) if (prob_h + prob_a) > 0 else 0.5
+                        try:
+                            _dnb_a = float(str(row.get('DNB_2')).replace(',', '.')) if row.get('DNB_2') is not None and not pd.isna(row.get('DNB_2')) else np.nan
+                            odds_dnb_a_real = _dnb_a if _dnb_a > 1.0 else np.nan
+                        except Exception:
+                            odds_dnb_a_real = np.nan
                         odds_dnb_a_synth = odds_a * (odds_d - 1.0) / odds_d if (odds_a and odds_d and odds_d > 1.0) else np.nan
-                        bookie_odds = odds_dnb_a_synth
+                        bookie_odds = odds_dnb_a_real if not pd.isna(odds_dnb_a_real) else odds_dnb_a_synth
                         
                         kelly_probs = [prob_a, prob_d, prob_h]
                         kelly_outcomes = [bookie_odds - 1.0, 0.0, -1.0] if not pd.isna(bookie_odds) else [0.0, 0.0, 0.0]
