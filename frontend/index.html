@@ -152,10 +152,18 @@
                                     </label>
                                     <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Empate Anula (DNB)</div>
                                     <label class="multiselect-option-item">
-                                        <input type="checkbox" value="dnb_h" onchange="onMarketSelectionChange()"> DNB Casa
+                                        <input type="checkbox" value="dnb_h" onchange="onMarketSelectionChange()"> DNB Casa <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <label class="multiselect-option-item">
-                                        <input type="checkbox" value="dnb_a" onchange="onMarketSelectionChange()"> DNB Fora
+                                        <input type="checkbox" value="dnb_a" onchange="onMarketSelectionChange()"> DNB Fora <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+
+                                    <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Handicap Asiático (Main Spread)</div>
+                                    <label class="multiselect-option-item">
+                                        <input type="checkbox" value="ah_home" onchange="onMarketSelectionChange()"> AH Casa <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input type="checkbox" value="ah_away" onchange="onMarketSelectionChange()"> AH Fora <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
                                     </label>
 
                                     <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">1º Tempo (HT)</div>
