@@ -183,7 +183,7 @@ def list_leagues(source: str = "footballdata"):
 @router.post("/sync")
 def trigger_sync(source: str = "csv"):
     try:
-        sync_data(force=False, source=source)
+        sync_data(force=True, source=source)
         return {"status": "success", "message": f"Dados sincronizados via {source.upper()} com sucesso."}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
