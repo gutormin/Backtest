@@ -67,12 +67,32 @@ def translate_custom_csv(df):
         if 'odds_btts_no' in df.columns: df.rename(columns={'odds_btts_no': 'BTTS_No'}, inplace=True)
         
         # Over/Under FT Goals
+        if 'Over 0.5' in df.columns: df.rename(columns={'Over 0.5': 'Over_FT_0_5'}, inplace=True)
+        if 'Under 0.5' in df.columns: df.rename(columns={'Under 0.5': 'Under_FT_0_5'}, inplace=True)
+        if 'odds_ft_over05' in df.columns: df.rename(columns={'odds_ft_over05': 'Over_FT_0_5'}, inplace=True)
+        if 'odds_ft_under05' in df.columns: df.rename(columns={'odds_ft_under05': 'Under_FT_0_5'}, inplace=True)
         if 'Over 1.5' in df.columns: df.rename(columns={'Over 1.5': 'Over_FT_1_5'}, inplace=True)
         if 'Under 1.5' in df.columns: df.rename(columns={'Under 1.5': 'Under_FT_1_5'}, inplace=True)
         if 'Over 3.5' in df.columns: df.rename(columns={'Over 3.5': 'Over_FT_3_5'}, inplace=True)
         if 'Under 3.5' in df.columns: df.rename(columns={'Under 3.5': 'Under_FT_3_5'}, inplace=True)
         if 'Over 4.5' in df.columns: df.rename(columns={'Over 4.5': 'Over_FT_4_5'}, inplace=True)
         if 'Under 4.5' in df.columns: df.rename(columns={'Under 4.5': 'Under_FT_4_5'}, inplace=True)
+        
+        # Win to Nil
+        if 'odds_win_to_nil_1' in df.columns: df.rename(columns={'odds_win_to_nil_1': 'odds_win_to_nil_1'}, inplace=True)
+        if 'odds_win_to_nil_2' in df.columns: df.rename(columns={'odds_win_to_nil_2': 'odds_win_to_nil_2'}, inplace=True)
+        
+        # Corners Over/Under
+        for line in ['75', '85', '95', '105', '115']:
+            col_over = f'odds_corners_over_{line}'
+            col_under = f'odds_corners_under_{line}'
+            if col_over in df.columns: df.rename(columns={col_over: col_over}, inplace=True)
+            if col_under in df.columns: df.rename(columns={col_under: col_under}, inplace=True)
+            
+        # Corners 1X2
+        if 'odds_corners_1' in df.columns: df.rename(columns={'odds_corners_1': 'odds_corners_1'}, inplace=True)
+        if 'odds_corners_x' in df.columns: df.rename(columns={'odds_corners_x': 'odds_corners_x'}, inplace=True)
+        if 'odds_corners_2' in df.columns: df.rename(columns={'odds_corners_2': 'odds_corners_2'}, inplace=True)
         
         # HT Over/Under Goals
         if 'odds_1st_half_over05' in df.columns: df.rename(columns={'odds_1st_half_over05': 'Over_HT_0_5'}, inplace=True)
@@ -304,6 +324,8 @@ def sync_single_league_from_api(league_code, force=False):
                         'Odd_2_HT': parse_odd(m.get('odds_1st_half_result_2')),
                         'BTTS_Yes': parse_odd(m.get('odds_btts_yes') or m.get('BTTS Sim')),
                         'BTTS_No': parse_odd(m.get('odds_btts_no') or m.get('BTTS Não')),
+                        'Over_FT_0_5': parse_odd(m.get('odds_ft_over05') or m.get('Over 0.5')),
+                        'Under_FT_0_5': parse_odd(m.get('odds_ft_under05') or m.get('Under 0.5')),
                         'Over_FT_1_5': parse_odd(m.get('odds_ft_over15') or m.get('Over 1.5')),
                         'Under_FT_1_5': parse_odd(m.get('odds_ft_under15') or m.get('Under 1.5')),
                         'Over_FT_3_5': parse_odd(m.get('odds_ft_over35') or m.get('Over 3.5')),
@@ -318,7 +340,22 @@ def sync_single_league_from_api(league_code, force=False):
                         'Over_HT_0_5': parse_odd(m.get('odds_1st_half_over05')),
                         'Under_HT_0_5': parse_odd(m.get('odds_1st_half_under05')),
                         'Over_HT_1_5': parse_odd(m.get('odds_1st_half_over15')),
-                        'Under_HT_1_5': parse_odd(m.get('odds_1st_half_under15'))
+                        'Under_HT_1_5': parse_odd(m.get('odds_1st_half_under15')),
+                        'odds_win_to_nil_1': parse_odd(m.get('odds_win_to_nil_1')),
+                        'odds_win_to_nil_2': parse_odd(m.get('odds_win_to_nil_2')),
+                        'odds_corners_over_75': parse_odd(m.get('odds_corners_over_75')),
+                        'odds_corners_over_85': parse_odd(m.get('odds_corners_over_85')),
+                        'odds_corners_over_95': parse_odd(m.get('odds_corners_over_95')),
+                        'odds_corners_over_105': parse_odd(m.get('odds_corners_over_105')),
+                        'odds_corners_over_115': parse_odd(m.get('odds_corners_over_115')),
+                        'odds_corners_under_75': parse_odd(m.get('odds_corners_under_75')),
+                        'odds_corners_under_85': parse_odd(m.get('odds_corners_under_85')),
+                        'odds_corners_under_95': parse_odd(m.get('odds_corners_under_95')),
+                        'odds_corners_under_105': parse_odd(m.get('odds_corners_under_105')),
+                        'odds_corners_under_115': parse_odd(m.get('odds_corners_under_115')),
+                        'odds_corners_1': parse_odd(m.get('odds_corners_1')),
+                        'odds_corners_x': parse_odd(m.get('odds_corners_x')),
+                        'odds_corners_2': parse_odd(m.get('odds_corners_2'))
                     }
                     records.append(rec)
                 return pd.DataFrame(records)
@@ -755,6 +792,8 @@ def load_upcoming_from_api(token):
                 'Odd_2_HT': parse_odd(match.get('odds_1st_half_result_2')),
                 'BTTS_Yes': parse_odd(match.get('odds_btts_yes') or match.get('BTTS Sim')),
                 'BTTS_No': parse_odd(match.get('odds_btts_no') or match.get('BTTS Não')),
+                'Over_FT_0_5': parse_odd(match.get('odds_ft_over05') or match.get('Over 0.5')),
+                'Under_FT_0_5': parse_odd(match.get('odds_ft_under05') or match.get('Under 0.5')),
                 'Over_FT_1_5': parse_odd(match.get('odds_ft_over15') or match.get('Over 1.5')),
                 'Under_FT_1_5': parse_odd(match.get('odds_ft_under15') or match.get('Under 1.5')),
                 'Over_FT_3_5': parse_odd(match.get('odds_ft_over35') or match.get('Over 3.5')),
@@ -769,7 +808,22 @@ def load_upcoming_from_api(token):
                 'Over_HT_0_5': parse_odd(match.get('odds_1st_half_over05')),
                 'Under_HT_0_5': parse_odd(match.get('odds_1st_half_under05')),
                 'Over_HT_1_5': parse_odd(match.get('odds_1st_half_over15')),
-                'Under_HT_1_5': parse_odd(match.get('odds_1st_half_under15'))
+                'Under_HT_1_5': parse_odd(match.get('odds_1st_half_under15')),
+                'odds_win_to_nil_1': parse_odd(match.get('odds_win_to_nil_1')),
+                'odds_win_to_nil_2': parse_odd(match.get('odds_win_to_nil_2')),
+                'odds_corners_over_75': parse_odd(match.get('odds_corners_over_75')),
+                'odds_corners_over_85': parse_odd(match.get('odds_corners_over_85')),
+                'odds_corners_over_95': parse_odd(match.get('odds_corners_over_95')),
+                'odds_corners_over_105': parse_odd(match.get('odds_corners_over_105')),
+                'odds_corners_over_115': parse_odd(match.get('odds_corners_over_115')),
+                'odds_corners_under_75': parse_odd(match.get('odds_corners_under_75')),
+                'odds_corners_under_85': parse_odd(match.get('odds_corners_under_85')),
+                'odds_corners_under_95': parse_odd(match.get('odds_corners_under_95')),
+                'odds_corners_under_105': parse_odd(match.get('odds_corners_under_105')),
+                'odds_corners_under_115': parse_odd(match.get('odds_corners_under_115')),
+                'odds_corners_1': parse_odd(match.get('odds_corners_1')),
+                'odds_corners_x': parse_odd(match.get('odds_corners_x')),
+                'odds_corners_2': parse_odd(match.get('odds_corners_2'))
             }
             mapped_records.append(record)
             
