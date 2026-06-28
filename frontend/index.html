@@ -188,12 +188,109 @@
                                     <label class="multiselect-option-item">
                                         <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_under15"/> HT Under 1.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-real" title="Football-Data: Odds Reais">FD ✓</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
-                                    <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Handicap Asiático (Main Spread)</div>
                                     <label class="multiselect-option-item">
-                                        <input type="checkbox" value="ah_home" onchange="onMarketSelectionChange()"> AH Casa
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_over25"/> HT Over 2.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
                                     <label class="multiselect-option-item">
-                                        <input type="checkbox" value="ah_away" onchange="onMarketSelectionChange()"> AH Fora
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_under25"/> HT Under 2.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_over35"/> HT Over 3.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="ht_under35"/> HT Under 3.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+
+                                    <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">2º Tempo (2H)</div>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_home"/> 2H Mandante <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_draw"/> 2H Empate <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_away"/> 2H Visitante <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_over05"/> 2H Over 0.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_under05"/> 2H Under 0.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_over15"/> 2H Over 1.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_under15"/> 2H Under 1.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_over25"/> 2H Over 2.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_under25"/> 2H Under 2.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_over35"/> 2H Over 3.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="sh_under35"/> 2H Under 3.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+
+                                    <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Handicap Asiático (Main Spread)</div>
+                                    <label class="multiselect-option-item">
+                                        <input type="checkbox" value="ah_home" onchange="onMarketSelectionChange()"> AH Casa <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input type="checkbox" value="ah_away" onchange="onMarketSelectionChange()"> AH Fora <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-est" title="FutPythonTrader: Estimado (Poisson)">FP ~</span></span>
+                                    </label>
+
+                                    <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Vitória sem Sofrer Gols</div>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="win_to_nil_home"/> Mandante Ganha de Zero <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="win_to_nil_away"/> Visitante Ganha de Zero <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+
+                                    <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Escanteios</div>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_1"/> Mais Escanteios Mandante <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_x"/> Mais Escanteios Empate <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_2"/> Mais Escanteios Visitante <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_over_75"/> Escanteios Over 7.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_under_75"/> Escanteios Under 7.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_over_85"/> Escanteios Over 8.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_under_85"/> Escanteios Under 8.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_over_95"/> Escanteios Over 9.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_under_95"/> Escanteios Under 9.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_over_105"/> Escanteios Over 10.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_under_105"/> Escanteios Under 10.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_over_115"/> Escanteios Over 11.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
+                                    </label>
+                                    <label class="multiselect-option-item">
+                                        <input onchange="onMarketSelectionChange()" type="checkbox" value="corners_under_115"/> Escanteios Under 11.5 <span class="mkt-status-badges"><span class="mkt-badge mkt-badge-fd mkt-est" title="Football-Data: Estimado (Poisson)">FD ~</span><span class="mkt-badge mkt-badge-fp mkt-real" title="FutPythonTrader: Odds Reais">FP ✓</span></span>
                                     </label>
 
                                     <div class="multiselect-optgroup" onclick="toggleGroup(this, event)">Placar Exato</div>

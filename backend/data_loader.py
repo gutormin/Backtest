@@ -99,6 +99,28 @@ def translate_custom_csv(df):
         if 'odds_1st_half_under05' in df.columns: df.rename(columns={'odds_1st_half_under05': 'Under_HT_0_5'}, inplace=True)
         if 'odds_1st_half_over15' in df.columns: df.rename(columns={'odds_1st_half_over15': 'Over_HT_1_5'}, inplace=True)
         if 'odds_1st_half_under15' in df.columns: df.rename(columns={'odds_1st_half_under15': 'Under_HT_1_5'}, inplace=True)
+        if 'odds_1st_half_over25' in df.columns: df.rename(columns={'odds_1st_half_over25': 'Over_HT_2_5'}, inplace=True)
+        if 'odds_1st_half_under25' in df.columns: df.rename(columns={'odds_1st_half_under25': 'Under_HT_2_5'}, inplace=True)
+        if 'odds_1st_half_over35' in df.columns: df.rename(columns={'odds_1st_half_over35': 'Over_HT_3_5'}, inplace=True)
+        if 'odds_1st_half_under35' in df.columns: df.rename(columns={'odds_1st_half_under35': 'Under_HT_3_5'}, inplace=True)
+        
+        # 2H Over/Under Goals
+        for line in ['05', '15', '25', '35']:
+            col_over = f'odds_2nd_half_over{line}'
+            col_under = f'odds_2nd_half_under{line}'
+            if col_over in df.columns: df.rename(columns={col_over: f'Over_2H_{line[0]}_{line[1]}'}, inplace=True)
+            if col_under in df.columns: df.rename(columns={col_under: f'Under_2H_{line[0]}_{line[1]}'}, inplace=True)
+            
+        # 2nd Half Result
+        if 'odds_2nd_half_result_1' in df.columns: df.rename(columns={'odds_2nd_half_result_1': 'Odd_1_2H'}, inplace=True)
+        if 'odds_2nd_half_result_x' in df.columns: df.rename(columns={'odds_2nd_half_result_x': 'Odd_X_2H'}, inplace=True)
+        if 'odds_2nd_half_result_2' in df.columns: df.rename(columns={'odds_2nd_half_result_2': 'Odd_2_2H'}, inplace=True)
+        
+        # HTHG / HTAG (HT Goals)
+        if 'Gols HT Casa' in df.columns: df.rename(columns={'Gols HT Casa': 'HTHG'}, inplace=True)
+        if 'Gols HT Fora' in df.columns: df.rename(columns={'Gols HT Fora': 'HTAG'}, inplace=True)
+        if 'ht_goals_team_a' in df.columns: df.rename(columns={'ht_goals_team_a': 'HTHG'}, inplace=True)
+        if 'ht_goals_team_b' in df.columns: df.rename(columns={'ht_goals_team_b': 'HTAG'}, inplace=True)
             
         # Filter incomplete matches for history, but keep them if we need them for upcoming
         # However, data_loader.py is usually for history, so we only need rows with FTR
@@ -310,6 +332,8 @@ def sync_single_league_from_api(league_code, force=False):
                         'FTHG': hg,
                         'FTAG': ag,
                         'FTR': ftr,
+                        'HTHG': parse_numeric(m.get('ht_goals_team_a')),
+                        'HTAG': parse_numeric(m.get('ht_goals_team_b')),
                         'B365H': parse_odd(m.get('odds_ft_1')),
                         'B365D': parse_odd(m.get('odds_ft_x')),
                         'B365A': parse_odd(m.get('odds_ft_2')),
@@ -317,6 +341,8 @@ def sync_single_league_from_api(league_code, force=False):
                         'B365<2.5': parse_odd(m.get('odds_ft_under25')),
                         'HST': parse_numeric(m.get('team_a_shotsOnTarget')),
                         'AST': parse_numeric(m.get('team_b_shotsOnTarget')),
+                        'HC': parse_numeric(m.get('team_a_corners')),
+                        'AC': parse_numeric(m.get('team_b_corners')),
                         'HomeXG': parse_numeric(m.get('team_a_xg') or m.get('team_a_xg_prematch')),
                         'AwayXG': parse_numeric(m.get('team_b_xg') or m.get('team_b_xg_prematch')),
                         'Odd_1_HT': parse_odd(m.get('odds_1st_half_result_1')),
@@ -341,6 +367,21 @@ def sync_single_league_from_api(league_code, force=False):
                         'Under_HT_0_5': parse_odd(m.get('odds_1st_half_under05')),
                         'Over_HT_1_5': parse_odd(m.get('odds_1st_half_over15')),
                         'Under_HT_1_5': parse_odd(m.get('odds_1st_half_under15')),
+                        'Over_HT_2_5': parse_odd(m.get('odds_1st_half_over25')),
+                        'Under_HT_2_5': parse_odd(m.get('odds_1st_half_under25')),
+                        'Over_HT_3_5': parse_odd(m.get('odds_1st_half_over35')),
+                        'Under_HT_3_5': parse_odd(m.get('odds_1st_half_under35')),
+                        'Over_2H_0_5': parse_odd(m.get('odds_2nd_half_over05')),
+                        'Under_2H_0_5': parse_odd(m.get('odds_2nd_half_under05')),
+                        'Over_2H_1_5': parse_odd(m.get('odds_2nd_half_over15')),
+                        'Under_2H_1_5': parse_odd(m.get('odds_2nd_half_under15')),
+                        'Over_2H_2_5': parse_odd(m.get('odds_2nd_half_over25')),
+                        'Under_2H_2_5': parse_odd(m.get('odds_2nd_half_under25')),
+                        'Over_2H_3_5': parse_odd(m.get('odds_2nd_half_over35')),
+                        'Under_2H_3_5': parse_odd(m.get('odds_2nd_half_under35')),
+                        'Odd_1_2H': parse_odd(m.get('odds_2nd_half_result_1')),
+                        'Odd_X_2H': parse_odd(m.get('odds_2nd_half_result_x')),
+                        'Odd_2_2H': parse_odd(m.get('odds_2nd_half_result_2')),
                         'odds_win_to_nil_1': parse_odd(m.get('odds_win_to_nil_1')),
                         'odds_win_to_nil_2': parse_odd(m.get('odds_win_to_nil_2')),
                         'odds_corners_over_75': parse_odd(m.get('odds_corners_over_75')),
@@ -785,6 +826,8 @@ def load_upcoming_from_api(token):
                 'B365<2.5': parse_odd(match.get('odds_ft_under25')),
                 'HST': parse_numeric(match.get('team_a_shotsOnTarget')),
                 'AST': parse_numeric(match.get('team_b_shotsOnTarget')),
+                'HC': parse_numeric(match.get('team_a_corners')),
+                'AC': parse_numeric(match.get('team_b_corners')),
                 'HomeXG': parse_numeric(match.get('team_a_xg_prematch')),
                 'AwayXG': parse_numeric(match.get('team_b_xg_prematch')),
                 'Odd_1_HT': parse_odd(match.get('odds_1st_half_result_1')),
@@ -809,6 +852,21 @@ def load_upcoming_from_api(token):
                 'Under_HT_0_5': parse_odd(match.get('odds_1st_half_under05')),
                 'Over_HT_1_5': parse_odd(match.get('odds_1st_half_over15')),
                 'Under_HT_1_5': parse_odd(match.get('odds_1st_half_under15')),
+                'Over_HT_2_5': parse_odd(match.get('odds_1st_half_over25')),
+                'Under_HT_2_5': parse_odd(match.get('odds_1st_half_under25')),
+                'Over_HT_3_5': parse_odd(match.get('odds_1st_half_over35')),
+                'Under_HT_3_5': parse_odd(match.get('odds_1st_half_under35')),
+                'Over_2H_0_5': parse_odd(match.get('odds_2nd_half_over05')),
+                'Under_2H_0_5': parse_odd(match.get('odds_2nd_half_under05')),
+                'Over_2H_1_5': parse_odd(match.get('odds_2nd_half_over15')),
+                'Under_2H_1_5': parse_odd(match.get('odds_2nd_half_under15')),
+                'Over_2H_2_5': parse_odd(match.get('odds_2nd_half_over25')),
+                'Under_2H_2_5': parse_odd(match.get('odds_2nd_half_under25')),
+                'Over_2H_3_5': parse_odd(match.get('odds_2nd_half_over35')),
+                'Under_2H_3_5': parse_odd(match.get('odds_2nd_half_under35')),
+                'Odd_1_2H': parse_odd(match.get('odds_2nd_half_result_1')),
+                'Odd_X_2H': parse_odd(match.get('odds_2nd_half_result_x')),
+                'Odd_2_2H': parse_odd(match.get('odds_2nd_half_result_2')),
                 'odds_win_to_nil_1': parse_odd(match.get('odds_win_to_nil_1')),
                 'odds_win_to_nil_2': parse_odd(match.get('odds_win_to_nil_2')),
                 'odds_corners_over_75': parse_odd(match.get('odds_corners_over_75')),
