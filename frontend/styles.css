@@ -92,7 +92,7 @@ body {
    Sidebar component
    ========================================================================== */
 .sidebar {
-    width: 320px;
+    width: 390px;
     background-color: rgba(13, 15, 24, 0.85);
     backdrop-filter: var(--glass-blur);
     border-right: 1px solid var(--border-color);
@@ -2399,13 +2399,26 @@ tbody tr:hover {
 
 /* ── Market Status Badges (odds quality indicator in dropdown) ── */
 .multiselect-option-item {
-    justify-content: space-between;
+    justify-content: flex-start;
+    gap: 6px;
+    width: 100%;
+}
+
+.multiselect-option-item span.mkt-col-name {
+    font-size: 10px;
+    opacity: 0.6;
+    margin-left: 4px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    flex-grow: 1;
+    text-align: left;
 }
 
 .mkt-status-badges {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 4px;
     margin-left: auto;
     flex-shrink: 0;
 }
