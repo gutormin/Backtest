@@ -1260,6 +1260,13 @@
                             <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
                                 <input type="radio" name="dutching-bookie-filter" value="Bet365" onchange="filterDutchingRadar()"> 🟩 Apenas Bet365
                             </label>
+                            
+                            <span style="font-size: 12px; color: var(--text-secondary); margin-left: auto;">Fonte de Dados:</span>
+                            <select id="dutching-source-select" style="background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 4px 8px; border-radius: 4px; font-size: 12px; outline: none;" onchange="runDutchingScan()">
+                                <option value="odds_api">The Odds API (Tempo Real)</option>
+                                <option value="datafootball">API DataFootball (Hoje)</option>
+                                <option value="csv_fixtures">Football-Data CSV (Rodada)</option>
+                            </select>
                         </div>
                         <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
                             <table class="table-styled" style="width: 100%;" id="dutching-radar-table">

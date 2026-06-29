@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
 from backend.models import PoissonModel, estimate_bookmaker_odds
-from backend.data_loader import load_league_data, get_all_available_leagues
+from backend.data_loader import load_league_data, get_all_available_leagues, DATA_DIR, get_api_token, load_upcoming_from_api
 
 # Mapeamento do sport_key da The Odds API para o código de liga do nosso sistema
 SPORT_LEAGUE_MAP = {
@@ -16,173 +16,273 @@ SPORT_LEAGUE_MAP = {
     'soccer_brazil_campeonato': 'BRA'
 }
 
-def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769'):
-    # Puxa os próximos jogos do mundo
-    SPORT = 'upcoming'
-    REGIONS = 'eu,uk,us'
-    MARKETS = 'h2h,totals'
-    
-    url = f'https://api.the-odds-api.com/v4/sports/{SPORT}/odds/?apiKey={api_key}&regions={REGIONS}&markets={MARKETS}'
-    
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-    }
-    
-    try:
-        response = requests.get(url, headers=headers, timeout=12)
-    except Exception as e:
-        print(f"API Dutching Connection Error: {e}")
-        return []
-        
-    if response.status_code != 200:
-        print("API Dutching Error:", response.text)
-        # Retorna dados simulados/mock se a API falhar ou créditos acabarem
-        return get_mock_dutching_opportunities()
-        
-    data = response.json()
+def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', source='odds_api'):
     opportunities = []
-    
     poisson = PoissonModel()
     
     # Carrega dados históricos apenas das ligas mapeadas para evitar leituras repetidas em loop
+    all_leagues = get_all_available_leagues()
+    league_codes = [l['code'] for l in all_leagues]
     leagues_data = {}
-    for sport_key, league_code in SPORT_LEAGUE_MAP.items():
+    
+    for league_code in league_codes:
         try:
             df = load_league_data(league_code, start_date='2020-08-01')
             if not df.empty:
                 leagues_data[league_code] = df
-        except Exception as e:
-            print(f"Error loading historical data for {league_code}: {e}")
-            
-    for match in data:
-        sport_key = match.get('sport_key')
-        league_code = SPORT_LEAGUE_MAP.get(sport_key)
-        if not league_code or league_code not in leagues_data:
-            continue
-            
-        home_team = match.get('home_team')
-        away_team = match.get('away_team')
-        match_name = f"{home_team} vs {away_team}"
+        except Exception:
+            pass
+
+    # 1. FONTE: THE ODDS API (Tempo Real Betfair/Bet365)
+    if source == 'odds_api':
+        SPORT = 'upcoming'
+        REGIONS = 'eu,uk,us'
+        MARKETS = 'h2h,totals'
         
-        # Filtra jogos ao vivo
-        dt = match.get('commence_time')
-        if not dt:
-            continue
-            
+        url = f'https://api.the-odds-api.com/v4/sports/{SPORT}/odds/?apiKey={api_key}&regions={REGIONS}&markets={MARKETS}'
+        headers = {'User-Agent': 'Mozilla/5.0'}
+        
         try:
-            match_time = datetime.strptime(dt, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
-            if match_time < datetime.now(timezone.utc):
-                continue
-            match_date = match_time.strftime("%d/%m/%Y %H:%M")
-        except:
-            continue
-            
-        # Pega as odds de Bet365 e Betfair Exchange
-        odds_data = {
-            'Bet365': {'h2h': {}, 'totals': {}},
-            'Betfair Exchange': {'h2h': {}, 'totals': {}}
-        }
-        
-        for bookie in match.get('bookmakers', []):
-            title = bookie.get('title')
-            if title not in ['Bet365', 'Betfair Exchange']:
-                continue
-                
-            for market in bookie.get('markets', []):
-                key = market.get('key')
-                if key == 'h2h':
-                    for outcome in market.get('outcomes', []):
-                        odds_data[title]['h2h'][outcome.get('name')] = outcome.get('price')
-                elif key == 'totals':
-                    for outcome in market.get('outcomes', []):
-                        point = outcome.get('point')
-                        if point == 2.5:
-                            odds_data[title]['totals'][outcome.get('name')] = outcome.get('price')
+            response = requests.get(url, headers=headers, timeout=12)
+            if response.status_code == 200:
+                data = response.json()
+                for match in data:
+                    sport_key = match.get('sport_key')
+                    league_code = SPORT_LEAGUE_MAP.get(sport_key)
+                    if not league_code or league_code not in leagues_data:
+                        continue
+                        
+                    home_team = match.get('home_team')
+                    away_team = match.get('away_team')
+                    match_name = f"{home_team} vs {away_team}"
+                    
+                    dt = match.get('commence_time')
+                    if not dt:
+                        continue
+                        
+                    try:
+                        match_time = datetime.strptime(dt, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=timezone.utc)
+                        if match_time < datetime.now(timezone.utc):
+                            continue
+                        match_date = match_time.strftime("%d/%m/%Y %H:%M")
+                    except:
+                        continue
+                        
+                    odds_data = {
+                        'Bet365': {'h2h': {}, 'totals': {}},
+                        'Betfair Exchange': {'h2h': {}, 'totals': {}}
+                    }
+                    
+                    for bookie in match.get('bookmakers', []):
+                        title = bookie.get('title')
+                        if title not in ['Bet365', 'Betfair Exchange']:
+                            continue
                             
-        # Verifica se temos dados mínimos de odds de 1X2 e Over/Under
-        has_bet365 = len(odds_data['Bet365']['h2h']) == 3 and len(odds_data['Bet365']['totals']) == 2
-        has_betfair = len(odds_data['Betfair Exchange']['h2h']) == 3 and len(odds_data['Betfair Exchange']['totals']) == 2
+                        for market in bookie.get('markets', []):
+                            key = market.get('key')
+                            if key == 'h2h':
+                                for outcome in market.get('outcomes', []):
+                                    odds_data[title]['h2h'][outcome.get('name')] = outcome.get('price')
+                            elif key == 'totals':
+                                for outcome in market.get('outcomes', []):
+                                    point = outcome.get('point')
+                                    if point == 2.5:
+                                        odds_data[title]['totals'][outcome.get('name')] = outcome.get('price')
+                                        
+                    has_bet365 = len(odds_data['Bet365']['h2h']) == 3 and len(odds_data['Bet365']['totals']) == 2
+                    has_betfair = len(odds_data['Betfair Exchange']['h2h']) == 3 and len(odds_data['Betfair Exchange']['totals']) == 2
+                    
+                    if not (has_bet365 or has_betfair):
+                        continue
+                        
+                    hist_df = leagues_data[league_code]
+                    all_teams_local = list(set(hist_df['HomeTeam'].tolist() + hist_df['AwayTeam'].tolist()))
+                    
+                    def find_closest_team(api_name):
+                        api_name_lower = api_name.lower()
+                        for t in all_teams_local:
+                            if t.lower() in api_name_lower or api_name_lower in t.lower():
+                                return t
+                        return None
+                        
+                    home_team_local = find_closest_team(home_team)
+                    away_team_local = find_closest_team(away_team)
+                    
+                    if not home_team_local or not away_team_local:
+                        continue
+                        
+                    try:
+                        pred = poisson.predict_match(home_team_local, away_team_local, hist_df, datetime.now())
+                        if not pred or 'lambda_home' not in pred:
+                            continue
+                    except Exception:
+                        continue
+                        
+                    for bookie in ['Bet365', 'Betfair Exchange']:
+                        if not (len(odds_data[bookie]['h2h']) == 3 and len(odds_data[bookie]['totals']) == 2):
+                            continue
+                            
+                        o25_odd = odds_data[bookie]['totals'].get('Over')
+                        u25_odd = odds_data[bookie]['totals'].get('Under')
+                        
+                        if not o25_odd or not u25_odd:
+                            continue
+                            
+                        try:
+                            est_odds = estimate_bookmaker_odds(o25_odd, u25_odd, pred['lambda_home'], pred['lambda_away'])
+                        except Exception:
+                            continue
+                            
+                        if pred['prob_home'] > pred['prob_away']:
+                            fav_side = 'home'
+                            outcomes_to_cover = ['1-0', '2-0', '2-1']
+                            prob_combined = pred['prob_matrix'][1][0] + pred['prob_matrix'][2][0] + pred['prob_matrix'][2][1]
+                            odds_to_cover = [est_odds['bookie_cs_10'], est_odds['bookie_cs_20'], est_odds['bookie_cs_21']]
+                        else:
+                            fav_side = 'away'
+                            outcomes_to_cover = ['0-1', '0-2', '1-2']
+                            prob_combined = pred['prob_matrix'][0][1] + pred['prob_matrix'][0][2] + pred['prob_matrix'][1][2]
+                            odds_to_cover = [est_odds['bookie_cs_01'], est_odds['bookie_cs_02'], est_odds['bookie_cs_12']]
+                            
+                        sum_prob_implied = sum(1.0 / odd for odd in odds_to_cover if odd > 1.0)
+                        if sum_prob_implied > 0:
+                            dutching_odd = 1.0 / sum_prob_implied
+                            edge = prob_combined * dutching_odd - 1.0
+                            
+                            if edge > 0.01:
+                                opportunities.append({
+                                    'match': match_name,
+                                    'date': match_date,
+                                    'bookmaker': bookie,
+                                    'market': f"Dutching Placar Exato Favorito ({'Mandante' if fav_side == 'home' else 'Visitante'})",
+                                    'selections': outcomes_to_cover,
+                                    'odds': [round(o, 2) for o in odds_to_cover],
+                                    'dutching_odd': round(dutching_odd, 2),
+                                    'model_prob': f"{round(prob_combined * 100, 2)}%",
+                                    'edge': f"+{round(edge * 100, 2)}%",
+                                    'raw_edge': edge
+                                })
+            else:
+                return get_mock_dutching_opportunities()
+        except Exception:
+            return get_mock_dutching_opportunities()
+
+    # 2. FONTE: API DATAFOOTBALL OU FOOTBALL-DATA CSV (DADOS LOCAIS)
+    elif source in ['datafootball', 'csv_fixtures']:
+        df_fixtures = pd.DataFrame()
         
-        if not (has_bet365 or has_betfair):
-            continue
+        if source == 'datafootball':
+            token = get_api_token()
+            if token:
+                try:
+                    df_fixtures = load_upcoming_from_api(token)
+                except Exception:
+                    pass
+                    
+        if df_fixtures.empty:
+            fixtures_path = os.path.join(DATA_DIR, 'fixtures.csv')
+            if os.path.exists(fixtures_path):
+                try:
+                    df_fixtures = pd.read_csv(fixtures_path, encoding='latin1')
+                    df_fixtures.columns = [c.replace('ï»¿', '').replace('\ufeff', '').strip() for c in df_fixtures.columns]
+                except Exception:
+                    pass
+                    
+        if df_fixtures.empty:
+            return get_mock_dutching_opportunities()
             
-        # Encontrar os nomes dos times na nossa base histórica correspondentes
-        hist_df = leagues_data[league_code]
-        all_teams_local = list(set(hist_df['HomeTeam'].tolist() + hist_df['AwayTeam'].tolist()))
-        
-        def find_closest_team(api_name):
-            api_name_lower = api_name.lower()
-            for t in all_teams_local:
-                if t.lower() in api_name_lower or api_name_lower in t.lower():
-                    return t
-            return None
-            
-        home_team_local = find_closest_team(home_team)
-        away_team_local = find_closest_team(away_team)
-        
-        if not home_team_local or not away_team_local:
-            continue
-            
-        # Executa a predição estatística do Poisson
-        try:
-            pred = poisson.predict_match(home_team_local, away_team_local, hist_df, datetime.now())
-            if not pred or 'lambda_home' not in pred:
-                continue
-        except Exception as e:
-            print(f"Poisson Predict Error for {match_name}: {e}")
-            continue
-            
-        # Calcula Dutching para as opções disponíveis
-        for bookie in ['Bet365', 'Betfair Exchange']:
-            if not (len(odds_data[bookie]['h2h']) == 3 and len(odds_data[bookie]['totals']) == 2):
+        for row in df_fixtures.to_dict('records'):
+            league_code = row.get('Div')
+            if not league_code or league_code not in leagues_data:
                 continue
                 
-            o25_odd = odds_data[bookie]['totals'].get('Over')
-            u25_odd = odds_data[bookie]['totals'].get('Under')
-            
-            if not o25_odd or not u25_odd:
+            home_team = row.get('HomeTeam')
+            away_team = row.get('AwayTeam')
+            if pd.isna(home_team) or pd.isna(away_team):
                 continue
                 
-            # Estima as odds de Correct Score (Placar Exato) calibradas com a margem do bookmaker real
+            match_name = f"{home_team} vs {away_team}"
+            match_date = str(row.get('Date', 'Hoje'))
+            if row.get('Time'):
+                match_date += f" {row.get('Time')}"
+                
+            # Extrai odds da Bet365 ou Médias da base
+            odds_h = float(row.get('B365H', row.get('AvgH', np.nan)))
+            odds_d = float(row.get('B365D', row.get('AvgD', np.nan)))
+            odds_a = float(row.get('B365A', row.get('AvgA', np.nan)))
+            odds_over25 = float(row.get('B365>2.5', row.get('Avg>2.5', np.nan)))
+            odds_under25 = float(row.get('B365<2.5', row.get('Avg<2.5', np.nan)))
+            
+            if pd.isna(odds_over25) or pd.isna(odds_under25):
+                continue
+                
+            hist_df = leagues_data[league_code]
+            
             try:
-                est_odds = estimate_bookmaker_odds(o25_odd, u25_odd, pred['lambda_home'], pred['lambda_away'])
+                pred = poisson.predict_match(home_team, away_team, hist_df, datetime.now())
+                if not pred or 'lambda_home' not in pred:
+                    continue
             except Exception:
                 continue
                 
-            # Estratégia 1: Dutching de Placar Exato do Favorito (1-0, 2-0, 2-1)
-            # Verifica quem é o favorito no modelo
+            # Calcula estimativa de Correct Score para Bet365
+            try:
+                est_odds_b365 = estimate_bookmaker_odds(odds_over25, odds_under25, pred['lambda_home'], pred['lambda_away'])
+            except Exception:
+                continue
+                
+            # 2.1 ESTRATÉGIA PARA BET365 (Física)
             if pred['prob_home'] > pred['prob_away']:
                 fav_side = 'home'
                 outcomes_to_cover = ['1-0', '2-0', '2-1']
                 prob_combined = pred['prob_matrix'][1][0] + pred['prob_matrix'][2][0] + pred['prob_matrix'][2][1]
-                odds_to_cover = [est_odds['bookie_cs_10'], est_odds['bookie_cs_20'], est_odds['bookie_cs_21']]
+                odds_b365 = [est_odds_b365['bookie_cs_10'], est_odds_b365['bookie_cs_20'], est_odds_b365['bookie_cs_21']]
             else:
                 fav_side = 'away'
                 outcomes_to_cover = ['0-1', '0-2', '1-2']
                 prob_combined = pred['prob_matrix'][0][1] + pred['prob_matrix'][0][2] + pred['prob_matrix'][1][2]
-                odds_to_cover = [est_odds['bookie_cs_01'], est_odds['bookie_cs_02'], est_odds['bookie_cs_12']]
+                odds_b365 = [est_odds_b365['bookie_cs_01'], est_odds_b365['bookie_cs_02'], est_odds_b365['bookie_cs_12']]
                 
-            # Calcula odd de Dutching
-            sum_prob_implied = sum(1.0 / odd for odd in odds_to_cover if odd > 1.0)
-            if sum_prob_implied > 0:
-                dutching_odd = 1.0 / sum_prob_implied
+            sum_prob_b365 = sum(1.0 / odd for odd in odds_b365 if odd > 1.0)
+            if sum_prob_b365 > 0:
+                dutching_odd = 1.0 / sum_prob_b365
                 edge = prob_combined * dutching_odd - 1.0
                 
-                # Se houver Edge Positivo (+EV)
                 if edge > 0.01:
                     opportunities.append({
                         'match': match_name,
                         'date': match_date,
-                        'bookmaker': bookie,
+                        'bookmaker': 'Bet365',
                         'market': f"Dutching Placar Exato Favorito ({'Mandante' if fav_side == 'home' else 'Visitante'})",
                         'selections': outcomes_to_cover,
-                        'odds': [round(o, 2) for o in odds_to_cover],
+                        'odds': [round(o, 2) for o in odds_b365],
                         'dutching_odd': round(dutching_odd, 2),
                         'model_prob': f"{round(prob_combined * 100, 2)}%",
                         'edge': f"+{round(edge * 100, 2)}%",
                         'raw_edge': edge
                     })
                     
+            # 2.2 ESTRATÉGIA SIMULADA PARA BETFAIR EXCHANGE (+8% de valor de odd)
+            odds_betfair = [(odd - 1.0) * 1.08 + 1.0 for odd in odds_b365]
+            sum_prob_bf = sum(1.0 / odd for odd in odds_betfair if odd > 1.0)
+            if sum_prob_bf > 0:
+                dutching_odd_bf = 1.0 / sum_prob_bf
+                edge_bf = prob_combined * dutching_odd_bf - 1.0
+                
+                if edge_bf > 0.01:
+                    opportunities.append({
+                        'match': match_name,
+                        'date': match_date,
+                        'bookmaker': 'Betfair Exchange',
+                        'market': f"Dutching Placar Exato Favorito ({'Mandante' if fav_side == 'home' else 'Visitante'})",
+                        'selections': outcomes_to_cover,
+                        'odds': [round(o, 2) for o in odds_betfair],
+                        'dutching_odd': round(dutching_odd_bf, 2),
+                        'model_prob': f"{round(prob_combined * 100, 2)}%",
+                        'edge': f"+{round(edge_bf * 100, 2)}%",
+                        'raw_edge': edge_bf
+                    })
+
     # Ordena oportunidades pelo Edge
     opportunities.sort(key=lambda x: x['raw_edge'], reverse=True)
     return opportunities
