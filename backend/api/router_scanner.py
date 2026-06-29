@@ -323,10 +323,10 @@ def scan_arbitrage(bookies: str = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/scan_dutching")
-def scan_dutching(source: str = "odds_api"):
+def scan_dutching(source: str = "odds_api", strategy: str = "fav_short"):
     try:
         token = get_api_token() or '75d5d936cc573c75bacf71e12b5de769'
-        return fetch_dutching_opportunities(api_key=token, source=source)
+        return fetch_dutching_opportunities(api_key=token, source=source, strategy=strategy)
     except Exception as e:
         import traceback
         traceback.print_exc()

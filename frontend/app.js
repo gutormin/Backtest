@@ -9541,7 +9541,8 @@ async function runDutchingScan() {
     
     try {
         const source = document.getElementById('dutching-source-select')?.value || 'odds_api';
-        const res = await fetch(`${window.API_BASE_URL || window.location.origin}/api/scan_dutching?source=${source}`);
+        const strategy = document.getElementById('dutching-strategy-select')?.value || 'fav_short';
+        const res = await fetch(`${window.API_BASE_URL || window.location.origin}/api/scan_dutching?source=${source}&strategy=${strategy}`);
         if (!res.ok) throw new Error("Dutching scan failed");
         
         const opps = await res.json();

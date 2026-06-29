@@ -16,7 +16,7 @@ SPORT_LEAGUE_MAP = {
     'soccer_brazil_campeonato': 'BRA'
 }
 
-def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', source='odds_api'):
+def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', source='odds_api', strategy='fav_short'):
     opportunities = []
     poisson = PoissonModel()
     
@@ -32,6 +32,49 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                 leagues_data[league_code] = df
         except Exception:
             pass
+
+    # Helper para estruturar placares e probabilidades com base na estratégia selecionada
+    def get_strategy_layout(pred, is_home_fav, strategy_name):
+        if strategy_name == 'fav_classic':
+            if is_home_fav:
+                fav_side = 'home'
+                outcomes = ['1-0', '2-0', '2-1', '3-0', '3-1']
+                prob = pred['prob_matrix'][1][0] + pred['prob_matrix'][2][0] + pred['prob_matrix'][2][1] + pred['prob_matrix'][3][0] + pred['prob_matrix'][3][1]
+                keys = ['bookie_cs_10', 'bookie_cs_20', 'bookie_cs_21', 'bookie_cs_30', 'bookie_cs_31']
+            else:
+                fav_side = 'away'
+                outcomes = ['0-1', '0-2', '1-2', '0-3', '1-3']
+                prob = pred['prob_matrix'][0][1] + pred['prob_matrix'][0][2] + pred['prob_matrix'][1][2] + pred['prob_matrix'][0][3] + pred['prob_matrix'][1][3]
+                keys = ['bookie_cs_01', 'bookie_cs_02', 'bookie_cs_12', 'bookie_cs_03', 'bookie_cs_13']
+            market_label = f"Favorito Clássico ({'Mandante' if fav_side == 'home' else 'Visitante'})"
+            
+        elif strategy_name == 'under_trunc':
+            if is_home_fav:
+                fav_side = 'home'
+                outcomes = ['0-0', '1-0', '2-0', '1-1']
+                prob = pred['prob_matrix'][0][0] + pred['prob_matrix'][1][0] + pred['prob_matrix'][2][0] + pred['prob_matrix'][1][1]
+                keys = ['bookie_cs_00', 'bookie_cs_10', 'bookie_cs_20', 'bookie_cs_11']
+            else:
+                fav_side = 'away'
+                outcomes = ['0-0', '0-1', '0-2', '1-1']
+                prob = pred['prob_matrix'][0][0] + pred['prob_matrix'][0][1] + pred['prob_matrix'][0][2] + pred['prob_matrix'][1][1]
+                keys = ['bookie_cs_00', 'bookie_cs_01', 'bookie_cs_02', 'bookie_cs_11']
+            market_label = f"Jogo Truncado / Under ({'Mandante' if fav_side == 'home' else 'Visitante'})"
+            
+        else: # fav_short
+            if is_home_fav:
+                fav_side = 'home'
+                outcomes = ['1-0', '2-0', '2-1']
+                prob = pred['prob_matrix'][1][0] + pred['prob_matrix'][2][0] + pred['prob_matrix'][2][1]
+                keys = ['bookie_cs_10', 'bookie_cs_20', 'bookie_cs_21']
+            else:
+                fav_side = 'away'
+                outcomes = ['0-1', '0-2', '1-2']
+                prob = pred['prob_matrix'][0][1] + pred['prob_matrix'][0][2] + pred['prob_matrix'][1][2]
+                keys = ['bookie_cs_01', 'bookie_cs_02', 'bookie_cs_12']
+            market_label = f"Favorito Curto ({'Mandante' if fav_side == 'home' else 'Visitante'})"
+            
+        return outcomes, prob, keys, market_label
 
     # 1. FONTE: THE ODDS API (Tempo Real Betfair/Bet365)
     if source == 'odds_api':
@@ -133,17 +176,11 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                         except Exception:
                             continue
                             
-                        if pred['prob_home'] > pred['prob_away']:
-                            fav_side = 'home'
-                            outcomes_to_cover = ['1-0', '2-0', '2-1']
-                            prob_combined = pred['prob_matrix'][1][0] + pred['prob_matrix'][2][0] + pred['prob_matrix'][2][1]
-                            odds_to_cover = [est_odds['bookie_cs_10'], est_odds['bookie_cs_20'], est_odds['bookie_cs_21']]
-                        else:
-                            fav_side = 'away'
-                            outcomes_to_cover = ['0-1', '0-2', '1-2']
-                            prob_combined = pred['prob_matrix'][0][1] + pred['prob_matrix'][0][2] + pred['prob_matrix'][1][2]
-                            odds_to_cover = [est_odds['bookie_cs_01'], est_odds['bookie_cs_02'], est_odds['bookie_cs_12']]
-                            
+                        # Layout dinâmico da estratégia
+                        is_home_fav = pred['prob_home'] > pred['prob_away']
+                        outcomes_to_cover, prob_combined, odds_keys, market_label = get_strategy_layout(pred, is_home_fav, strategy)
+                        odds_to_cover = [est_odds.get(key, np.nan) for key in odds_keys]
+                        
                         sum_prob_implied = sum(1.0 / odd for odd in odds_to_cover if odd > 1.0)
                         if sum_prob_implied > 0:
                             dutching_odd = 1.0 / sum_prob_implied
@@ -154,7 +191,7 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                                     'match': match_name,
                                     'date': match_date,
                                     'bookmaker': bookie,
-                                    'market': f"Dutching Placar Exato Favorito ({'Mandante' if fav_side == 'home' else 'Visitante'})",
+                                    'market': f"Dutching {market_label}",
                                     'selections': outcomes_to_cover,
                                     'odds': [round(o, 2) for o in odds_to_cover],
                                     'dutching_odd': round(dutching_odd, 2),
@@ -163,9 +200,9 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                                     'raw_edge': edge
                                 })
             else:
-                return get_mock_dutching_opportunities()
+                return get_mock_dutching_opportunities(strategy)
         except Exception:
-            return get_mock_dutching_opportunities()
+            return get_mock_dutching_opportunities(strategy)
 
     # 2. FONTE: API DATAFOOTBALL OU FOOTBALL-DATA CSV (DADOS LOCAIS)
     elif source in ['datafootball', 'csv_fixtures']:
@@ -189,7 +226,7 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                     pass
                     
         if df_fixtures.empty:
-            return get_mock_dutching_opportunities()
+            return get_mock_dutching_opportunities(strategy)
             
         for row in df_fixtures.to_dict('records'):
             league_code = row.get('Div')
@@ -231,18 +268,12 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
             except Exception:
                 continue
                 
+            # Layout dinâmico da estratégia
+            is_home_fav = pred['prob_home'] > pred['prob_away']
+            outcomes_to_cover, prob_combined, odds_keys, market_label = get_strategy_layout(pred, is_home_fav, strategy)
+            odds_b365 = [est_odds_b365.get(key, np.nan) for key in odds_keys]
+            
             # 2.1 ESTRATÉGIA PARA BET365 (Física)
-            if pred['prob_home'] > pred['prob_away']:
-                fav_side = 'home'
-                outcomes_to_cover = ['1-0', '2-0', '2-1']
-                prob_combined = pred['prob_matrix'][1][0] + pred['prob_matrix'][2][0] + pred['prob_matrix'][2][1]
-                odds_b365 = [est_odds_b365['bookie_cs_10'], est_odds_b365['bookie_cs_20'], est_odds_b365['bookie_cs_21']]
-            else:
-                fav_side = 'away'
-                outcomes_to_cover = ['0-1', '0-2', '1-2']
-                prob_combined = pred['prob_matrix'][0][1] + pred['prob_matrix'][0][2] + pred['prob_matrix'][1][2]
-                odds_b365 = [est_odds_b365['bookie_cs_01'], est_odds_b365['bookie_cs_02'], est_odds_b365['bookie_cs_12']]
-                
             sum_prob_b365 = sum(1.0 / odd for odd in odds_b365 if odd > 1.0)
             if sum_prob_b365 > 0:
                 dutching_odd = 1.0 / sum_prob_b365
@@ -253,7 +284,7 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                         'match': match_name,
                         'date': match_date,
                         'bookmaker': 'Bet365',
-                        'market': f"Dutching Placar Exato Favorito ({'Mandante' if fav_side == 'home' else 'Visitante'})",
+                        'market': f"Dutching {market_label}",
                         'selections': outcomes_to_cover,
                         'odds': [round(o, 2) for o in odds_b365],
                         'dutching_odd': round(dutching_odd, 2),
@@ -274,7 +305,7 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                         'match': match_name,
                         'date': match_date,
                         'bookmaker': 'Betfair Exchange',
-                        'market': f"Dutching Placar Exato Favorito ({'Mandante' if fav_side == 'home' else 'Visitante'})",
+                        'market': f"Dutching {market_label}",
                         'selections': outcomes_to_cover,
                         'odds': [round(o, 2) for o in odds_betfair],
                         'dutching_odd': round(dutching_odd_bf, 2),
@@ -287,31 +318,88 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
     opportunities.sort(key=lambda x: x['raw_edge'], reverse=True)
     return opportunities
 
-def get_mock_dutching_opportunities():
+def get_mock_dutching_opportunities(strategy='fav_short'):
     now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
-    return [
-        {
-            'match': 'Flamengo vs Fluminense',
-            'date': now_str,
-            'bookmaker': 'Betfair Exchange',
-            'market': 'Dutching Placar Exato Favorito (Mandante)',
-            'selections': ['1-0', '2-0', '2-1'],
-            'odds': [6.50, 7.50, 8.50],
-            'dutching_odd': 2.45,
-            'model_prob': '47.50%',
-            'edge': '+16.38%',
-            'raw_edge': 0.1638
-        },
-        {
-            'match': 'Real Madrid vs Atletico Madrid',
-            'date': now_str,
-            'bookmaker': 'Bet365',
-            'market': 'Dutching Placar Exato Favorito (Mandante)',
-            'selections': ['1-0', '2-0', '2-1'],
-            'odds': [7.00, 8.00, 8.50],
-            'dutching_odd': 2.53,
-            'model_prob': '45.10%',
-            'edge': '+14.10%',
-            'raw_edge': 0.1410
-        }
-    ]
+    
+    if strategy == 'fav_classic':
+        opps = [
+            {
+                'match': 'Flamengo vs Fluminense',
+                'date': now_str,
+                'bookmaker': 'Betfair Exchange',
+                'market': 'Dutching Favorito Clássico (Mandante)',
+                'selections': ['1-0', '2-0', '2-1', '3-0', '3-1'],
+                'odds': [6.50, 7.50, 8.50, 11.0, 13.0],
+                'dutching_odd': 1.68,
+                'model_prob': '68.50%',
+                'edge': '+15.08%',
+                'raw_edge': 0.1508
+            },
+            {
+                'match': 'Real Madrid vs Atletico Madrid',
+                'date': now_str,
+                'bookmaker': 'Bet365',
+                'market': 'Dutching Favorito Clássico (Mandante)',
+                'selections': ['1-0', '2-0', '2-1', '3-0', '3-1'],
+                'odds': [7.00, 8.00, 8.50, 12.0, 14.0],
+                'dutching_odd': 1.76,
+                'model_prob': '64.10%',
+                'edge': '+12.82%',
+                'raw_edge': 0.1282
+            }
+        ]
+    elif strategy == 'under_trunc':
+        opps = [
+            {
+                'match': 'Flamengo vs Fluminense',
+                'date': now_str,
+                'bookmaker': 'Betfair Exchange',
+                'market': 'Dutching Jogo Truncado / Under (Mandante)',
+                'selections': ['0-0', '1-0', '2-0', '1-1'],
+                'odds': [10.0, 6.50, 7.50, 7.00],
+                'dutching_odd': 1.95,
+                'model_prob': '61.50%',
+                'edge': '+19.93%',
+                'raw_edge': 0.1993
+            },
+            {
+                'match': 'Real Madrid vs Atletico Madrid',
+                'date': now_str,
+                'bookmaker': 'Bet365',
+                'market': 'Dutching Jogo Truncado / Under (Mandante)',
+                'selections': ['0-0', '1-0', '2-0', '1-1'],
+                'odds': [11.0, 7.00, 8.00, 7.50],
+                'dutching_odd': 2.08,
+                'model_prob': '58.10%',
+                'edge': '+20.85%',
+                'raw_edge': 0.2085
+            }
+        ]
+    else: # fav_short
+        opps = [
+            {
+                'match': 'Flamengo vs Fluminense',
+                'date': now_str,
+                'bookmaker': 'Betfair Exchange',
+                'market': 'Dutching Favorito Curto (Mandante)',
+                'selections': ['1-0', '2-0', '2-1'],
+                'odds': [6.50, 7.50, 8.50],
+                'dutching_odd': 2.45,
+                'model_prob': '47.50%',
+                'edge': '+16.38%',
+                'raw_edge': 0.1638
+            },
+            {
+                'match': 'Real Madrid vs Atletico Madrid',
+                'date': now_str,
+                'bookmaker': 'Bet365',
+                'market': 'Dutching Favorito Curto (Mandante)',
+                'selections': ['1-0', '2-0', '2-1'],
+                'odds': [7.00, 8.00, 8.50],
+                'dutching_odd': 2.53,
+                'model_prob': '45.10%',
+                'edge': '+14.10%',
+                'raw_edge': 0.1410
+            }
+        ]
+    return opps
