@@ -572,6 +572,7 @@
     <button class="tab-btn" id="tab-btn-clustering" onclick="switchTab('tab-clustering')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-network-wired"></i> Clusterização (IA)</button>
     <button class="tab-btn" id="tab-btn-radar" onclick="switchTab('tab-radar')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-satellite-dish"></i> Radar Smart Money</button>
     <button class="tab-btn" id="tab-btn-arbitrage" onclick="switchTab('tab-arbitrage')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-scale-balanced"></i> Arbitragem</button>
+    <button class="tab-btn" id="tab-btn-dutching" onclick="switchTab('tab-dutching')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-calculator"></i> Calculadora Dutching</button>
     <button class="tab-btn" id="tab-btn-operations" onclick="switchTab('tab-operations')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-bolt"></i> Operação Diária</button>
     <button class="tab-btn" id="tab-btn-gr" onclick="switchTab('tab-gr')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-shield-halved"></i> Gestão de Risco</button>
     <button class="tab-btn" id="tab-btn-history" onclick="switchTab('tab-history')" style="background: none; border: none; color: var(--text-muted); font-family: var(--font-heading); font-size: 15px; font-weight: 600; cursor: pointer; padding: 10px 15px; border-bottom: 2px solid transparent; transition: all 0.3s ease;"><i class="fa-solid fa-bookmark"></i> Histórico</button>
@@ -1231,6 +1232,133 @@
                         </div>
                     </div>
                 </div>
+
+            <!-- Tab: Dutching Pro -->
+            <div id="tab-dutching" class="tab-pane" style="display: none;">
+                <div class="content-panel">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                        <div>
+                            <h2 style="margin: 0; color: #a78bfa; font-weight: 600;"><i class="fa-solid fa-calculator"></i> Calculadora e Radar de Dutching Pro</h2>
+                            <p style="margin: 5px 0 0 0; color: #9ca3af; font-size: 14px;">Automação de odds da Bet365/Betfair Exchange e análise preditiva de valor.</p>
+                        </div>
+                        <button type="button" class="btn-primary" id="btn-scan-dutching" onclick="runDutchingScan()" style="background: linear-gradient(135deg, #8b5cf6, #a78bfa); border: none;">
+                            <i class="fa-solid fa-satellite-dish"></i> Atualizar Odds Radar
+                        </button>
+                    </div>
+
+                    <!-- Radar Section -->
+                    <div class="glassmorphism" style="margin-bottom: 20px; padding: 20px;">
+                        <h3 style="font-size: 15px; color: var(--text-primary); margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-tower-broadcast" style="color: #8b5cf6;"></i> Radar de Oportunidades +EV em Tempo Real</h3>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: center; margin-bottom: 15px; background: rgba(255,255,255,0.02); padding: 10px 15px; border-radius: var(--border-radius-sm); border: 1px solid var(--border-color);" id="dutching-radar-filter-container">
+                            <span style="font-size: 12px; color: var(--text-secondary);">Filtrar Casa de Aposta:</span>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="radio" name="dutching-bookie-filter" value="best" checked onchange="filterDutchingRadar()"> 🏆 Melhor Odd (Mesclado)
+                            </label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="radio" name="dutching-bookie-filter" value="Betfair Exchange" onchange="filterDutchingRadar()"> 🟨 Apenas Betfair Exchange
+                            </label>
+                            <label style="font-size: 12px; display: flex; align-items: center; gap: 6px; cursor: pointer;">
+                                <input type="radio" name="dutching-bookie-filter" value="Bet365" onchange="filterDutchingRadar()"> 🟩 Apenas Bet365
+                            </label>
+                        </div>
+                        <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
+                            <table class="table-styled" style="width: 100%;" id="dutching-radar-table">
+                                <thead>
+                                    <tr>
+                                        <th>Partida / Horário</th>
+                                        <th>Mercado</th>
+                                        <th>Resultados Cobrir</th>
+                                        <th>Odds Individuais</th>
+                                        <th>Odd Dutching</th>
+                                        <th>Prob. Modelo</th>
+                                        <th>Edge (+EV)</th>
+                                        <th>Ação</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="dutching-radar-list">
+                                    <tr>
+                                        <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhuma oportunidade detectada no momento. Clique em 'Atualizar Odds Radar' para escanear.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Calculator Grid Section -->
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 20px;">
+                        
+                        <!-- Col Left: Settings and Inputs -->
+                        <div class="glassmorphism" style="padding: 20px;">
+                            <h3 style="font-size: 15px; color: var(--text-primary); margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-sliders" style="color: #8b5cf6;"></i> Configuração do Dutching</h3>
+                            
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px;">
+                                <div>
+                                    <label for="dutching-mode-select" style="display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase;">Modo de Cálculo</label>
+                                    <select id="dutching-mode-select" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 4px; outline: none;" onchange="calculateDutching()">
+                                        <option value="total_stake">Stake Total Fixa</option>
+                                        <option value="target_profit">Lucro Alvo Fixo</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="dutching-amount-input" style="display: block; font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; text-transform: uppercase;" id="dutching-amount-label">Valor da Stake Total ($)</label>
+                                    <input type="number" id="dutching-amount-input" value="100" min="1" step="5" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 4px; outline: none;" oninput="calculateDutching()">
+                                </div>
+                            </div>
+
+                            <div style="margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center;">
+                                <span style="font-size: 12px; font-weight: 600; color: var(--text-primary);">Seleções de Odds</span>
+                                <button type="button" class="btn-clear" onclick="addDutchingRow()" style="padding: 4px 10px; font-size: 11px; display: flex; align-items: center; gap: 4px; color: #a78bfa; border: 1px solid rgba(167, 139, 250, 0.2); background: rgba(167, 139, 250, 0.05);"><i class="fa-solid fa-plus"></i> Adicionar Odd</button>
+                            </div>
+
+                            <div id="dutching-rows-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 280px; overflow-y: auto; padding-right: 5px; margin-bottom: 10px;">
+                                <!-- Dynamically filled with addDutchingRow() -->
+                            </div>
+                        </div>
+
+                        <!-- Col Right: Allocation Table and Chart -->
+                        <div class="glassmorphism" style="padding: 20px; display: flex; flex-direction: column; justify-content: space-between;">
+                            <div>
+                                <h3 style="font-size: 15px; color: var(--text-primary); margin-top: 0; margin-bottom: 15px; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-chart-pie" style="color: #8b5cf6;"></i> Alocação de Stakes e Gráfico</h3>
+                                
+                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px;">
+                                    <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; text-align: center;">
+                                        <div style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px;">Probabilidade Combinada</div>
+                                        <div style="font-size: 18px; font-weight: 700; color: #a78bfa;" id="dutching-prob-value">0.00%</div>
+                                    </div>
+                                    <div style="background: rgba(255,255,255,0.01); border: 1px solid var(--border-color); padding: 10px; border-radius: 6px; text-align: center;">
+                                        <div style="font-size: 10px; color: var(--text-secondary); text-transform: uppercase; margin-bottom: 4px;" id="dutching-result-type-label">Lucro Líquido Ganho</div>
+                                        <div style="font-size: 18px; font-weight: 700; color: #34d399;" id="dutching-profit-value">$0.00</div>
+                                    </div>
+                                </div>
+
+                                <div class="table-responsive" style="margin-bottom: 15px;">
+                                    <table class="table-styled" style="width: 100%; font-size: 12px;">
+                                        <thead>
+                                            <tr>
+                                                <th>Seleção</th>
+                                                <th>Odd</th>
+                                                <th>Stake Proporcional</th>
+                                                <th>Risco/Retorno</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="dutching-allocation-list">
+                                            <tr>
+                                                <td colspan="4" style="text-align: center; color: var(--text-muted); padding: 15px;">Adicione seleções para ver a alocação de stakes.</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div style="height: 180px; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.1); border-radius: 8px; border: 1px solid var(--border-color); padding: 10px; position: relative;">
+                                <canvas id="dutching-pie-chart" style="max-height: 100%; max-width: 100%;"></canvas>
+                                <div id="dutching-pie-placeholder" style="position: absolute; color: var(--text-muted); font-size: 12px;">Nenhum dada para exibir no gráfico</div>
+                            </div>
+                        </div>
+
+                    </div>
+                </div>
+            </div>
 
 <!-- Tab: Dashboard -->
 <div class="tab-pane" id="tab-laboratory" style="display: none;">

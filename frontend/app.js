@@ -367,6 +367,14 @@ async function initApp() {
             .then(() => console.log('Service Worker registrado.'))
             .catch(err => console.error('Service Worker erro:', err));
     }
+    
+    // Inicializa a calculadora de Dutching com duas seleções padrão
+    setTimeout(() => {
+        if (typeof addDutchingRow === 'function') {
+            addDutchingRow("Placar 1-0", 6.50);
+            addDutchingRow("Placar 2-0", 7.50);
+        }
+    }, 100);
 }
 
 
@@ -9337,4 +9345,270 @@ window.savePortfolio = savePortfolio;
 window.selectAllMarkets = selectAllMarkets;
 window.testNotificationAlert = testNotificationAlert;
 window.toggleMarketDropdown = toggleMarketDropdown;
+
+// ==========================================================================
+// Dutching Pro Module Logic
+// ==========================================================================
+let dutchingChartInstance = null;
+let dutchingRadarAllOpps = [];
+
+function updateDutchingChart(labels, data) {
+    const ctx = document.getElementById('dutching-pie-chart');
+    const placeholder = document.getElementById('dutching-pie-placeholder');
+    if (!ctx) return;
+    
+    if (dutchingChartInstance) {
+        dutchingChartInstance.destroy();
+    }
+    
+    if (data.length === 0) {
+        placeholder.style.display = 'block';
+        return;
+    }
+    
+    placeholder.style.display = 'none';
+    
+    dutchingChartInstance = new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                data: data,
+                backgroundColor: [
+                    'rgba(139, 92, 246, 0.7)',
+                    'rgba(52, 211, 153, 0.7)',
+                    'rgba(245, 158, 11, 0.7)',
+                    'rgba(239, 68, 68, 0.7)',
+                    'rgba(59, 130, 246, 0.7)',
+                    'rgba(236, 72, 153, 0.7)'
+                ],
+                borderColor: 'rgba(13, 15, 24, 0.9)',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        color: '#9ca3af',
+                        font: { size: 10 }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function addDutchingRow(name = "", odd = "") {
+    const container = document.getElementById('dutching-rows-container');
+    if (!container) return;
+    
+    const rowId = 'dutching-row-' + Date.now() + '-' + Math.floor(Math.random() * 1000);
+    const div = document.createElement('div');
+    div.id = rowId;
+    div.className = 'dutching-input-row';
+    div.style = 'display: grid; grid-template-columns: 1fr 0.8fr auto; gap: 10px; align-items: center;';
+    
+    div.innerHTML = `
+        <input type="text" placeholder="Ex: Placar 1-0" value="${name}" class="dutching-input-name" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 4px; outline: none;" oninput="calculateDutching()">
+        <input type="number" placeholder="Odd" value="${odd}" step="0.05" min="1.01" class="dutching-input-odd" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 4px; outline: none;" oninput="calculateDutching()">
+        <button type="button" class="btn-clear" onclick="removeDutchingRow('${rowId}')" style="color: var(--text-loss); border-color: rgba(239, 68, 68, 0.2); background: rgba(239, 68, 68, 0.05); padding: 8px 10px;"><i class="fa-solid fa-trash-can"></i></button>
+    `;
+    
+    container.appendChild(div);
+    calculateDutching();
+}
+
+function removeDutchingRow(rowId) {
+    const row = document.getElementById(rowId);
+    if (row) {
+        row.remove();
+    }
+    calculateDutching();
+}
+
+function calculateDutching() {
+    const mode = document.getElementById('dutching-mode-select').value;
+    const amount = parseFloat(document.getElementById('dutching-amount-input').value) || 0.0;
+    const rows = document.querySelectorAll('.dutching-input-row');
+    const allocationList = document.getElementById('dutching-allocation-list');
+    
+    if (!allocationList) return;
+    
+    const selections = [];
+    let sumProbabilityImplied = 0.0;
+    
+    rows.forEach(row => {
+        const nameInput = row.querySelector('.dutching-input-name');
+        const oddInput = row.querySelector('.dutching-input-odd');
+        
+        const name = nameInput.value.trim() || 'Seleção';
+        const odd = parseFloat(oddInput.value) || 0.0;
+        
+        if (odd > 1.0) {
+            selections.push({ name, odd });
+            sumProbabilityImplied += 1.0 / odd;
+        }
+    });
+    
+    if (selections.length === 0 || sumProbabilityImplied <= 0) {
+        allocationList.innerHTML = `<tr><td colspan="4" style="text-align: center; color: var(--text-muted); padding: 15px;">Adicione seleções válidas com odds > 1.00.</td></tr>`;
+        document.getElementById('dutching-prob-value').innerText = '0.00%';
+        document.getElementById('dutching-profit-value').innerText = '$0.00';
+        updateDutchingChart([], []);
+        return;
+    }
+    
+    const targetProfitLabel = document.getElementById('dutching-result-type-label');
+    const amountLabel = document.getElementById('dutching-amount-label');
+    
+    let totalStake = 0.0;
+    let targetProfit = 0.0;
+    
+    if (mode === 'total_stake') {
+        amountLabel.innerText = 'Valor da Stake Total ($)';
+        targetProfitLabel.innerText = 'Lucro Líquido Ganho';
+        totalStake = amount;
+        targetProfit = totalStake / sumProbabilityImplied - totalStake;
+    } else {
+        amountLabel.innerText = 'Valor do Lucro Alvo ($)';
+        targetProfitLabel.innerText = 'Stake Total Exigida';
+        targetProfit = amount;
+        totalStake = targetProfit * sumProbabilityImplied;
+    }
+    
+    allocationList.innerHTML = '';
+    const labels = [];
+    const stakes = [];
+    
+    selections.forEach(sel => {
+        let selStake = 0.0;
+        if (mode === 'total_stake') {
+            selStake = totalStake * ( (1.0 / sel.odd) / sumProbabilityImplied );
+        } else {
+            selStake = (targetProfit + totalStake) / sel.odd;
+        }
+        
+        const grossReturn = selStake * sel.odd;
+        
+        labels.push(sel.name);
+        stakes.push(parseFloat(selStake.toFixed(2)));
+        
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><strong>${sel.name}</strong></td>
+            <td><span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--border-color);">${sel.odd.toFixed(2)}</span></td>
+            <td style="color: var(--text-primary); font-weight: 600;">$${selStake.toFixed(2)}</td>
+            <td><span style="color: #34d399;">+$${(grossReturn - totalStake).toFixed(2)}</span></td>
+        `;
+        allocationList.appendChild(tr);
+    });
+    
+    document.getElementById('dutching-prob-value').innerText = (sumProbabilityImplied * 100).toFixed(2) + '%';
+    
+    if (mode === 'total_stake') {
+        const profitColor = targetProfit >= 0 ? '#34d399' : '#f87171';
+        document.getElementById('dutching-profit-value').style.color = profitColor;
+        document.getElementById('dutching-profit-value').innerText = `$${targetProfit.toFixed(2)} (ROI: ${((targetProfit / totalStake) * 100).toFixed(1)}%)`;
+    } else {
+        document.getElementById('dutching-profit-value').style.color = 'var(--text-primary)';
+        document.getElementById('dutching-profit-value').innerText = `$${totalStake.toFixed(2)}`;
+    }
+    
+    updateDutchingChart(labels, stakes);
+}
+
+async function runDutchingScan() {
+    const btn = document.getElementById('btn-scan-dutching');
+    if (!btn) return;
+    
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-arrows-rotate spinning"></i> Escaneando...';
+    
+    try {
+        const res = await fetch(`${window.API_BASE_URL || window.location.origin}/api/scan_dutching`);
+        if (!res.ok) throw new Error("Dutching scan failed");
+        
+        const opps = await res.json();
+        dutchingRadarAllOpps = opps;
+        
+        filterDutchingRadar();
+        showToast(`Radar de Dutching atualizado! ${opps.length} oportunidades +EV encontradas.`, "success");
+    } catch (err) {
+        console.error("Dutching scan error:", err);
+        showToast("Erro ao escanear oportunidades de Dutching.", "error");
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-satellite-dish"></i> Atualizar Odds Radar';
+    }
+}
+
+function filterDutchingRadar() {
+    const filterVal = document.querySelector('input[name="dutching-bookie-filter"]:checked').value;
+    const tbody = document.getElementById('dutching-radar-list');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    const filtered = dutchingRadarAllOpps.filter(opp => {
+        if (filterVal === 'best') return true;
+        return opp.bookmaker === filterVal;
+    });
+    
+    if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhuma oportunidade +EV correspondente encontrada.</td></tr>`;
+        return;
+    }
+    
+    filtered.forEach((opp, index) => {
+        const tr = document.createElement('tr');
+        
+        const oppDataEscaped = encodeURIComponent(JSON.stringify(opp));
+        
+        tr.innerHTML = `
+            <td>
+                <div><strong>${opp.match}</strong></div>
+                <div style="font-size: 11px; color: var(--text-muted);"><i class="fa-solid fa-clock"></i> ${opp.date}</div>
+            </td>
+            <td><span class="badge badge-info" style="font-size: 10px;">${opp.bookmaker}</span></td>
+            <td><div style="font-size: 11px; color: var(--text-secondary);">${opp.market}</div></td>
+            <td><div style="font-size: 11px; font-family: monospace;">${opp.selections.join(' | ')}</div></td>
+            <td><span style="font-weight: 600; color: var(--text-primary); font-size: 13px;">${opp.dutching_odd.toFixed(2)}</span></td>
+            <td><span style="color: #a78bfa; font-weight: 500;">${opp.model_prob}</span></td>
+            <td><span style="color: #34d399; font-weight: 700; font-size: 13px;">${opp.edge}</span></td>
+            <td>
+                <button type="button" class="btn-clear" onclick="loadDutchingOpportunity('${oppDataEscaped}')" style="padding: 4px 8px; font-size: 10px; color: #a78bfa; border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.05);">
+                    <i class="fa-solid fa-download"></i> Carregar
+                </button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function loadDutchingOpportunity(oppDataEscaped) {
+    const opp = JSON.parse(decodeURIComponent(oppDataEscaped));
+    const container = document.getElementById('dutching-rows-container');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    opp.selections.forEach((sel, i) => {
+        addDutchingRow(sel, opp.odds[i]);
+    });
+    
+    showToast(`Oportunidade para ${opp.match} carregada na calculadora!`, "success");
+}
+
+// Expose to window
+window.addDutchingRow = addDutchingRow;
+window.removeDutchingRow = removeDutchingRow;
+window.calculateDutching = calculateDutching;
+window.runDutchingScan = runDutchingScan;
+window.filterDutchingRadar = filterDutchingRadar;
+window.loadDutchingOpportunity = loadDutchingOpportunity;
+
 

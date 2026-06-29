@@ -15,6 +15,7 @@ from ..data_loader import (
 from ..backtester import ChronologicalBacktester
 from ..smart_money import SmartMoneyBacktester, calculate_confidence_score
 from ..arbitrage_scanner import fetch_arbitrage_opportunities
+from ..dutching_scanner import fetch_dutching_opportunities
 from ..telegram_bot import (
     get_telegram_config, save_telegram_config, send_test_message,
     send_telegram_message, format_telegram_tip, get_telegram_tips,
@@ -316,6 +317,16 @@ def scan_arbitrage(bookies: str = None):
         if bookies:
             allowed_bookies = [b.strip() for b in bookies.split(',') if b.strip()]
         return fetch_arbitrage_opportunities(allowed_bookies=allowed_bookies)
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/scan_dutching")
+def scan_dutching():
+    try:
+        token = get_api_token() or '75d5d936cc573c75bacf71e12b5de769'
+        return fetch_dutching_opportunities(api_key=token)
     except Exception as e:
         import traceback
         traceback.print_exc()
