@@ -9571,6 +9571,8 @@ function filterDutchingRadar() {
         return opp.bookmaker === filterVal;
     });
     
+    window.dutchingRadarFilteredOpps = filtered;
+    
     if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 20px;">Nenhuma oportunidade +EV correspondente encontrada.</td></tr>`;
         return;
@@ -9578,8 +9580,6 @@ function filterDutchingRadar() {
     
     filtered.forEach((opp, index) => {
         const tr = document.createElement('tr');
-        
-        const oppDataEscaped = encodeURIComponent(JSON.stringify(opp));
         
         tr.innerHTML = `
             <td>
@@ -9593,7 +9593,7 @@ function filterDutchingRadar() {
             <td><span style="color: #a78bfa; font-weight: 500;">${opp.model_prob}</span></td>
             <td><span style="color: #34d399; font-weight: 700; font-size: 13px;">${opp.edge}</span></td>
             <td>
-                <button type="button" class="btn-clear" onclick="loadDutchingOpportunity('${oppDataEscaped}')" style="padding: 4px 8px; font-size: 10px; color: #a78bfa; border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.05);">
+                <button type="button" class="btn-clear" onclick="loadDutchingOpportunityByIndex(${index})" style="padding: 4px 8px; font-size: 10px; color: #a78bfa; border-color: rgba(167,139,250,0.3); background: rgba(167,139,250,0.05); cursor: pointer;">
                     <i class="fa-solid fa-download"></i> Carregar
                 </button>
             </td>
@@ -9602,8 +9602,10 @@ function filterDutchingRadar() {
     });
 }
 
-function loadDutchingOpportunity(oppDataEscaped) {
-    const opp = JSON.parse(decodeURIComponent(oppDataEscaped));
+function loadDutchingOpportunityByIndex(index) {
+    const opp = window.dutchingRadarFilteredOpps && window.dutchingRadarFilteredOpps[index];
+    if (!opp) return;
+    
     const container = document.getElementById('dutching-rows-container');
     if (!container) return;
     
@@ -9623,6 +9625,7 @@ window.removeDutchingRow = removeDutchingRow;
 window.calculateDutching = calculateDutching;
 window.runDutchingScan = runDutchingScan;
 window.filterDutchingRadar = filterDutchingRadar;
+window.loadDutchingOpportunityByIndex = loadDutchingOpportunityByIndex;
 window.loadDutchingOpportunity = loadDutchingOpportunity;
 
 
