@@ -13,7 +13,7 @@ from .api.router_history import router as history_router
 from .api.router_backtest import router as backtest_router
 from .api.router_scanner import router as scanner_router
 
-from .scheduler import run_scheduler_loop, run_arbitrage_scheduler_loop, run_live_odds_tracker_loop
+from .scheduler import run_scheduler_loop, run_arbitrage_scheduler_loop, run_live_odds_tracker_loop, run_dutching_scheduler_loop
 from .cluster_ai_tracker import run_cluster_ai_alerts_loop
 
 app = FastAPI(title="Sports Betting Backtester API")
@@ -34,6 +34,7 @@ async def startup_event():
     asyncio.create_task(run_arbitrage_scheduler_loop())
     asyncio.create_task(run_live_odds_tracker_loop())
     asyncio.create_task(run_cluster_ai_alerts_loop())
+    asyncio.create_task(run_dutching_scheduler_loop())
 
 # Include APIRouters with prefix "/api"
 app.include_router(history_router, prefix="/api")

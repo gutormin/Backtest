@@ -12,9 +12,11 @@ from .data_loader import (
 from .models import PoissonModel, estimate_bookmaker_odds
 from .telegram_bot import (
     get_telegram_tips, add_telegram_tip, send_telegram_message, format_telegram_tip,
-    get_telegram_arbitrage_tips, add_telegram_arbitrage_tip, format_telegram_arbitrage_tip
+    get_telegram_arbitrage_tips, add_telegram_arbitrage_tip, format_telegram_arbitrage_tip,
+    get_telegram_dutching_tips, add_telegram_dutching_tip, format_telegram_dutching_tip
 )
 from .arbitrage_scanner import fetch_arbitrage_opportunities
+from .dutching_scanner import fetch_dutching_opportunities
 CONFIG_PATH = os.path.join(DATA_DIR, 'telegram_scheduler_config.json')
 
 DEFAULT_CONFIG = {
@@ -612,3 +614,123 @@ async def run_live_odds_tracker_loop():
             print(f'[Live Odds Tracker] Erro no loop: {e}')
         # Run every 30 minutes
         await asyncio.sleep(1800)
+
+
+DUTCH_CONFIG_PATH = os.path.join(DATA_DIR, 'telegram_dutching_config.json')
+
+DEFAULT_DUTCH_CONFIG = {
+    "enabled": false,
+    "check_interval_hours": 1.0,
+    "min_edge_pct": 1.0,
+    "min_hours_before": 2.0
+}
+
+def get_dutching_scheduler_config():
+    if os.path.exists(DUTCH_CONFIG_PATH):
+        try:
+            with open(DUTCH_CONFIG_PATH, 'r', encoding='utf-8') as f:
+                config = json.load(f)
+                for k, v in DEFAULT_DUTCH_CONFIG.items():
+                    if k not in config:
+                        config[k] = v
+                return config
+        except Exception:
+            pass
+    return DEFAULT_DUTCH_CONFIG.copy()
+
+def save_dutching_scheduler_config(config):
+    os.makedirs(os.path.dirname(DUTCH_CONFIG_PATH), exist_ok=True)
+    with open(DUTCH_CONFIG_PATH, 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=4, ensure_ascii=False)
+    return config
+
+async def run_automatic_dutching_scan():
+    config = get_dutching_scheduler_config()
+    if not config.get("enabled"):
+        return {"status": "skipped", "message": "Robô de Dutching desativado."}
+        
+    loop = asyncio.get_event_loop()
+    min_edge = config.get("min_edge_pct", 1.0)
+    min_hours_before = config.get("min_hours_before", 2.0)
+    token = get_api_token() or '75d5d936cc573c75bacf71e12b5de769'
+    
+    try:
+        # Puxar oportunidades via The Odds API (live)
+        opps = await loop.run_in_executor(None, lambda: fetch_dutching_opportunities(api_key=token, source='odds_api', strategy='auto_ia'))
+    except Exception as e:
+        return {"status": "error", "message": f"Erro ao buscar Dutching: {e}"}
+        
+    if not opps:
+        return {"status": "success", "message": "Nenhuma oportunidade de Dutching encontrada."}
+        
+    sent_tips = get_telegram_dutching_tips()
+    sent_lookup = set()
+    for t in sent_tips:
+        key = (t.get('match'), t.get('date'))
+        sent_lookup.add(key)
+        
+    sent_count = 0
+    
+    for opp in opps:
+        edge_pct = opp.get('raw_edge', 0.0) * 100.0
+        if edge_pct < min_edge:
+            continue
+            
+        match_name = opp.get('match')
+        match_date = opp.get('date')
+        
+        # Filtro de antecedência mínima
+        try:
+            match_dt = datetime.strptime(match_date, "%d/%m/%Y %H:%M")
+            time_diff = (match_dt - datetime.now()).total_seconds() / 3600.0
+        except Exception:
+            time_diff = 999.0
+            
+        if time_diff < min_hours_before:
+            continue
+            
+        dup_key = (match_name, match_date)
+        if dup_key in sent_lookup:
+            continue
+            
+        msg_text = format_telegram_dutching_tip(
+            match_name, match_date, opp.get('bookmaker'), opp.get('market'),
+            opp.get('selections'), opp.get('odds'), opp.get('dutching_odd'),
+            opp.get('model_prob'), opp.get('edge')
+        )
+        
+        ok, msg = send_telegram_message(msg_text)
+        if ok:
+            add_telegram_dutching_tip(match_name, match_date, edge_pct)
+            sent_lookup.add(dup_key)
+            sent_count += 1
+            await asyncio.sleep(1.0)
+            
+    return {
+        "status": "success",
+        "found": len(opps),
+        "sent": sent_count
+    }
+
+async def run_dutching_scheduler_loop():
+    print("[Dutching Scheduler Startup] Iniciando robô de Dutching...")
+    while True:
+        try:
+            config = get_dutching_scheduler_config()
+            enabled = config.get("enabled", False)
+            interval_hours = config.get("check_interval_hours", 1.0)
+            
+            if enabled:
+                print(f"[Dutching Scheduler Run] Buscando novas oportunidades de Dutching...")
+                res = await run_automatic_dutching_scan()
+                print(f"[Dutching Scheduler Complete] Resultado: {res}")
+            
+            # Espera o próximo intervalo
+            await asyncio.sleep(interval_hours * 3600)
+            
+        except asyncio.CancelledError:
+            print("[Dutching Scheduler Shutdown] Robô de Dutching finalizado.")
+            break
+        except Exception as e:
+            print(f"[Dutching Scheduler Exception] Erro no loop: {e}")
+            await asyncio.sleep(600)

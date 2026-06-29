@@ -1246,6 +1246,37 @@
                         </button>
                     </div>
 
+                    <!-- Robô do Telegram (Dutching) -->
+                    <div class="glassmorphism" style="margin-bottom: 20px; padding: 15px;">
+                        <h4 style="font-size: 13px; color: var(--text-secondary); margin-bottom: 10px; display: flex; align-items: center; gap: 8px;"><i class="fa-brands fa-telegram text-glow" style="color: #24A1DE;"></i> Robô do Telegram (Dutching Pro)</h4>
+                        <div style="display: flex; gap: 15px; flex-wrap: wrap; align-items: flex-end;">
+                            <div class="form-group" style="flex: 1; min-width: 150px; flex-direction: row; align-items: center; gap: 8px; margin-bottom: 0;">
+                                <label class="switch">
+                                    <input type="checkbox" id="dutch-bot-enabled" onchange="saveDutchingBotConfig()">
+                                    <span class="slider round"></span>
+                                </label>
+                                <label for="dutch-bot-enabled" style="cursor: pointer; margin-bottom: 0;">Ativar Alertas</label>
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                                <label for="dutch-bot-interval">Intervalo (Horas)</label>
+                                <input type="number" id="dutch-bot-interval" value="1" step="0.5" min="0.1" onchange="saveDutchingBotConfig()" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px; border-radius: 4px; outline: none; font-size: 12px;">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                                <label for="dutch-bot-edge">Edge Mínimo (%)</label>
+                                <input type="number" id="dutch-bot-edge" value="1" step="0.5" min="0" onchange="saveDutchingBotConfig()" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px; border-radius: 4px; outline: none; font-size: 12px;">
+                            </div>
+                            <div class="form-group" style="flex: 1; min-width: 150px; margin-bottom: 0;">
+                                <label for="dutch-bot-hours">Antecedência Mín. (Horas)</label>
+                                <input type="number" id="dutch-bot-hours" value="2" step="1" min="1" onchange="saveDutchingBotConfig()" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px; border-radius: 4px; outline: none; font-size: 12px;">
+                            </div>
+                            <div style="flex: 1; min-width: 150px; padding-bottom: 2px;">
+                                <button type="button" class="btn-primary" onclick="testDutchingTelegramAlert()" style="width: 100%; background: rgba(36, 161, 222, 0.2); border-color: #24A1DE; color: #24A1DE; font-size: 12px; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                                    <i class="fa-solid fa-paper-plane"></i> Testar Alerta
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Radar Section -->
                     <div class="glassmorphism" style="margin-bottom: 20px; padding: 20px;">
                         <h3 style="font-size: 15px; color: var(--text-primary); margin-top: 0; margin-bottom: 12px; display: flex; align-items: center; gap: 8px;"><i class="fa-solid fa-tower-broadcast" style="color: #8b5cf6;"></i> Radar de Oportunidades +EV em Tempo Real</h3>

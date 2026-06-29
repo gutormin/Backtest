@@ -357,6 +357,7 @@ async function initApp() {
     await loadSchedulerConfigUi();
     await loadTelegramTipsLog();
     await loadArbitrageBotConfig();
+    await loadDutchingBotConfig();
     toggleStakeLabel();
     onMarketSelectionChange(); // Initialize custom market multiselect label
     updateNotificationUi(); // Initialize notification permission state in UI
@@ -7891,6 +7892,65 @@ async function testArbitrageTelegramAlert() {
     }
 }
 
+async function loadDutchingBotConfig() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/telegram/dutching_config`);
+        if (res.ok) {
+            const config = await res.json();
+            document.getElementById('dutch-bot-enabled').checked = config.enabled || false;
+            document.getElementById('dutch-bot-interval').value = config.check_interval_hours || 1.0;
+            document.getElementById('dutch-bot-edge').value = config.min_edge_pct || 1.0;
+            document.getElementById('dutch-bot-hours').value = config.min_hours_before || 2.0;
+        }
+    } catch (e) {
+        console.error("Erro ao carregar config de dutching telegram", e);
+    }
+}
+
+async function saveDutchingBotConfig() {
+    const enabled = document.getElementById('dutch-bot-enabled').checked;
+    const interval = parseFloat(document.getElementById('dutch-bot-interval').value);
+    const edge = parseFloat(document.getElementById('dutch-bot-edge').value);
+    const hours = parseFloat(document.getElementById('dutch-bot-hours').value);
+    
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/telegram/dutching_config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ 
+                enabled: enabled, 
+                check_interval_hours: isNaN(interval) ? 1.0 : interval, 
+                min_edge_pct: isNaN(edge) ? 1.0 : edge,
+                min_hours_before: isNaN(hours) ? 2.0 : hours
+            })
+        });
+        
+        if (res.ok) {
+            showToast("Configuração do Robô de Dutching salva com sucesso!", "success");
+        } else {
+            showToast("Erro ao salvar configuração.", "danger");
+        }
+    } catch (e) {
+        showToast("Erro de conexão com API.", "danger");
+    }
+}
+
+async function testDutchingTelegramAlert() {
+    try {
+        showToast("Enviando alerta de teste do Dutching...", "info");
+        const res = await fetch("/api/telegram/test_dutching", { method: 'POST' });
+        const data = await res.json();
+        
+        if (res.ok && data.status === 'success') {
+            showToast("Alerta de teste enviado com sucesso! Verifique seu Telegram.", "success");
+        } else {
+            showToast("Falha ao enviar: " + (data.detail || data.message), "error");
+        }
+    } catch (e) {
+        showToast("Erro de conexão ao tentar enviar teste de Dutching.", "error");
+    }
+}
+
 
 function runBookieInit() {
     const savedBookies = localStorage.getItem('arbBookies');
@@ -9627,5 +9687,8 @@ window.runDutchingScan = runDutchingScan;
 window.filterDutchingRadar = filterDutchingRadar;
 window.loadDutchingOpportunityByIndex = loadDutchingOpportunityByIndex;
 window.loadDutchingOpportunity = loadDutchingOpportunity;
+window.loadDutchingBotConfig = loadDutchingBotConfig;
+window.saveDutchingBotConfig = saveDutchingBotConfig;
+window.testDutchingTelegramAlert = testDutchingTelegramAlert;
 
 

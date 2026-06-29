@@ -283,3 +283,52 @@ def format_dna_shift_alert(league_name, old_cluster_desc, new_cluster_desc, reco
         f"<i>Fique de olho em oportunidades de valor esmagador nestes mercados para as próximas rodadas!</i>\n"
     )
     return message
+
+DUTCHING_TIPS_LOG_PATH = os.path.join(DATA_DIR, 'telegram_dutching_tips_sent.json')
+
+def get_telegram_dutching_tips():
+    if os.path.exists(DUTCHING_TIPS_LOG_PATH):
+        try:
+            with open(DUTCHING_TIPS_LOG_PATH, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception:
+            pass
+    return []
+
+def save_telegram_dutching_tips(tips):
+    os.makedirs(os.path.dirname(DUTCHING_TIPS_LOG_PATH), exist_ok=True)
+    with open(DUTCHING_TIPS_LOG_PATH, 'w', encoding='utf-8') as f:
+        json.dump(tips, f, indent=4, ensure_ascii=False)
+    return tips
+
+def add_telegram_dutching_tip(match_name, match_date, edge):
+    tips = get_telegram_dutching_tips()
+    new_tip = {
+        "id": str(uuid.uuid4()),
+        "match": match_name,
+        "date": match_date,
+        "edge": float(edge),
+        "status": "Enviado",
+        "created_at": datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+    tips.append(new_tip)
+    save_telegram_dutching_tips(tips)
+    return new_tip
+
+def format_telegram_dutching_tip(match_name, match_date, bookmaker, market, selections, odds, dutching_odd, model_prob, edge):
+    sel_lines = "\n".join([f"🔹 <b>{sel}</b>: Odd @{odds[i]:.2f}" for i, sel in enumerate(selections)])
+    message = (
+        f"<b>🤖 ALERTA DE DUTCHING PRO DETECTADO</b>\n\n"
+        f"⚽ <b>Jogo:</b> {match_name}\n"
+        f"📅 <b>Data/Hora:</b> {match_date}\n"
+        f"🏦 <b>Casa Recomendada:</b> {bookmaker}\n"
+        f"🧠 <b>Estratégia Recomendada:</b> {market}\n\n"
+        f"📋 <b>Seleções e Odds:</b>\n"
+        f"{sel_lines}\n\n"
+        f"📊 <b>Métricas de Valor:</b>\n"
+        f"📉 <b>Odd Combinada Dutching:</b> @{dutching_odd:.2f}\n"
+        f"📈 <b>Probabilidade Real (IA):</b> {model_prob}\n"
+        f"🔥 <b>Edge (+EV):</b> <b>{edge}</b>\n\n"
+        f"⚠️ <i>Distribua suas stakes usando a Calculadora de Dutching do seu painel!</i>"
+    )
+    return message

@@ -20,11 +20,12 @@ from ..telegram_bot import (
     get_telegram_config, save_telegram_config, send_test_message,
     send_telegram_message, format_telegram_tip, get_telegram_tips,
     add_telegram_tip, update_telegram_tip_status, clear_telegram_tips,
-    format_telegram_arbitrage_tip
+    format_telegram_arbitrage_tip, format_telegram_dutching_tip
 )
 from ..scheduler import (
     get_scheduler_config, save_scheduler_config, run_automatic_tips_scan,
-    get_arbitrage_scheduler_config, save_arbitrage_scheduler_config
+    get_arbitrage_scheduler_config, save_arbitrage_scheduler_config,
+    get_dutching_scheduler_config, save_dutching_scheduler_config
 )
 from ..cluster_ai_tracker import get_cluster_ai_config, save_cluster_ai_config
 from ..ml_clustering import extract_league_features, cluster_leagues
@@ -170,6 +171,12 @@ class ArbitrageSchedulerConfig(BaseModel):
     enabled: bool
     check_interval_hours: float
     min_profit_pct: float
+
+class TelegramDutchingConfigRequest(BaseModel):
+    enabled: bool
+    check_interval_hours: float
+    min_edge_pct: float
+    min_hours_before: float
 
 class TelegramConfigRequest(BaseModel):
     enabled: bool
@@ -632,6 +639,47 @@ def send_match_tip(req: TelegramTipSendRequest):
         return {"status": "success", "message": msg}
     except HTTPException:
         raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/telegram/dutching_config")
+def get_tg_dutching_config_api():
+    try:
+        return get_dutching_scheduler_config()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/dutching_config")
+def save_tg_dutching_config_api(req: TelegramDutchingConfigRequest):
+    try:
+        config = {
+            "enabled": req.enabled,
+            "check_interval_hours": req.check_interval_hours,
+            "min_edge_pct": req.min_edge_pct,
+            "min_hours_before": req.min_hours_before
+        }
+        return save_dutching_scheduler_config(config)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/test_dutching")
+def test_tg_dutching_connection():
+    try:
+        msg_text = format_telegram_dutching_tip(
+            match_name="IA Akranes vs Fram",
+            match_date="29/06/2026 16:15",
+            bookmaker="Betfair Exchange",
+            market="🧠 IA: Jogo Truncado / Under (Mandante)",
+            selections=["0-0", "1-0", "2-0", "1-1"],
+            odds=[11.0, 7.00, 8.00, 7.50],
+            dutching_odd=2.08,
+            model_prob="58.10%",
+            edge="+20.85%"
+        )
+        ok, msg = send_telegram_message(msg_text)
+        if not ok:
+            raise HTTPException(status_code=400, detail=msg)
+        return {"status": "success", "message": msg}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

@@ -1,0 +1,6 @@
+{
+    "enabled": false,
+    "check_interval_hours": 1.0,
+    "min_edge_pct": 1.0,
+    "min_hours_before": 2.0
+}
