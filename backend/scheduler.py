@@ -619,7 +619,7 @@ async def run_live_odds_tracker_loop():
 DUTCH_CONFIG_PATH = os.path.join(DATA_DIR, 'telegram_dutching_config.json')
 
 DEFAULT_DUTCH_CONFIG = {
-    "enabled": false,
+    "enabled": False,
     "check_interval_hours": 1.0,
     "min_edge_pct": 1.0,
     "min_hours_before": 2.0
