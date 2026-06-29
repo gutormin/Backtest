@@ -9433,6 +9433,7 @@ function removeDutchingRow(rowId) {
 function calculateDutching() {
     const mode = document.getElementById('dutching-mode-select').value;
     const amount = parseFloat(document.getElementById('dutching-amount-input').value) || 0.0;
+    const commission = parseFloat(document.getElementById('dutching-commission-input').value) || 0.0;
     const rows = document.querySelectorAll('.dutching-input-row');
     const allocationList = document.getElementById('dutching-allocation-list');
     
@@ -9449,8 +9450,13 @@ function calculateDutching() {
         const odd = parseFloat(oddInput.value) || 0.0;
         
         if (odd > 1.0) {
-            selections.push({ name, odd });
-            sumProbabilityImplied += 1.0 / odd;
+            let calculationOdd = odd;
+            // Se contiver 'betfair' ou 'exchange' no nome, aplica comissão
+            if (name.toLowerCase().includes('betfair') || name.toLowerCase().includes('exchange')) {
+                calculationOdd = (odd - 1.0) * (1.0 - commission / 100.0) + 1.0;
+            }
+            selections.push({ name, odd, calculationOdd });
+            sumProbabilityImplied += 1.0 / calculationOdd;
         }
     });
     
@@ -9487,22 +9493,27 @@ function calculateDutching() {
     selections.forEach(sel => {
         let selStake = 0.0;
         if (mode === 'total_stake') {
-            selStake = totalStake * ( (1.0 / sel.odd) / sumProbabilityImplied );
+            selStake = totalStake * ( (1.0 / sel.calculationOdd) / sumProbabilityImplied );
         } else {
-            selStake = (targetProfit + totalStake) / sel.odd;
+            selStake = (targetProfit + totalStake) / sel.calculationOdd;
         }
-        
-        const grossReturn = selStake * sel.odd;
         
         labels.push(sel.name);
         stakes.push(parseFloat(selStake.toFixed(2)));
         
+        const isBetfair = sel.name.toLowerCase().includes('betfair') || sel.name.toLowerCase().includes('exchange');
+        const netProfit = selStake * sel.calculationOdd - totalStake;
+        const commissionText = isBetfair ? ` <span style="font-size: 10px; color: var(--text-muted);">(-${commission}%)</span>` : '';
+        
         const tr = document.createElement('tr');
         tr.innerHTML = `
             <td><strong>${sel.name}</strong></td>
-            <td><span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--border-color);">${sel.odd.toFixed(2)}</span></td>
+            <td>
+                <span class="badge" style="background: rgba(255,255,255,0.05); color: var(--text-primary); border: 1px solid var(--border-color);">${sel.odd.toFixed(2)}</span>
+                ${isBetfair ? `<span style="font-size: 10px; color: #a78bfa; margin-left: 4px;">(${sel.calculationOdd.toFixed(2)} líq)</span>` : ''}
+            </td>
             <td style="color: var(--text-primary); font-weight: 600;">$${selStake.toFixed(2)}</td>
-            <td><span style="color: #34d399;">+$${(grossReturn - totalStake).toFixed(2)}</span></td>
+            <td><span style="color: #34d399;">+$${netProfit.toFixed(2)}</span>${commissionText}</td>
         `;
         allocationList.appendChild(tr);
     });
@@ -9597,7 +9608,8 @@ function loadDutchingOpportunity(oppDataEscaped) {
     container.innerHTML = '';
     
     opp.selections.forEach((sel, i) => {
-        addDutchingRow(sel, opp.odds[i]);
+        const suffix = opp.bookmaker === 'Betfair Exchange' ? ' (Betfair)' : '';
+        addDutchingRow(sel + suffix, opp.odds[i]);
     });
     
     showToast(`Oportunidade para ${opp.match} carregada na calculadora!`, "success");
