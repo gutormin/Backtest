@@ -16,7 +16,7 @@ SPORT_LEAGUE_MAP = {
     'soccer_brazil_campeonato': 'BRA'
 }
 
-def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', source='odds_api', strategy='fav_short'):
+def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', source='odds_api', strategy='auto_ia'):
     opportunities = []
     poisson = PoissonModel()
     
@@ -75,6 +75,19 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
             market_label = f"Favorito Curto ({'Mandante' if fav_side == 'home' else 'Visitante'})"
             
         return outcomes, prob, keys, market_label
+
+    # Helper para selecionar a melhor estratégia de forma automática (IA Recomendada)
+    def determine_best_strategy(pred, is_home_fav):
+        g_exp = pred.get('lambda_home', 1.0) + pred.get('lambda_away', 1.0)
+        prob_under25 = pred.get('prob_under_25', 0.5)
+        prob_fav = pred['prob_home'] if is_home_fav else pred['prob_away']
+        
+        if g_exp < 2.30 or prob_under25 > 0.55:
+            return 'under_trunc'
+        elif prob_fav > 0.50:
+            return 'fav_classic'
+        else:
+            return 'fav_short'
 
     # 1. FONTE: THE ODDS API (Tempo Real Betfair/Bet365)
     if source == 'odds_api':
@@ -178,7 +191,8 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                             
                         # Layout dinâmico da estratégia
                         is_home_fav = pred['prob_home'] > pred['prob_away']
-                        outcomes_to_cover, prob_combined, odds_keys, market_label = get_strategy_layout(pred, is_home_fav, strategy)
+                        current_strat = determine_best_strategy(pred, is_home_fav) if strategy == 'auto_ia' else strategy
+                        outcomes_to_cover, prob_combined, odds_keys, market_label = get_strategy_layout(pred, is_home_fav, current_strat)
                         odds_to_cover = [est_odds.get(key, np.nan) for key in odds_keys]
                         
                         sum_prob_implied = sum(1.0 / odd for odd in odds_to_cover if odd > 1.0)
@@ -187,11 +201,12 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                             edge = prob_combined * dutching_odd - 1.0
                             
                             if edge > 0.01:
+                                label_prefix = "🧠 IA: " if strategy == 'auto_ia' else ""
                                 opportunities.append({
                                     'match': match_name,
                                     'date': match_date,
                                     'bookmaker': bookie,
-                                    'market': f"Dutching {market_label}",
+                                    'market': f"{label_prefix}{market_label}",
                                     'selections': outcomes_to_cover,
                                     'odds': [round(o, 2) for o in odds_to_cover],
                                     'dutching_odd': round(dutching_odd, 2),
@@ -270,7 +285,8 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                 
             # Layout dinâmico da estratégia
             is_home_fav = pred['prob_home'] > pred['prob_away']
-            outcomes_to_cover, prob_combined, odds_keys, market_label = get_strategy_layout(pred, is_home_fav, strategy)
+            current_strat = determine_best_strategy(pred, is_home_fav) if strategy == 'auto_ia' else strategy
+            outcomes_to_cover, prob_combined, odds_keys, market_label = get_strategy_layout(pred, is_home_fav, current_strat)
             odds_b365 = [est_odds_b365.get(key, np.nan) for key in odds_keys]
             
             # 2.1 ESTRATÉGIA PARA BET365 (Física)
@@ -280,11 +296,12 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                 edge = prob_combined * dutching_odd - 1.0
                 
                 if edge > 0.01:
+                    label_prefix = "🧠 IA: " if strategy == 'auto_ia' else ""
                     opportunities.append({
                         'match': match_name,
                         'date': match_date,
                         'bookmaker': 'Bet365',
-                        'market': f"Dutching {market_label}",
+                        'market': f"{label_prefix}{market_label}",
                         'selections': outcomes_to_cover,
                         'odds': [round(o, 2) for o in odds_b365],
                         'dutching_odd': round(dutching_odd, 2),
@@ -301,11 +318,12 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                 edge_bf = prob_combined * dutching_odd_bf - 1.0
                 
                 if edge_bf > 0.01:
+                    label_prefix = "🧠 IA: " if strategy == 'auto_ia' else ""
                     opportunities.append({
                         'match': match_name,
                         'date': match_date,
                         'bookmaker': 'Betfair Exchange',
-                        'market': f"Dutching {market_label}",
+                        'market': f"{label_prefix}{market_label}",
                         'selections': outcomes_to_cover,
                         'odds': [round(o, 2) for o in odds_betfair],
                         'dutching_odd': round(dutching_odd_bf, 2),
@@ -318,7 +336,7 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
     opportunities.sort(key=lambda x: x['raw_edge'], reverse=True)
     return opportunities
 
-def get_mock_dutching_opportunities(strategy='fav_short'):
+def get_mock_dutching_opportunities(strategy='auto_ia'):
     now_str = datetime.now().strftime("%d/%m/%Y %H:%M")
     
     if strategy == 'fav_classic':
@@ -334,18 +352,6 @@ def get_mock_dutching_opportunities(strategy='fav_short'):
                 'model_prob': '68.50%',
                 'edge': '+15.08%',
                 'raw_edge': 0.1508
-            },
-            {
-                'match': 'Real Madrid vs Atletico Madrid',
-                'date': now_str,
-                'bookmaker': 'Bet365',
-                'market': 'Dutching Favorito Clássico (Mandante)',
-                'selections': ['1-0', '2-0', '2-1', '3-0', '3-1'],
-                'odds': [7.00, 8.00, 8.50, 12.0, 14.0],
-                'dutching_odd': 1.76,
-                'model_prob': '64.10%',
-                'edge': '+12.82%',
-                'raw_edge': 0.1282
             }
         ]
     elif strategy == 'under_trunc':
@@ -361,21 +367,9 @@ def get_mock_dutching_opportunities(strategy='fav_short'):
                 'model_prob': '61.50%',
                 'edge': '+19.93%',
                 'raw_edge': 0.1993
-            },
-            {
-                'match': 'Real Madrid vs Atletico Madrid',
-                'date': now_str,
-                'bookmaker': 'Bet365',
-                'market': 'Dutching Jogo Truncado / Under (Mandante)',
-                'selections': ['0-0', '1-0', '2-0', '1-1'],
-                'odds': [11.0, 7.00, 8.00, 7.50],
-                'dutching_odd': 2.08,
-                'model_prob': '58.10%',
-                'edge': '+20.85%',
-                'raw_edge': 0.2085
             }
         ]
-    else: # fav_short
+    elif strategy == 'fav_short':
         opps = [
             {
                 'match': 'Flamengo vs Fluminense',
@@ -388,18 +382,33 @@ def get_mock_dutching_opportunities(strategy='fav_short'):
                 'model_prob': '47.50%',
                 'edge': '+16.38%',
                 'raw_edge': 0.1638
+            }
+        ]
+    else: # auto_ia
+        opps = [
+            {
+                'match': 'Flamengo vs Fluminense',
+                'date': now_str,
+                'bookmaker': 'Betfair Exchange',
+                'market': '🧠 IA: Favorito Clássico (Mandante)',
+                'selections': ['1-0', '2-0', '2-1', '3-0', '3-1'],
+                'odds': [6.50, 7.50, 8.50, 11.0, 13.0],
+                'dutching_odd': 1.68,
+                'model_prob': '68.50%',
+                'edge': '+15.08%',
+                'raw_edge': 0.1508
             },
             {
-                'match': 'Real Madrid vs Atletico Madrid',
+                'match': 'Castellon vs Eibar',
                 'date': now_str,
                 'bookmaker': 'Bet365',
-                'market': 'Dutching Favorito Curto (Mandante)',
-                'selections': ['1-0', '2-0', '2-1'],
-                'odds': [7.00, 8.00, 8.50],
-                'dutching_odd': 2.53,
-                'model_prob': '45.10%',
-                'edge': '+14.10%',
-                'raw_edge': 0.1410
+                'market': '🧠 IA: Jogo Truncado / Under (Mandante)',
+                'selections': ['0-0', '1-0', '2-0', '1-1'],
+                'odds': [11.0, 7.00, 8.00, 7.50],
+                'dutching_odd': 2.08,
+                'model_prob': '58.10%',
+                'edge': '+20.85%',
+                'raw_edge': 0.2085
             }
         ]
     return opps
