@@ -1269,6 +1269,10 @@
                                 <label for="dutch-bot-hours">Antecedência Mín. (Horas)</label>
                                 <input type="number" id="dutch-bot-hours" value="2" step="1" min="1" onchange="saveDutchingBotConfig()" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px; border-radius: 4px; outline: none; font-size: 12px;">
                             </div>
+                            <div class="form-group" style="flex: 1.5; min-width: 200px; margin-bottom: 0;">
+                                <label for="dutch-odds-api-key">Chave The Odds API (Opcional)</label>
+                                <input type="password" id="dutch-odds-api-key" placeholder="Usar chave pessoal..." onchange="saveOddsApiKey()" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px; border-radius: 4px; outline: none; font-size: 12px;">
+                            </div>
                             <div style="flex: 1; min-width: 150px; padding-bottom: 2px;">
                                 <button type="button" class="btn-primary" onclick="testDutchingTelegramAlert()" style="width: 100%; background: rgba(36, 161, 222, 0.2); border-color: #24A1DE; color: #24A1DE; font-size: 12px; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
                                     <i class="fa-solid fa-paper-plane"></i> Testar Alerta

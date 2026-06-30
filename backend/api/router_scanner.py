@@ -178,6 +178,9 @@ class TelegramDutchingConfigRequest(BaseModel):
     min_edge_pct: float
     min_hours_before: float
 
+class OddsApiConfigRequest(BaseModel):
+    api_key: str
+
 class TelegramConfigRequest(BaseModel):
     enabled: bool
     token: str
@@ -332,7 +335,8 @@ def scan_arbitrage(bookies: str = None):
 @router.get("/scan_dutching")
 def scan_dutching(source: str = "odds_api", strategy: str = "fav_short"):
     try:
-        token = get_api_token() or '75d5d936cc573c75bacf71e12b5de769'
+        from ..dutching_scanner import get_odds_api_token
+        token = get_odds_api_token() or '75d5d936cc573c75bacf71e12b5de769'
         return fetch_dutching_opportunities(api_key=token, source=source, strategy=strategy)
     except Exception as e:
         import traceback
@@ -680,6 +684,25 @@ def test_tg_dutching_connection():
         if not ok:
             raise HTTPException(status_code=400, detail=msg)
         return {"status": "success", "message": msg}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/telegram/odds_api_config")
+def get_odds_api_config_api():
+    try:
+        from ..dutching_scanner import get_odds_api_token
+        return {"api_key": get_odds_api_token()}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/telegram/odds_api_config")
+def save_odds_api_config_api(req: OddsApiConfigRequest):
+    try:
+        config_path = os.path.join(DATA_DIR, 'odds_api_config.json')
+        os.makedirs(os.path.dirname(config_path), exist_ok=True)
+        with open(config_path, 'w', encoding='utf-8') as f:
+            json.dump({"api_key": req.api_key.strip()}, f, indent=4)
+        return {"status": "success"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 

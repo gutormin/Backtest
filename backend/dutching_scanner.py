@@ -4,7 +4,19 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timezone
 from backend.models import PoissonModel, estimate_bookmaker_odds
+import json
 from backend.data_loader import load_league_data, get_all_available_leagues, DATA_DIR, get_api_token, load_upcoming_from_api
+
+def get_odds_api_token():
+    config_path = os.path.join(DATA_DIR, 'odds_api_config.json')
+    if os.path.exists(config_path):
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f)
+                return cfg.get('api_key', '').strip()
+        except Exception:
+            pass
+    return ''
 
 # Mapeamento do sport_key da The Odds API para o código de liga do nosso sistema
 SPORT_LEAGUE_MAP = {

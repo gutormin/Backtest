@@ -358,6 +358,7 @@ async function initApp() {
     await loadTelegramTipsLog();
     await loadArbitrageBotConfig();
     await loadDutchingBotConfig();
+    await loadOddsApiKey();
     toggleStakeLabel();
     onMarketSelectionChange(); // Initialize custom market multiselect label
     updateNotificationUi(); // Initialize notification permission state in UI
@@ -7951,6 +7952,37 @@ async function testDutchingTelegramAlert() {
     }
 }
 
+async function loadOddsApiKey() {
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/telegram/odds_api_config`);
+        if (res.ok) {
+            const data = await res.json();
+            document.getElementById('dutch-odds-api-key').value = data.api_key || '';
+        }
+    } catch (e) {
+        console.error("Erro ao carregar chave da Odds API", e);
+    }
+}
+
+async function saveOddsApiKey() {
+    const keyInput = document.getElementById('dutch-odds-api-key');
+    const key = keyInput.value ? keyInput.value.trim() : '';
+    try {
+        const res = await fetch(`${API_BASE_URL}/api/telegram/odds_api_config`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ api_key: key })
+        });
+        if (res.ok) {
+            showToast("Chave da The Odds API salva com sucesso!", "success");
+        } else {
+            showToast("Erro ao salvar chave da Odds API.", "danger");
+        }
+    } catch (e) {
+        showToast("Erro de conexão ao salvar chave da Odds API.", "danger");
+    }
+}
+
 
 function runBookieInit() {
     const savedBookies = localStorage.getItem('arbBookies');
@@ -9690,5 +9722,7 @@ window.loadDutchingOpportunity = loadDutchingOpportunity;
 window.loadDutchingBotConfig = loadDutchingBotConfig;
 window.saveDutchingBotConfig = saveDutchingBotConfig;
 window.testDutchingTelegramAlert = testDutchingTelegramAlert;
+window.loadOddsApiKey = loadOddsApiKey;
+window.saveOddsApiKey = saveOddsApiKey;
 
 
