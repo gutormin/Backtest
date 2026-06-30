@@ -20,14 +20,16 @@ def get_odds_api_token():
 
 # Mapeamento do sport_key da The Odds API para o código de liga do nosso sistema
 SPORT_LEAGUE_MAP = {
-    'soccer_england_premier_league': 'E0',
+    'soccer_epl': 'E0',
     'soccer_spain_la_liga': 'SP1',
     'soccer_italy_serie_a': 'I1',
     'soccer_germany_bundesliga': 'D1',
     'soccer_france_ligue_one': 'F1',
     'soccer_brazil_campeonato': 'BRA',
     'soccer_usa_mls': 'USA',
-    'soccer_japan_j_league': 'JPN'
+    'soccer_japan_j_league': 'JPN',
+    'soccer_sweden_allsvenskan': 'SWEDEN_ALLSVENSKAN',
+    'soccer_norway_eliteserien': 'NORWAY_ELITESERIEN'
 }
 
 def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', source='odds_api', strategy='auto_ia'):
@@ -148,12 +150,15 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                 
             odds_data = {
                 'Bet365': {'h2h': {}, 'totals': {}},
-                'Betfair Exchange': {'h2h': {}, 'totals': {}}
+                'Betfair Exchange': {'h2h': {}, 'totals': {}},
+                'Pinnacle': {'h2h': {}, 'totals': {}}
             }
             
             for bookie in match.get('bookmakers', []):
                 title = bookie.get('title')
-                if title not in ['Bet365', 'Betfair Exchange']:
+                if title == 'Betfair':
+                    title = 'Betfair Exchange'
+                if title not in ['Bet365', 'Betfair Exchange', 'Pinnacle']:
                     continue
                     
                 for market in bookie.get('markets', []):
@@ -169,8 +174,9 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                                 
             has_bet365 = len(odds_data['Bet365']['h2h']) == 3 and len(odds_data['Bet365']['totals']) == 2
             has_betfair = len(odds_data['Betfair Exchange']['h2h']) == 3 and len(odds_data['Betfair Exchange']['totals']) == 2
+            has_pinnacle = len(odds_data['Pinnacle']['h2h']) == 3 and len(odds_data['Pinnacle']['totals']) == 2
             
-            if not (has_bet365 or has_betfair):
+            if not (has_bet365 or has_betfair or has_pinnacle):
                 continue
                 
             hist_df = leagues_data[league_code]
@@ -196,7 +202,7 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
             except Exception:
                 continue
                 
-            for bookie in ['Bet365', 'Betfair Exchange']:
+            for bookie in ['Bet365', 'Betfair Exchange', 'Pinnacle']:
                 if not (len(odds_data[bookie]['h2h']) == 3 and len(odds_data[bookie]['totals']) == 2):
                     continue
                     
