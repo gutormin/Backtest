@@ -168,7 +168,9 @@ LEAGUES_AGGREGATE = {
     'BRA': 'Brazil Serie A',
     'USA': 'USA MLS',
     'MEX': 'Mexico Liga MX',
-    'JPN': 'Japan J-League'
+    'JPN': 'Japan J-League',
+    'SWEDEN_ALLSVENSKAN': 'Sweden Allsvenskan',
+    'NORWAY_ELITESERIEN': 'Norway Eliteserien'
 }
 
 SEASONS = ['2021', '2122', '2223', '2324', '2425', '2526']
@@ -642,7 +644,9 @@ API_LEAGUE_MAP = {
     'Brazil Serie A': 'BRA',
     'USA MLS': 'USA',
     'Japan J1 League': 'JPN',
-    'Mexico Liga MX': 'MEX'
+    'Mexico Liga MX': 'MEX',
+    'Sweden Allsvenskan': 'SWEDEN_ALLSVENSKAN',
+    'Norway Eliteserien': 'NORWAY_ELITESERIEN'
 }
 
 def clean_league_code(league_name):
