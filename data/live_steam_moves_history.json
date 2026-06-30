@@ -1,0 +1,53 @@
+[
+    {
+        "unique_id": "Botafogo vs Santos_Pinnacle_home",
+        "date": "28/06 16:00",
+        "match": "Botafogo vs Santos",
+        "league_code": "BRA",
+        "bookmaker": "Pinnacle",
+        "market": "home",
+        "opening_odd": 2.25,
+        "current_odd": 1.95,
+        "drop_pct": 15.4,
+        "confidence_score": 85.0,
+        "confidence_level": "Alta",
+        "won": true,
+        "profit": 9.5,
+        "stake_value": 10.0,
+        "resolved": true
+    },
+    {
+        "unique_id": "Palmeiras vs Corinthians_Pinnacle_home",
+        "date": "29/06 20:00",
+        "match": "Palmeiras vs Corinthians",
+        "league_code": "BRA",
+        "bookmaker": "Pinnacle",
+        "market": "home",
+        "opening_odd": 1.85,
+        "current_odd": 1.65,
+        "drop_pct": 12.1,
+        "confidence_score": 78.5,
+        "confidence_level": "Alta",
+        "won": false,
+        "profit": -10.0,
+        "stake_value": 10.0,
+        "resolved": true
+    },
+    {
+        "unique_id": "Arsenal vs Chelsea_Pinnacle_home",
+        "date": "30/06 15:00",
+        "match": "Arsenal vs Chelsea",
+        "league_code": "E0",
+        "bookmaker": "Pinnacle",
+        "market": "home",
+        "opening_odd": 2.10,
+        "current_odd": 1.75,
+        "drop_pct": 20.0,
+        "confidence_score": 95.0,
+        "confidence_level": "Alta",
+        "won": true,
+        "profit": 7.5,
+        "stake_value": 10.0,
+        "resolved": true
+    }
+]

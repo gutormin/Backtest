@@ -40,15 +40,21 @@ def estimate_liquidity_tier(league_identifier: str):
 def calculate_confidence_score(drop_pct: float, league_identifier: str):
     """
     Calcula um score de confiança de 0 a 100 com base no drop de odds e na liquidez da liga.
-    Formula: Confidence Score = min(100.0, drop_pct * 10.0 * liquidity_weight)
+    Ligas de alta liquidez exigem menos variação para serem de alta confiança.
+    Ligas de baixa liquidez exigem variações violentas para mitigar ruídos de baixo volume.
     Retorna (score, confidence_level, liquidity_tier)
     """
     tier_name, weight = estimate_liquidity_tier(league_identifier)
     if drop_pct <= 0:
         return 0.0, 'Baixa', tier_name
         
-    score = min(100.0, drop_pct * 10.0 * weight)
-    
+    if tier_name == 'Alta':
+        score = min(100.0, 35.0 + (drop_pct * 12.0))
+    elif tier_name == 'Média':
+        score = min(100.0, 15.0 + (drop_pct * 8.0))
+    else: # Baixa
+        score = min(100.0, drop_pct * 5.0)
+        
     if score >= 75.0:
         confidence_level = 'Alta'
     elif score >= 45.0:
@@ -59,100 +65,85 @@ def calculate_confidence_score(drop_pct: float, league_identifier: str):
     return round(score, 1), confidence_level, tier_name
 
 class SmartMoneyBacktester:
-    def __init__(self, data_loader_fn):
+    def __init__(self, data_loader_fn=None):
         self.data_loader_fn = data_loader_fn
+        self.history_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data', 'live_steam_moves_history.json')
 
-    def scan_steam_moves(self, league_code, min_drop_pct=5.0, markets=None, start_date='2021-01-01', end_date='2026-01-01', stake_value=10):
+    def scan_steam_moves(self, league_code=None, min_drop_pct=5.0, markets=None, start_date='2021-01-01', end_date='2026-01-01', stake_value=10):
+        import os
+        import json
+        
         if markets is None:
-            markets = ['home', 'away', 'draw', 'over25', 'under25']
+            markets = ['home', 'away', 'draw']
             
-        df = self.data_loader_fn(league_code, start_date=start_date)
-        if df is None or df.empty:
-            return []
-            
-        df['Date'] = pd.to_datetime(df['Date'], errors='coerce')
-        mask = (df['Date'] >= pd.to_datetime(start_date)) & (df['Date'] <= pd.to_datetime(end_date))
-        df = df.loc[mask].copy()
+        # Default list of niches to display if history is empty, matching user's main leagues
+        default_leagues = ['BRA', 'E0', 'F1', 'D1', 'I1', 'SP1']
         
-        if df.empty:
-            return []
-
+        # Load real history alerts from json
+        history_alerts = []
+        if os.path.exists(self.history_file):
+            try:
+                with open(self.history_file, 'r', encoding='utf-8') as f:
+                    history_alerts = json.load(f)
+            except Exception:
+                pass
+                
+        # Group alerts by niche (league_code | market)
+        niche_groups = {}
+        
+        # Pre-populate with defaults to avoid empty screens
+        leagues_to_populate = [league_code] if league_code else default_leagues
+        for lcode in leagues_to_populate:
+            for mkt in markets:
+                niche_key = f"{lcode}|{mkt}"
+                niche_groups[niche_key] = []
+                
+        # Populate with real alerts if they match filters
+        for alert in history_alerts:
+            lcode = alert.get('league_code')
+            mkt = alert.get('market', '').lower()
+            if not lcode or not mkt:
+                continue
+                
+            # Filter by dates
+            alert_date_str = alert.get('date', '')
+            try:
+                # Expecting 'YYYY-MM-DD' or 'DD/MM HH:MM'
+                # Simplistic filter: check if start_date in string or basic ISO parse
+                alert_dt = pd.to_datetime(alert_date_str, errors='coerce')
+                if pd.notna(alert_dt):
+                    if alert_dt < pd.to_datetime(start_date) or alert_dt > pd.to_datetime(end_date):
+                        continue
+            except:
+                pass
+                
+            # Filter by league selection if requested
+            if league_code and lcode != league_code:
+                continue
+                
+            if mkt not in markets:
+                continue
+                
+            if alert.get('drop_pct', 0.0) < min_drop_pct:
+                continue
+                
+            niche_key = f"{lcode}|{mkt}"
+            if niche_key not in niche_groups:
+                niche_groups[niche_key] = []
+            niche_groups[niche_key].append(alert)
+            
         results = []
-        
-        for market in markets:
-            bets = []
-            for _, row in df.iterrows():
-                max_odd = None
-                closing_odd = None
-                won = False
-                
-                if market == 'home':
-                    max_odd = row.get('MaxH')
-                    closing_odd = row.get('PSCH')
-                    won = row.get('FTR') == 'H'
-                elif market == 'draw':
-                    max_odd = row.get('MaxD')
-                    closing_odd = row.get('PSCD')
-                    won = row.get('FTR') == 'D'
-                elif market == 'away':
-                    max_odd = row.get('MaxA')
-                    closing_odd = row.get('PSCA')
-                    won = row.get('FTR') == 'A'
-                elif market == 'over25':
-                    max_odd = row.get('Max>2.5')
-                    closing_odd = row.get('P>2.5')
-                    # P>2.5 is pinnacle closing for over 2.5
-                    total_goals = row.get('FTHG', 0) + row.get('FTAG', 0)
-                    won = total_goals > 2.5
-                elif market == 'under25':
-                    max_odd = row.get('Max<2.5')
-                    closing_odd = row.get('P<2.5')
-                    total_goals = row.get('FTHG', 0) + row.get('FTAG', 0)
-                    won = total_goals < 2.5
-                
-                # If Pinnacle Closing is not available, fallback to Average Closing
-                if pd.isna(closing_odd) or not closing_odd:
-                    if market == 'home': closing_odd = row.get('AvgCH')
-                    elif market == 'draw': closing_odd = row.get('AvgCD')
-                    elif market == 'away': closing_odd = row.get('AvgCA')
-                    elif market == 'over25': closing_odd = row.get('AvgC>2.5')
-                    elif market == 'under25': closing_odd = row.get('AvgC<2.5')
-
-                # If Max is not available, fallback to Average
-                if pd.isna(max_odd) or not max_odd:
-                    if market == 'home': max_odd = row.get('AvgH')
-                    elif market == 'draw': max_odd = row.get('AvgD')
-                    elif market == 'away': max_odd = row.get('AvgA')
-                    elif market == 'over25': max_odd = row.get('Avg>2.5')
-                    elif market == 'under25': max_odd = row.get('Avg<2.5')
-                    
-                if pd.isna(max_odd) or pd.isna(closing_odd) or not max_odd or not closing_odd or closing_odd <= 1.0 or max_odd <= 1.0:
-                    continue
-                    
-                drop_pct = (max_odd / closing_odd - 1.0) * 100
-                
-                if drop_pct >= min_drop_pct:
-                    # Found a Steam Move! We bet at the closing odd (conservative) or max odd?
-                    # Typically, to be conservative and realistic, we assume we catch it at closing_odd,
-                    # or somewhere in between. Let's assume we bet at closing_odd for a worst-case scenario
-                    # Wait, if we are "Trend Following", we caught the steam move. We probably got closing_odd.
-                    profit = (closing_odd - 1.0) * stake_value if won else -stake_value
-                    
-                    bets.append({
-                        'date': row['Date'].strftime('%Y-%m-%d') if pd.notna(row['Date']) else '',
-                        'match': f"{row.get('HomeTeam', 'Unknown')} vs {row.get('AwayTeam', 'Unknown')}",
-                        'max_odd': max_odd,
-                        'closing_odd': closing_odd,
-                        'drop_pct': drop_pct,
-                        'won': won,
-                        'profit': profit
-                    })
-                    
+        for niche_key, bets in niche_groups.items():
+            lcode, mkt = niche_key.split('|')
+            
+            # Estimate league info
+            tier_name, weight = estimate_liquidity_tier(lcode)
+            
             if not bets:
-                score, confidence_level, tier_name = calculate_confidence_score(0.0, league_code)
+                score, confidence_level, tier_name = calculate_confidence_score(0.0, lcode)
                 results.append({
-                    'code': f"{league_code}|{market}",
-                    'market_name': market.capitalize(),
+                    'code': niche_key,
+                    'market_name': mkt.capitalize(),
                     'total_bets': 0,
                     'net_profit': 0.0,
                     'roi': 0.0,
@@ -165,18 +156,20 @@ class SmartMoneyBacktester:
                 continue
                 
             total_bets = len(bets)
-            net_profit = sum(b['profit'] for b in bets)
-            total_staked = total_bets * stake_value
+            net_profit = sum(b.get('profit', 0.0) for b in bets)
+            total_staked = sum(b.get('stake_value', stake_value) for b in bets)
             roi = (net_profit / total_staked * 100) if total_staked > 0 else 0
-            avg_drop = float(np.mean([b['drop_pct'] for b in bets]))
-            wins = sum(1 for b in bets if b['won'])
+            avg_drop = float(np.mean([b.get('drop_pct', 0.0) for b in bets]))
+            
+            # Count wins
+            wins = sum(1 for b in bets if b.get('won') == True)
             win_rate = (wins / total_bets * 100) if total_bets > 0 else 0
             
-            score, confidence_level, tier_name = calculate_confidence_score(avg_drop, league_code)
+            score, confidence_level, tier_name = calculate_confidence_score(avg_drop, lcode)
             
             results.append({
-                'code': f"{league_code}|{market}",
-                'market_name': market.capitalize(),
+                'code': niche_key,
+                'market_name': mkt.capitalize(),
                 'total_bets': total_bets,
                 'net_profit': round(net_profit, 2),
                 'roi': round(roi, 2),
