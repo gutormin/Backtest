@@ -32,7 +32,7 @@ let appliedOptimizationSuggestions = new Set(); // Track applied suggestions to 
 const API_BASE_URL = window.location.origin;
 window.API_BASE_URL = API_BASE_URL;
 window.currentDataSource = 'footballdata';
-window.futpythonApiKey = 'cmqa6oz0p01i1wq6lzxknltmd';
+window.futpythonApiKey = '';
 
 // ============================================================
 // LOCAL STORAGE PERSISTENCE
@@ -9875,6 +9875,10 @@ window.canonicalMarketCode = function(market) {
     if (m === 'draw' || m === 'x') return 'draw';
     if (m === 'over25' || m === 'o25' || m === 'over') return 'over25';
     if (m === 'under25' || m === 'u25' || m === 'under') return 'under25';
+    if (m === 'bttsyes' || m === 'am' || m === 'ambasmarcam') return 'btts_yes';
+    if (m === 'bttsno') return 'btts_no';
+    if (m === 'homednb' || m === 'dnbhome') return 'home_dnb';
+    if (m === 'awaydnb' || m === 'dnbaway') return 'away_dnb';
     return m; // fallback: já normalizado sem separadores
 };
 

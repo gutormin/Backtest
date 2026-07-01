@@ -13,7 +13,7 @@ load_dotenv()
 API_KEY = os.getenv('THE_ODDS_API_KEY')
 SPORT   = 'upcoming'
 REGIONS = 'eu,uk,us'
-MARKETS = 'h2h,spreads,totals'
+MARKETS = 'h2h,spreads,totals,btts,draw_no_bet'
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  BASELINE IMUTÁVEL
@@ -225,6 +225,12 @@ def normalize_market_key(market_key: str, outcome_name: str,
     elif market_key == 'spreads':
         if outcome_name == home_team:   return 'home_spread'
         elif outcome_name == away_team: return 'away_spread'
+    elif market_key == 'btts':
+        if outcome_name.lower() == 'yes': return 'btts_yes'
+        elif outcome_name.lower() == 'no': return 'btts_no'
+    elif market_key == 'draw_no_bet':
+        if outcome_name == home_team: return 'home_dnb'
+        elif outcome_name == away_team: return 'away_dnb'
     return outcome_name
 
 
