@@ -134,7 +134,7 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     current_dd_duration = 0
 
     equity_curve = []
-    current_date = all_bets[0]['date']
+    bet_index = 0
 
     strategy_stats = {
         s['id']: {
@@ -153,12 +153,11 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     monthly_stats = defaultdict(lambda: {'profit': 0.0, 'bets': 0})
     odds_stats = defaultdict(lambda: {'profit': 0.0, 'bets': 0})
 
+    # Record initial bankroll as first point
+    equity_curve.append({'date': all_bets[0]['date'], 'bankroll': round(bankroll, 2), 'bet_index': 0})
+
     for b in all_bets:
         b_date = b['date']
-
-        if b_date != current_date:
-            equity_curve.append({'date': current_date, 'bankroll': round(bankroll, 2)})
-            current_date = b_date
 
         bet_odds = float(b.get('odds', 2.0))
         prob = float(b.get('prob', 50.0)) / 100.0
@@ -182,6 +181,12 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         b['profit'] = round(profit, 2)
         b['bankroll'] = round(bankroll + profit, 2)
         bankroll += profit
+        bet_index += 1
+
+        # Record equity curve after EVERY bet (not just at date boundaries)
+        # This reveals true intraday drawdowns when multiple strategies
+        # have bets on the same day.
+        equity_curve.append({'date': b_date, 'bankroll': round(bankroll, 2), 'bet_index': bet_index})
 
         # Drawdown
         if bankroll > peak_bankroll:
@@ -218,8 +223,6 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
         odds_band = f"{math.floor(bet_odds * 2) / 2:.1f} - {math.floor(bet_odds * 2) / 2 + 0.5:.1f}"
         odds_stats[odds_band]['bets'] += 1
         odds_stats[odds_band]['profit'] += profit
-
-    equity_curve.append({'date': current_date, 'bankroll': round(bankroll, 2)})
 
     # ---------------------------------------------------------------
     # RECOMMENDED STAKE ('Apostar' column)
