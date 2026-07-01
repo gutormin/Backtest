@@ -8503,6 +8503,40 @@ window.runBacktest = async function(overrideParams) {
                         if (calibCard) calibCard.style.background = 'rgba(16, 185, 129, 0.02)';
                     }
                 }
+
+                // === SELECTION BIAS WARNING BANNER ===
+                const biasBanner = document.getElementById('selection-bias-banner');
+                if (!biasBanner) {
+                    // Create banner dynamically if it doesn't exist
+                    const banner = document.createElement('div');
+                    banner.id = 'selection-bias-banner';
+                    banner.style.cssText = 'display:none; margin:12px 0; padding:12px 16px; border-radius:8px; font-size:13px; line-height:1.5;';
+                    const transPanel = document.getElementById('transparency-panel');
+                    if (transPanel) transPanel.appendChild(banner);
+                }
+                const biasEl = document.getElementById('selection-bias-banner');
+                if (biasEl) {
+                    const filterPct = evaluatedVal > 0 ? ((skippedFilterVal + skippedOddsVal) / evaluatedVal * 100) : 0;
+                    if (filterPct > 25) {
+                        biasEl.style.display = 'block';
+                        biasEl.style.background = 'rgba(239, 68, 68, 0.08)';
+                        biasEl.style.border = '1px solid rgba(239, 68, 68, 0.3)';
+                        biasEl.style.color = '#fca5a5';
+                        biasEl.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444;"></i> <strong style="color:#ef4444;">Alerta de Viés de Seleção (${filterPct.toFixed(1)}%):</strong> Mais de 25% dos jogos foram excluídos do backtest (${skippedOddsVal} sem odds + ${skippedFilterVal} fora do filtro de ${evaluatedVal} avaliados). O ROI reportado pode estar <strong>significativamente inflado</strong> porque os jogos removidos são exatamente aqueles onde o modelo teria dificuldade. Considere usar uma fonte de odds com maior cobertura ou relaxar os filtros.`;
+                    } else if (filterPct > 10) {
+                        biasEl.style.display = 'block';
+                        biasEl.style.background = 'rgba(245, 158, 11, 0.06)';
+                        biasEl.style.border = '1px solid rgba(245, 158, 11, 0.2)';
+                        biasEl.style.color = '#fcd34d';
+                        biasEl.innerHTML = `<i class="fa-solid fa-circle-exclamation" style="color:#f59e0b;"></i> <strong style="color:#f59e0b;">Aviso de Viés Moderado (${filterPct.toFixed(1)}%):</strong> ${skippedOddsVal + skippedFilterVal} de ${evaluatedVal} jogos excluídos do backtest (${nanPctVal}% sem odds registradas). O ROI pode conter um viés otimista leve.`;
+                    } else {
+                        biasEl.style.display = 'block';
+                        biasEl.style.background = 'rgba(16, 185, 129, 0.05)';
+                        biasEl.style.border = '1px solid rgba(16, 185, 129, 0.15)';
+                        biasEl.style.color = '#6ee7b7';
+                        biasEl.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#10b981;"></i> <strong style="color:#10b981;">Amostra Saudável (${filterPct.toFixed(1)}% excluídos):</strong> Baixo risco de viés de seleção. A cobertura de odds é excelente para esta liga.`;
+                    }
+                }
             }
             
             const bets = data.bets || [];

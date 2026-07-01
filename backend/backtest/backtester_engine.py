@@ -1347,13 +1347,14 @@ class ChronologicalBacktester:
                 if mkt in self.calibrators:
                     model_prob = self.calibrators[mkt].calibrate(model_prob)
                     
-                # 3. Store History
+                # 3. Store ML history (features are pre-game, no leak)
                 if use_ml:
                     self.ml_history[mkt]['X'].append(features)
                     self.ml_history[mkt]['y'].append(1 if bet_won else 0)
-                
-                self.calibration_history[mkt]['probs'].append(raw_prob)
-                self.calibration_history[mkt]['outcomes'].append(1 if bet_won else 0)
+
+                # NOTE: calibration_history is appended AFTER betting evaluation
+                # to prevent temporal leak (outcome must not train Platt before
+                # the calibrator is used to make a bet decision on this match).
 
                 # If match date is within our backtest active window, evaluate betting
                 if start_dt <= match_date <= end_dt:
@@ -1601,6 +1602,10 @@ class ChronologicalBacktester:
                                     'is_synthetic': is_synthetic,
                                     'ml_applied': ml_applied
                                 })
+
+                # 3b. NOW store calibration history (after betting decision)
+                self.calibration_history[mkt]['probs'].append(raw_prob)
+                self.calibration_history[mkt]['outcomes'].append(1 if bet_won else 0)
                             
             # Fit Calibration Periodically
             # NOTE: threshold raised from 50 → 200 to avoid fitting the Platt
@@ -1614,7 +1619,7 @@ class ChronologicalBacktester:
                     if len(hist['probs']) > 2000:
                         hist['probs'] = hist['probs'][-2000:]
                         hist['outcomes'] = hist['outcomes'][-2000:]
-                    if len(hist['probs']) >= 200:  # raised from 50 – Phase 2 fix
+                    if len(hist['probs']) >= 500:  # raised from 200 → 500 to prevent temporal leak on small samples
                         if c_mkt not in self.calibrators:
                             self.calibrators[c_mkt] = PlattCalibrator(epochs=200)
                         self.calibrators[c_mkt].fit(hist['probs'], hist['outcomes'])
@@ -1691,7 +1696,7 @@ class ChronologicalBacktester:
             cal_history = self.calibration_history.get(m, {'probs': []})
             m_samples = len(cal_history['probs'])
             cal_samples += m_samples
-            if m_samples < 200:
+            if m_samples < 500:
                 cal_skipped = True
                 
         summary_dict['summary']['calibration_samples'] = cal_samples
@@ -2608,19 +2613,22 @@ class ChronologicalBacktester:
                 if mkt in self.calibrators:
                     model_prob = self.calibrators[mkt].calibrate(model_prob)
                     
-                # 3. Store History
+                # 3. Store ML history (features are pre-game, no leak)
                 if use_ml:
                     self.ml_history[mkt]['X'].append(features)
                     self.ml_history[mkt]['y'].append(1 if bet_won else 0)
                 
-                self.calibration_history[mkt]['probs'].append(raw_prob)
-                self.calibration_history[mkt]['outcomes'].append(1 if bet_won else 0)
-                            
+                # NOTE: calibration_history appended AFTER betting evaluation
+                # to prevent temporal leak.
+
                 if not pd.isna(bookie_odds) and bookie_odds > 1.0:
                     if min_odds <= bookie_odds <= max_odds:
                         expected_value = model_prob * bookie_odds
                         if expected_value >= value_threshold:
                             return bookie_odds, model_prob, expected_value, bet_won
+                # 3b. NOW store calibration history (after betting decision)
+                self.calibration_history[mkt]['probs'].append(raw_prob)
+                self.calibration_history[mkt]['outcomes'].append(1 if bet_won else 0)
                 return None
                 
             # Run parallel updates
@@ -2744,7 +2752,7 @@ class ChronologicalBacktester:
                     if len(hist['probs']) > 2000:
                         hist['probs'] = hist['probs'][-2000:]
                         hist['outcomes'] = hist['outcomes'][-2000:]
-                    if len(hist['probs']) >= 200:  # raised from 50 – Phase 2 fix
+                    if len(hist['probs']) >= 500:  # raised from 200 → 500 to prevent temporal leak on small samples
                         if c_mkt not in self.calibrators:
                             self.calibrators[c_mkt] = PlattCalibrator(epochs=200)
                         self.calibrators[c_mkt].fit(hist['probs'], hist['outcomes'])
