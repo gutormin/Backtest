@@ -1009,7 +1009,7 @@
             </div>
 
             <div class="scanner-buttons" style="display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
-                <button id="btn-scan-steam" class="action-button active" onclick="runSteamScan()">
+                <button id="btn-scan-steam" class="action-button active" onclick="window.runSteamScan()">
                     <i class="fa-solid fa-flask"></i> Executar Backtest
                 </button>
                 <button id="btn-clear-steam" class="action-button danger" onclick="clearSteamScan()">
@@ -1017,7 +1017,44 @@
                 </button>
             </div>
         
-        <div class="info-alert" style="margin-top: 15px; display: flex; align-items: flex-start; gap: 15px; padding: 15px; background: rgba(var(--warning-rgb), 0.05); border: 1px solid rgba(var(--warning-rgb), 0.2); border-radius: 8px;">
+    <div id="steam-loading-overlay" style="display: none; padding: 40px; text-align: center; color: var(--text-muted);">
+        <i class="fa-solid fa-satellite-dish fa-spin" style="font-size: 24px; color: var(--warning); margin-bottom: 10px;"></i>
+        <p>Rastreando o mercado asiático em busca de anomalias...</p>
+    </div>
+    
+    <div id="steam-table-container" style="margin-top: 20px;"></div>
+    <div id="steam-live-table-container" style="margin-top: 20px; display: none;">
+        <!-- PROFITABLE FILTER TOGGLE -->
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+            <div style="display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.03); padding: 8px 14px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.06); box-shadow: 0 4px 6px rgba(0,0,0,0.15);">
+                <input type="checkbox" id="filter-profitable-only" onchange="window.renderLiveSteamTable(window.lastLiveSteamData)" style="cursor: pointer; width: 16px; height: 16px; margin: 0;" checked>
+                <label for="filter-profitable-only" style="font-size: 13px; color: var(--text-secondary); cursor: pointer; user-select: none; font-weight: bold; display: flex; align-items: center; gap: 6px; margin-bottom: 0;">
+                    <i class="fa-solid fa-filter" style="color: #10b981;"></i> Exibir apenas Nichos Lucrativos (ROI > 0)
+                </label>
+            </div>
+            <div id="live-cache-status" style="font-size: 11px; color: var(--text-muted); font-weight: 500;">
+                <span style="color: #f59e0b;"><i class="fa-solid fa-circle-exclamation"></i> Laboratório Desconectado:</span> Rode um backtest para ativar filtros.
+            </div>
+        </div>
+        <table class="radar-smart-table" id="steam-live-table">
+            <thead>
+                <tr>
+                    <th>JOGO / DATA</th>
+                    <th>CASA</th>
+                    <th>MERCADO</th>
+                    <th>ABERTURA</th>
+                    <th>ATUAL</th>
+                    <th>QUEDA</th>
+                    <th>CONFIANÇA</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Populated dynamically -->
+            </tbody>
+        </table>
+    </div>
+
+        <div class="info-alert" style="margin-top: 40px; display: flex; align-items: flex-start; gap: 15px; padding: 15px; background: rgba(var(--warning-rgb), 0.05); border: 1px solid rgba(var(--warning-rgb), 0.2); border-radius: 8px;">
             <i class="fa-solid fa-triangle-exclamation" style="color: var(--warning); font-size: 20px; margin-top: 2px;"></i>
             <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.5;">
                 <strong style="color: var(--warning);">Isolamento Matemático:</strong> Esta aba <strong>NÃO</strong> utiliza o modelo de Expected Goals de Poisson. O backtest simulado aqui testa exclusivamente: <em>"O que teria acontecido com a minha banca se eu apostasse apenas nos times/mercados que tiveram um Steam Move maior que o gatilho exigido?"</em>
@@ -1031,36 +1068,7 @@
             
             <div style="font-size: 13px; color: var(--text-secondary); line-height: 1.6; display: flex; flex-direction: column; gap: 24px;">
                 
-                <!-- Parte 1: Passo a Passo -->
-                <div>
-                    <h5 style="color: #ffffff; font-size: 14px; font-weight: 700; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;">
-                        <i class="fa-solid fa-list-check" style="color: #06b6d4;"></i> Passo a Passo para Analisar e Fazer uma Aposta
-                    </h5>
-                    
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px;">
-                        <div style="background: rgba(255, 255, 255, 0.02); border-left: 3px solid #10b981; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <strong style="color: #10b981; font-size: 13px; display: block; margin-bottom: 6px;"><i class="fa-solid fa-magnifying-glass-chart"></i> Passo 1: Encontre o Alerta</strong>
-                            Fique de olho na tabela do <strong>Radar Ao Vivo</strong> (ou nas mensagens do Telegram). Quando um novo jogo aparecer com uma odd despencando, identifique o confronto e a linha de aposta sugerida na coluna <strong>MERCADO</strong>.
-                        </div>
-                        
-                        <div style="background: rgba(255, 255, 255, 0.02); border-left: 3px solid #06b6d4; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <strong style="color: #06b6d4; font-size: 13px; display: block; margin-bottom: 6px;"><i class="fa-solid fa-shield-halved"></i> Passo 2: Avalie a Confiança</strong>
-                            Verifique a coluna <strong>CONFIANÇA</strong>. Foque prioritariamente em alertas classificados como <strong>Alta</strong> ou <strong>Média</strong>. Eles representam jogos em ligas com alta liquidez onde a queda de odds indica ação de capital profissional (sindicatos e robôs).
-                        </div>
-                        
-                        <div style="background: rgba(255, 255, 255, 0.02); border-left: 3px solid #f59e0b; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <strong style="color: #f59e0b; font-size: 13px; display: block; margin-bottom: 6px;"><i class="fa-solid fa-chart-line"></i> Passo 3: Valide o Histórico</strong>
-                            Consulte a tabela do <strong>Histórico (Dashboard)</strong>. Procure a linha referente ao <strong>NICHO</strong> (liga + mercado) do seu alerta. Faça a entrada apenas se o histórico do nicho apresentar <strong>ROI positivo (verde)</strong>.
-                        </div>
-                        
-                        <div style="background: rgba(255, 255, 255, 0.02); border-left: 3px solid #ef4444; padding: 15px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <strong style="color: #ef4444; font-size: 13px; display: block; margin-bottom: 6px;"><i class="fa-solid fa-clock-rotate-left"></i> Passo 4: Pegue a Odd Atrasada</strong>
-                            O dinheiro derrubou a odd global (ex: Pinnacle caiu de @2.20 para @1.70). Abra a sua casa de apostas (Bet365, Betano, etc.). Se a odd lá ainda estiver desatualizada (ex: @2.00 ou @2.10), faça a aposta imediatamente antes que corrijam!
-                        </div>
-                    </div>
-                </div>
 
-                <hr style="border: 0; border-top: 1px solid rgba(255, 255, 255, 0.05); margin: 5px 0;">
 
                 <!-- Parte 2: Glossário de Indicadores -->
                 <div>
@@ -1101,32 +1109,6 @@
 
             </div>
         </div>
-    </div>
-    
-    <div id="steam-loading-overlay" style="display: none; padding: 40px; text-align: center; color: var(--text-muted);">
-        <i class="fa-solid fa-satellite-dish fa-spin" style="font-size: 24px; color: var(--warning); margin-bottom: 10px;"></i>
-        <p>Rastreando o mercado asiático em busca de anomalias...</p>
-    </div>
-    
-    <div id="steam-table-container" style="margin-top: 20px;"></div>
-    <div id="steam-live-table-container" style="margin-top: 20px; display: none;">
-        <table class="radar-smart-table" id="steam-live-table">
-            <thead>
-                <tr>
-                    <th>JOGO / DATA</th>
-                    <th>CASA</th>
-                    <th>MERCADO</th>
-                    <th>ABERTURA</th>
-                    <th>ATUAL</th>
-                    <th>QUEDA</th>
-                    <th>CONFIANÇA</th>
-                </tr>
-            </thead>
-            <tbody>
-                <!-- Populated dynamically -->
-            </tbody>
-        </table>
-    </div>
     </div>
 </div>
 
@@ -2978,7 +2960,7 @@
     </div>
 
     <!-- Custom Script com Cache Buster para evitar problemas de atualização -->
-    <script type="module" src="app.js?v=56"></script>
+    <script type="module" src="app.js?v=58"></script>
 
 <script>
 window.toggleGroup = function(groupEl, event) {
@@ -3017,3 +2999,4 @@ window.toggleGroup = function(groupEl, event) {
 </script>
 </body>
 </html>
+

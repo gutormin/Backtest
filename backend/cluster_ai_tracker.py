@@ -95,10 +95,13 @@ async def run_cluster_ai_alerts():
         return
         
     clusters = cluster_leagues(features_list, n_clusters=3)
-    
+    if 'error' in clusters:
+        print(f"[Cluster AI] Erro na clusterização: {clusters['error']}")
+        return
+        
     # Mapear ligas para clusters
     league_to_cluster = {}
-    for c in clusters:
+    for c in clusters.get('clusters', []):
         profile = get_cluster_profile(c)
         for lg in c['leagues']:
             league_to_cluster[lg] = {

@@ -220,14 +220,42 @@ def add_telegram_arbitrage_tip(match_name, match_date, profit_margin):
     return new_tip
 
 
-def format_telegram_smart_money_tip(match_name, match_date, bookmaker, market, opening_odd, current_odd, drop_pct, confidence_score=None, confidence_level=None, liquidity_tier=None):
+def format_telegram_smart_money_tip(match_name, match_date, bookmaker, market, opening_odd, current_odd, drop_pct, confidence_score=None, confidence_level=None, liquidity_tier=None, sharpness_score=None, profile_type=None, velocity=None, acceleration_ratio=None, acceleration_text=None, is_in_play=False, elapsed_minutes=0, adjusted_drop_pct=0.0):
     # Formats a beautiful alert for smart money drops
     confidence_str = ""
     if confidence_level and confidence_score is not None:
         emoji = "🟢" if confidence_level == "Alta" else ("🟡" if confidence_level == "Média" else "🔴")
-        confidence_str = f"ℹ️ <b>Índice de Confiança:</b> {emoji} <b>{confidence_level}</b> ({confidence_score:.0f}%)\n💧 <b>Liquidez da Liga:</b> {liquidity_tier}\n\n"
+        confidence_str = f"ℹ️ <b>Índice de Confiança:</b> {emoji} <b>{confidence_level}</b> ({confidence_score:.0f}%)\n💧 <b>Liquidez da Liga:</b> {liquidity_tier}\n"
+        if profile_type:
+            p_emoji = "🧠" if profile_type == "Sharps" else "📢"
+            p_name = "Sharps (Dinheiro Inteligente)" if profile_type == "Sharps" else "Squares (Público/Tipster)"
+            confidence_str += f"{p_emoji} <b>Perfil do Drop:</b> {p_name} - {sharpness_score:.0f}%\n"
+        
+        if velocity is not None and acceleration_ratio is not None:
+            acc_emoji = "➡️"
+            if acceleration_text == "Aceleração Forte":
+                acc_emoji = "🚀"
+            elif acceleration_text == "Acelerando":
+                acc_emoji = "📈"
+            elif acceleration_text == "Desacelerando":
+                acc_emoji = "📉"
+            confidence_str += f"⚡ <b>Velocidade do Drop:</b> -{velocity:.1f}%/h\n"
+            confidence_str += f"{acc_emoji} <b>Aceleração:</b> +{acceleration_ratio:.1f}x ({acceleration_text})\n"
+            
+        confidence_str += "\n"
+
+    in_play_header = ""
+    drop_info_str = f"💥 <b>Queda Total: -{drop_pct:.1f}%</b>\n\n"
+    if is_in_play:
+        in_play_header = f"🔴 <b>AO VIVO - {elapsed_minutes:.0f}' MINUTOS</b>\n⚠️ <i>Partida em andamento. Odds de gols e empate têm decaimento natural.</i>\n\n"
+        drop_info_str = (
+            f"💥 <b>Queda Real (Nominal): -{drop_pct:.1f}%</b>\n"
+            f"📉 <b>Queda Ajustada (Time Decay): -{adjusted_drop_pct:.1f}%</b>\n\n"
+        )
+
     message = (
         f"<b>🚨 ALERTA DE SMART MONEY DETECTADO</b>\n\n"
+        f"{in_play_header}"
         f"⚽ <b>Jogo:</b> {match_name}\n"
         f"📅 <b>Data:</b> {match_date}\n"
         f"🎯 <b>Mercado Afetado:</b> {market}\n"
@@ -235,7 +263,7 @@ def format_telegram_smart_money_tip(match_name, match_date, bookmaker, market, o
         f"{confidence_str}"
         f"📉 <b>Esmagamento da Odd:</b>\n"
         f"Abertura: @{opening_odd:.2f} ➡️ Atual: <b>@{current_odd:.2f}</b>\n"
-        f"💥 <b>Queda Total: -{drop_pct:.1f}%</b>\n\n"
+        f"{drop_info_str}"
         f"⚠️ <i>Atenção: O dinheiro institucional entrou pesado nessa seleção. Se a sua casa de aposta ainda não acompanhou a queda, há enorme valor!</i>"
     )
     return message

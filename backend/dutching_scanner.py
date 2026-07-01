@@ -124,7 +124,7 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                 print(f"Erro ao buscar Odds API para {sport_key}: {e}")
                 
         if not matches_found:
-            return get_mock_dutching_opportunities(strategy)
+            return []
             
         for match in matches_found:
             sport_key = match.get('sport_key')
@@ -269,7 +269,7 @@ def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', sou
                     pass
                     
         if df_fixtures.empty:
-            return get_mock_dutching_opportunities(strategy)
+            return []
             
         for row in df_fixtures.to_dict('records'):
             league_code = row.get('Div')

@@ -123,6 +123,8 @@ class SteamMovesRequest(BaseModel):
     stakeValue: float = 10.0
     data_source: str = "footballdata"
     futpython_api_key: str = ""
+    profileFilter: str = "all"
+    latencySeconds: int = 0
 
     @validator('startDate', 'endDate')
     def validate_date_format(cls, v):
@@ -238,6 +240,7 @@ class LiveSteamRequest(BaseModel):
     minDropPct: float = 5.0
     markets: List[str] = ['home']
     leagues: List[str] = []
+    profileFilter: str = "all"
 
 class ClusterAIConfigReq(BaseModel):
     enabled: bool
@@ -310,7 +313,9 @@ def run_steam_moves_scan(req: SteamMovesRequest):
                 markets=req.markets,
                 start_date=req.startDate,
                 end_date=req.endDate,
-                stake_value=req.stakeValue
+                stake_value=req.stakeValue,
+                profile_filter=req.profileFilter,
+                latency_seconds=req.latencySeconds
             )
             all_results.extend(results)
             
@@ -800,9 +805,64 @@ def get_live_steam_moves(req: LiveSteamRequest):
                     
                     if opening > 1.0 and current > 0.0 and current < opening:
                         drop_pct = ((opening / current) - 1.0) * 100
-                        if drop_pct >= req.minDropPct:
+                        
+                        # In-Play e Time Decay
+                        is_in_play = False
+                        elapsed_minutes = 0.0
+                        try:
+                            commence_dt = datetime.fromisoformat(commence_time.replace('Z', '+00:00'))
+                            now_utc = datetime.now(timezone.utc)
+                            if now_utc > commence_dt:
+                                is_in_play = True
+                                elapsed_minutes = (now_utc - commence_dt).total_seconds() / 60.0
+                                if elapsed_minutes > 95.0:
+                                    elapsed_minutes = 95.0
+                        except Exception:
+                            pass
+                            
+                        from backend.smart_money import calculate_time_decay_adjusted_drop
+                        odd_decay, adjusted_drop_pct = calculate_time_decay_adjusted_drop(
+                            norm_market=norm_market,
+                            opening=opening,
+                            current=current,
+                            elapsed_minutes=elapsed_minutes
+                        )
+                        
+                        trigger_drop = adjusted_drop_pct if is_in_play else drop_pct
+                        
+                        if trigger_drop >= req.minDropPct:
                             sport_key = match_info.get('sport', '')
-                            score, confidence_level, tier_name = calculate_confidence_score(drop_pct, sport_key)
+                            from backend.smart_money import calculate_confidence_score, classify_drop_profile, calculate_odds_metrics
+                            score, confidence_level, tier_name = calculate_confidence_score(trigger_drop, sport_key)
+                            sharpness_score, profile_type = classify_drop_profile(
+                                drop_pct=trigger_drop,
+                                league_identifier=sport_key,
+                                commence_time_str=commence_time,
+                                bookmaker_name=bookie,
+                                match_entry=match_info,
+                                comp_key=comp_key
+                            )
+                            
+                            # Calcular métricas de velocidade e aceleração
+                            updates = odds_data.get('updates', [])
+                            if not updates:
+                                first_seen = odds_data.get('first_seen') or odds_data.get('last_updated') or commence_time
+                                last_updated = odds_data.get('last_updated') or commence_time
+                                updates = [
+                                    {'timestamp': first_seen, 'price': opening},
+                                    {'timestamp': last_updated, 'price': current}
+                                ]
+                            
+                            metrics = calculate_odds_metrics(updates)
+                            
+                            if req.profileFilter == 'sharps' and profile_type != 'Sharps':
+                                continue
+                            if req.profileFilter == 'squares' and profile_type != 'Squares':
+                                continue
+                                
+                            from backend.live_odds_tracker import map_sport_to_league_code
+                            league_code = map_sport_to_league_code(sport_key)
+                            
                             results.append({
                                 'match': title,
                                 'date': date_str,
@@ -811,9 +871,18 @@ def get_live_steam_moves(req: LiveSteamRequest):
                                 'opening_odd': opening,
                                 'current_odd': current,
                                 'drop_pct': round(drop_pct, 1),
+                                'is_in_play': is_in_play,
+                                'elapsed_minutes': round(elapsed_minutes),
+                                'adjusted_drop_pct': round(adjusted_drop_pct, 1),
                                 'liquidity_tier': tier_name,
                                 'confidence_score': score,
-                                'confidence_level': confidence_level
+                                'confidence_level': confidence_level,
+                                'sharpness_score': sharpness_score,
+                                'profile_type': profile_type,
+                                'velocity': metrics['velocity_recent'],
+                                'acceleration_ratio': metrics['acceleration_ratio'],
+                                'acceleration_text': metrics['acceleration_text'],
+                                'league_code': league_code
                             })
                             
         results = sorted(results, key=lambda x: x['drop_pct'], reverse=True)

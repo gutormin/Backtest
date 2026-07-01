@@ -2704,3 +2704,208 @@ tbody tr:hover {
 .multiselect-optgroup:hover {
     color: #8b5cf6;
 }
+
+/* ==========================================================================
+   Radar Smart Money — Redesign UX (Tabs, Accordion, Tooltip)
+   ========================================================================== */
+
+/* Professional Tabs */
+.radar-tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.06);
+    margin-bottom: 20px;
+}
+
+.radar-tab {
+    position: relative;
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-family: var(--font-heading);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 12px 24px;
+    cursor: pointer;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: color 0.25s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.radar-tab:hover {
+    color: var(--text-secondary);
+}
+
+.radar-tab.active {
+    color: #34d399;
+}
+
+.radar-tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #10b981, #34d399);
+    border-radius: 2px 2px 0 0;
+    animation: tabSlideIn 0.3s ease-out;
+}
+
+@keyframes tabSlideIn {
+    from { transform: scaleX(0); }
+    to { transform: scaleX(1); }
+}
+
+/* Action Bar */
+.radar-action-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+}
+
+.radar-action-bar .action-button {
+    padding: 8px 18px;
+    font-size: 13px;
+}
+
+.radar-action-bar .radar-latency-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-left: auto;
+}
+
+.radar-action-bar .radar-latency-group label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin: 0;
+}
+
+.radar-action-bar .radar-latency-group select {
+    width: auto;
+    padding: 6px 10px;
+    font-size: 12px;
+}
+
+/* Tooltip Icon (replaces big warning block) */
+.radar-info-tooltip {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: rgba(245, 158, 11, 0.12);
+    color: #f59e0b;
+    font-size: 11px;
+    cursor: help;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
+.radar-info-tooltip .tooltip-content {
+    display: none;
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 360px;
+    padding: 12px 16px;
+    background: #1a1d29;
+    border: 1px solid rgba(245, 158, 11, 0.25);
+    border-radius: 8px;
+    color: var(--text-secondary);
+    font-size: 12px;
+    line-height: 1.5;
+    z-index: 100;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    pointer-events: none;
+}
+
+.radar-info-tooltip:hover .tooltip-content {
+    display: block;
+}
+
+/* Accordion / Collapsible Guide */
+.radar-accordion {
+    margin-top: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    overflow: hidden;
+}
+
+.radar-accordion-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: rgba(255, 255, 255, 0.02);
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.25s;
+}
+
+.radar-accordion-header:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.radar-accordion-header h4 {
+    font-family: var(--font-heading);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+}
+
+.radar-accordion-header h4 i {
+    color: var(--primary);
+    font-size: 12px;
+}
+
+.radar-accordion-header .accordion-chevron {
+    color: var(--text-muted);
+    font-size: 12px;
+    transition: transform 0.3s ease;
+}
+
+.radar-accordion-header.open .accordion-chevron {
+    transform: rotate(180deg);
+}
+
+.radar-accordion-body {
+    display: none;
+    padding: 16px;
+    border-top: 1px solid var(--border-color);
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.radar-accordion-body.open {
+    display: block;
+}
+
+/* Blink animation for AO VIVO badge */
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+}
+

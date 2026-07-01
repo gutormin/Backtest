@@ -1,0 +1,182 @@
+{
+  "1efdb1887acc061ad67771e359bc849b::h2h_home": {
+    "opening": 2.25,
+    "first_seen": "2026-07-01T00:19:37.326751+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "h2h_home",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "1efdb1887acc061ad67771e359bc849b::h2h_away": {
+    "opening": 3.3,
+    "first_seen": "2026-07-01T00:19:37.332282+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "h2h_away",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "1efdb1887acc061ad67771e359bc849b::h2h_draw": {
+    "opening": 3.0,
+    "first_seen": "2026-07-01T00:19:37.333150+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "h2h_draw",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "1efdb1887acc061ad67771e359bc849b::totals_over25": {
+    "opening": 1.95,
+    "first_seen": "2026-07-01T00:19:37.336683+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "totals_over25",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "1efdb1887acc061ad67771e359bc849b::totals_under25": {
+    "opening": 1.7,
+    "first_seen": "2026-07-01T00:19:37.337865+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "totals_under25",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "1efdb1887acc061ad67771e359bc849b::spreads_home_spread": {
+    "opening": 2.47,
+    "first_seen": "2026-07-01T00:37:12.091857+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "spreads_home_spread",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "1efdb1887acc061ad67771e359bc849b::spreads_away_spread": {
+    "opening": 1.58,
+    "first_seen": "2026-07-01T00:37:12.093283+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "spreads_away_spread",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "1efdb1887acc061ad67771e359bc849b::h2h_lay_Botafogo": {
+    "opening": 29.0,
+    "first_seen": "2026-07-01T00:37:12.093859+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "h2h_lay_Botafogo",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "1efdb1887acc061ad67771e359bc849b::h2h_lay_Clube de Regatas Brasil": {
+    "opening": 1.38,
+    "first_seen": "2026-07-01T00:37:12.094319+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "h2h_lay_Clube de Regatas Brasil",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "1efdb1887acc061ad67771e359bc849b::h2h_lay_Draw": {
+    "opening": 4.4,
+    "first_seen": "2026-07-01T00:37:12.094780+00:00",
+    "match_id": "1efdb1887acc061ad67771e359bc849b",
+    "comp_key": "h2h_lay_Draw",
+    "commence_time": "2026-06-30T22:59:00Z",
+    "title": "Botafogo vs Clube de Regatas Brasil",
+    "sport_key": "soccer_brazil_serie_b"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::h2h_away": {
+    "opening": 4.0,
+    "first_seen": "2026-07-01T00:37:13.786915+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "h2h_away",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::h2h_home": {
+    "opening": 2.23,
+    "first_seen": "2026-07-01T00:37:13.787689+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "h2h_home",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::h2h_draw": {
+    "opening": 2.8,
+    "first_seen": "2026-07-01T00:37:13.788207+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "h2h_draw",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::totals_over25": {
+    "opening": 1.57,
+    "first_seen": "2026-07-01T00:37:13.788679+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "totals_over25",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::totals_under25": {
+    "opening": 2.3,
+    "first_seen": "2026-07-01T00:37:13.789137+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "totals_under25",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::h2h_lay_Ecuador": {
+    "opening": 4.5,
+    "first_seen": "2026-07-01T00:37:13.789760+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "h2h_lay_Ecuador",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::h2h_lay_Mexico": {
+    "opening": 2.36,
+    "first_seen": "2026-07-01T00:37:13.790231+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "h2h_lay_Mexico",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::h2h_lay_Draw": {
+    "opening": 2.9,
+    "first_seen": "2026-07-01T00:37:13.790717+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "h2h_lay_Draw",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::spreads_away_spread": {
+    "opening": 1.69,
+    "first_seen": "2026-07-01T00:37:13.791285+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "spreads_away_spread",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  },
+  "f58c55a9da96af562c31b7c5cca40187::spreads_home_spread": {
+    "opening": 2.17,
+    "first_seen": "2026-07-01T00:37:13.791775+00:00",
+    "match_id": "f58c55a9da96af562c31b7c5cca40187",
+    "comp_key": "spreads_home_spread",
+    "commence_time": "2026-07-01T01:00:00Z",
+    "title": "Mexico vs Ecuador",
+    "sport_key": "soccer_fifa_world_cup"
+  }
+}
