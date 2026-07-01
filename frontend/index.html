@@ -561,7 +561,7 @@
 <button class="btn-sync" id="btn-export-backtest" onclick="exportBacktestReport()" style="display: none;" title="Exportar relatório completo do backtest para CSV (Excel)">
 <i class="fa-solid fa-file-csv"></i> Exportar CSV
                     </button>
-<button class="btn-clear" id="btn-clear-dash" onclick="clearDashboard()" title="Limpar todos os gráficos e resultados para uma nova simulação">
+<button class="btn-clear" id="btn-clear-dash" onclick="window.clearDashboard()" title="Limpar todos os gráficos e resultados para uma nova simulação">
 <i class="fa-solid fa-trash-can"></i> Limpar Painel
                     </button>
 <button class="btn-scanner" id="btn-save-strategy" onclick="openSaveStrategyModal()" style="display: none; background: linear-gradient(135deg, #10b981 0%, #059669 100%); margin-left: 10px;" title="Salvar esta estratégia no histórico">
@@ -3048,7 +3048,7 @@
     </div>
 
     <!-- Custom Script com Cache Buster para evitar problemas de atualização -->
-    <script type="module" src="app.js?v=68"></script>
+    <script type="module" src="app.js?v=69"></script>
 
 <script>
 // Fallback inline: garante que window.switchTab exista IMEDIATAMENTE,

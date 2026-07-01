@@ -2880,6 +2880,7 @@ function applyOddsSuggestion(rangeName) {
 
 
 function clearDashboard() {
+    console.log("clearDashboard() execution started.");
     try {
         const safeSetText = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
         const safeSetVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
