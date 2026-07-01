@@ -1706,23 +1706,23 @@
                     </h3>
                 </div>
                 <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 15px; font-size: 13px; color: var(--text-secondary); line-height: 1.6;">
-                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03); cursor: help;" title="Viés de Seleção (Selection Bias): Mede o impacto dos jogos excluídos por falta de cotações. Se este percentual for alto (>10%), os resultados simulados podem parecer inflados ou melhores do que seriam na prática real de apostas.">
                         <strong style="color: var(--text-main); display: block; margin-bottom: 4px;">🎯 Viés de Seleção (Odds Faltantes)</strong>
                         <span id="transparency-skipped-odds" style="color: #f59e0b; font-weight: bold;">N/A</span> dos jogos analisados foram excluídos silenciosamente do backtest por não possuírem odds no CSV da casa de apostas selecionada.
                     </div>
-                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03); cursor: help;" title="Odds Sintéticas: Mostra quantas apostas foram simuladas usando odds estimadas via cálculo de paridade (ex: calcular Lay a partir de Back, ou DNB de 1X2) porque a odd real não estava registrada no arquivo de dados.">
                         <strong style="color: var(--text-main); display: block; margin-bottom: 4px;">🧪 Apostas com Odds Sintéticas</strong>
                         <span id="transparency-synthetic-bets" style="color: var(--text-main); font-weight: bold;">N/A</span> (<span id="transparency-synthetic-pct">0%</span>) das entradas simularam odds estimadas por fórmula matemática (Lay/Handicap sem odd real no CSV).
                     </div>
-                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03); cursor: help;" title="Timing das Odds: Indica se o teste utilizou odds de Abertura (início da semana) ou Fechamento (início do jogo). O uso de odds de Fechamento está sujeito ao 'drift/drop' do mercado, o que costuma reduzir os lucros reais em relação ao simulado.">
                         <strong style="color: var(--text-main); display: block; margin-bottom: 4px;">🕒 Timing das Odds Simuladas</strong>
                         Simulando com odds de <span id="transparency-odds-timing-text" style="color: var(--text-main); font-weight: bold;">Fechamento</span>. <span id="transparency-odds-timing-warning" style="opacity: 0.8; font-size: 11px; display: block; margin-top: 4px;">Drift de mercado pode reduzir o ROI real na prática.</span>
                     </div>
-                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                    <div style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03); cursor: help;" title="Filtro de Machine Learning: Percentual de apostas que passaram pelo crivo e foram validadas pelo classificador XGBoost secundário após passarem pelo modelo Poisson.">
                         <strong style="color: var(--text-main); display: block; margin-bottom: 4px;">🤖 Correção por Machine Learning</strong>
                         O filtro de ML (XGBoost) foi ativado e corrigiu efetivamente <span id="transparency-ml-applied" style="color: var(--text-main); font-weight: bold;">N/A</span> (<span id="transparency-ml-pct">0%</span>) das apostas analisadas.
                     </div>
-                    <div id="transparency-calibration-card" style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03);">
+                    <div id="transparency-calibration-card" style="background: rgba(255,255,255,0.02); padding: 12px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.03); cursor: help;" title="Calibração Platt (Poisson): Ajusta as probabilidades do Poisson comparando com o histórico real de acertos. Exige um mínimo de 200 jogos históricos no mercado correspondente para calibrar com segurança, evitando ruído estatístico.">
                         <strong style="color: var(--text-main); display: block; margin-bottom: 4px;">⚖️ Calibração Platt (Poisson)</strong>
                         <span id="transparency-calibration" style="color: var(--text-main); font-weight: bold;">N/A</span>
                     </div>
@@ -3045,7 +3045,7 @@
     </div>
 
     <!-- Custom Script com Cache Buster para evitar problemas de atualização -->
-    <script type="module" src="app.js?v=66"></script>
+    <script type="module" src="app.js?v=67"></script>
 
 <script>
 // Fallback inline: garante que window.switchTab exista IMEDIATAMENTE,
