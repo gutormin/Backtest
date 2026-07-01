@@ -854,11 +854,9 @@ async function runScanner(scanType) {
         initialBankroll: parseFloat(document.getElementById('init-bankroll').value),
 
         stakingRule: stakingRule,
-
         stakeValue: stakeValue,
-
         oddsSource: document.getElementById('odds-source').value,
-
+        odds_timing: document.getElementById('odds-timing') ? document.getElementById('odds-timing').value : 'closing',
         scanType: scanType,
 
         minOdds: parseFloat(document.getElementById('min-odds').value) || 1.0,
@@ -6367,11 +6365,9 @@ async function runEqsScanner(scanType) {
         initialBankroll: parseFloat(document.getElementById('init-bankroll').value),
 
         stakingRule: stakingRule,
-
         stakeValue: stakeValue,
-
         oddsSource: document.getElementById('odds-source').value,
-
+        odds_timing: document.getElementById('odds-timing') ? document.getElementById('odds-timing').value : 'closing',
         scanType: scanType,
 
         minOdds: parseFloat(document.getElementById('min-odds').value) || 1.0,
@@ -7541,6 +7537,7 @@ async function reloadStrategy(params) {
         }
         
         if (params.oddsSource && document.getElementById('odds-source')) document.getElementById('odds-source').value = params.oddsSource;
+        if (params.odds_timing && document.getElementById('odds-timing')) document.getElementById('odds-timing').value = params.odds_timing;
         if (params.exchange_commission !== undefined && document.getElementById('exchange-commission')) document.getElementById('exchange-commission').value = params.exchange_commission;
         
         if (params.out_of_sample !== undefined && document.getElementById('oos-toggle')) document.getElementById('oos-toggle').checked = params.out_of_sample;
@@ -8285,6 +8282,7 @@ window.runBacktest = async function(overrideParams) {
             stakeRule = document.getElementById('stake-rule') ? document.getElementById('stake-rule').value : 'fixed';
             stakeValue = stakeRule === 'kelly' ? parseFloat(document.getElementById('kelly-fraction') ? document.getElementById('kelly-fraction').value : 0.25) || 0.25 : parseFloat(document.getElementById('stake-value') ? document.getElementById('stake-value').value : 10.0) || 10.0;
             oddsSource = document.getElementById('odds-source') ? document.getElementById('odds-source').value : 'B365';
+            oddsTiming = document.getElementById('odds-timing') ? document.getElementById('odds-timing').value : 'closing';
             minOdds = parseFloat(document.getElementById('min-odds') ? document.getElementById('min-odds').value : 1.0) || 1.0;
             maxOdds = parseFloat(document.getElementById('max-odds') ? document.getElementById('max-odds').value : 2.50) || 2.50;
             exchangeCommission = parseFloat(document.getElementById('exchange-commission') ? document.getElementById('exchange-commission').value : 0.0) || 0.0;
@@ -8318,6 +8316,7 @@ window.runBacktest = async function(overrideParams) {
             stakingRule: stakeRule,
             stakeValue: stakeValue,
             oddsSource: oddsSource,
+            odds_timing: oddsTiming,
             minOdds: minOdds,
             maxOdds: maxOdds,
             exchange_commission: exchangeCommission,

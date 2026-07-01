@@ -4,30 +4,61 @@ import math
 from .elo_model import estimate_dynamic_rho
 
 def find_best_team_match(api_name, historical_teams):
-    if not api_name:
+    if not api_name or not historical_teams:
         return api_name
     api_name_lower = api_name.lower().strip()
     
-    # Direct match
+    # 1. Direct match (Fast Path)
     if api_name in historical_teams:
         return api_name
         
-    # Check for lowercase direct match
+    # 2. Check for lowercase direct match
     for team in historical_teams:
         if team.lower().strip() == api_name_lower:
             return team
             
-    # Check if one is a substring of the other (excluding common suffixes like FC, City, United, etc.)
-    clean_api = api_name_lower.replace(' fc', '').replace(' united', '').replace(' utd', '').replace(' city', '').replace(' town', '').replace(' athletic', '').replace(' club', '').strip()
+    # 3. Clean common suffixes to compare substring or do quick match
+    suffixes = [' fc', ' united', ' utd', ' city', ' town', ' athletic', ' club', ' de ']
+    clean_api = api_name_lower
+    for s in suffixes:
+        clean_api = clean_api.replace(s, '')
+    clean_api = clean_api.strip()
+    
     if not clean_api:
         return api_name
         
+    # Check if a clean match exists
     for team in historical_teams:
         team_lower = team.lower()
-        clean_team = team_lower.replace(' fc', '').replace(' united', '').replace(' utd', '').replace(' city', '').replace(' town', '').replace(' athletic', '').replace(' club', '').strip()
+        clean_team = team_lower
+        for s in suffixes:
+            clean_team = clean_team.replace(s, '')
+        clean_team = clean_team.strip()
         if clean_api == clean_team or clean_api in clean_team or clean_team in clean_api:
             return team
             
+    # 4. Fuzzy Match with RapidFuzz
+    try:
+        from rapidfuzz import process, fuzz
+        # Clean the list of historical teams to make fuzzy matching cleaner
+        cleaned_historical = []
+        team_map = {}
+        for team in historical_teams:
+            clean_t = team.lower()
+            for s in suffixes:
+                clean_t = clean_t.replace(s, '')
+            clean_t = clean_t.strip()
+            cleaned_historical.append(clean_t)
+            team_map[clean_t] = team
+            
+        best_match_info = process.extractOne(clean_api, cleaned_historical, scorer=fuzz.WRatio)
+        if best_match_info:
+            best_clean_team, score, _ = best_match_info
+            if score >= 85.0:  # 85% threshold is the sweet spot for team name matches
+                return team_map[best_clean_team]
+    except Exception:
+        pass
+        
     # Default fallback
     return api_name
 

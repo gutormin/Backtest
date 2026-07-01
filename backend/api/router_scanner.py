@@ -55,6 +55,7 @@ class ScanRequest(BaseModel):
     stakingRule: str
     stakeValue: float
     oddsSource: str
+    odds_timing: Optional[str] = "closing"
     scanType: str  # 'markets' or 'leagues'
     minOdds: Optional[float] = 1.0
     maxOdds: Optional[float] = 2.50
@@ -432,6 +433,7 @@ def run_scan(req: ScanRequest):
                 staking_rule=req.stakingRule,
                 stake_value=req.stakeValue,
                 odds_source=req.oddsSource,
+                odds_timing=req.odds_timing or 'closing',
                 min_odds=req.minOdds or 1.0,
                 max_odds=req.maxOdds or 2.50,
                 scan_type='markets',
@@ -474,6 +476,7 @@ def run_scan(req: ScanRequest):
                 staking_rule=req.stakingRule,
                 stake_value=req.stakeValue,
                 odds_source=req.oddsSource,
+                odds_timing=req.odds_timing or 'closing',
                 min_odds=req.minOdds or 1.0,
                 max_odds=req.maxOdds or 2.50,
                 scan_type='leagues',
@@ -524,6 +527,7 @@ def run_scan(req: ScanRequest):
                 staking_rule=req.stakingRule,
                 stake_value=req.stakeValue,
                 odds_source=req.oddsSource,
+                odds_timing=req.odds_timing or 'closing',
                 min_odds=req.minOdds or 1.0,
                 max_odds=req.maxOdds or 2.50,
                 scan_type='combinations',

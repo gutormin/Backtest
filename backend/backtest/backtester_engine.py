@@ -49,7 +49,7 @@ class ChronologicalBacktester:
         self.ml_history = defaultdict(lambda: {'X': [], 'y': []})
         self.matches_since_ml_fit = 0
 
-    def run(self, leagues, start_date, end_date, market, value_threshold, initial_bankroll, staking_rule, stake_value, odds_source='B365', run_monte_carlo=True, min_odds=1.0, max_odds=2.50, exchange_commission=0.0, use_ml=False, data_source='football-data', futpython_api_key='', min_odds_h=None, max_odds_h=None, min_odds_d=None, max_odds_d=None, min_odds_a=None, max_odds_a=None, min_odds_over25=None, max_odds_over25=None, min_odds_under25=None, max_odds_under25=None):
+    def run(self, leagues, start_date, end_date, market, value_threshold, initial_bankroll, staking_rule, stake_value, odds_source='B365', odds_timing='closing', run_monte_carlo=True, min_odds=1.0, max_odds=2.50, exchange_commission=0.0, use_ml=False, data_source='football-data', futpython_api_key='', min_odds_h=None, max_odds_h=None, min_odds_d=None, max_odds_d=None, min_odds_a=None, max_odds_a=None, min_odds_over25=None, max_odds_over25=None, min_odds_under25=None, max_odds_under25=None):
         """
         Runs a chronological backtest across selected leagues.
         
@@ -259,14 +259,21 @@ class ChronologicalBacktester:
                                   team_home_scored_ht, team_home_conceded_ht, team_away_scored_ht, team_away_conceded_ht,
                                   league_home_goals_ht, league_away_goals_ht, hthg, htag)
                 continue
-                
-            # Map odds columns based on source
+                            # Map odds columns based on source and timing (Phase 3 Structural Fix)
             if odds_source == 'B365':
-                odds_h = row.get('B365H')
-                odds_d = row.get('B365D')
-                odds_a = row.get('B365A')
-                odds_over25 = row.get('B365>2.5')
-                odds_under25 = row.get('B365<2.5')
+                if odds_timing == 'closing':
+                    odds_h = row.get('B365CH', row.get('B365H'))
+                    odds_d = row.get('B365CD', row.get('B365D'))
+                    odds_a = row.get('B365CA', row.get('B365A'))
+                    odds_over25 = row.get('B365C>2.5', row.get('B365>2.5'))
+                    odds_under25 = row.get('B365C<2.5', row.get('B365<2.5'))
+                else:
+                    odds_h = row.get('B365H')
+                    odds_d = row.get('B365D')
+                    odds_a = row.get('B365A')
+                    odds_over25 = row.get('B365>2.5')
+                    odds_under25 = row.get('B365<2.5')
+                
                 odds_over05_ht = row.get('Over_HT_0_5', row.get('B365>0.5HT'))
                 odds_under05_ht = row.get('Under_HT_0_5', row.get('B365<0.5HT'))
                 odds_over15_ht = row.get('Over_HT_1_5', row.get('B365>1.5HT'))
@@ -307,13 +314,13 @@ class ChronologicalBacktester:
                 odds_corners_under_95 = row.get('odds_corners_under_95')
                 odds_corners_under_105 = row.get('odds_corners_under_105')
                 odds_corners_under_115 = row.get('odds_corners_under_115')
-
+ 
                 # HT Goals extra
                 odds_over25_ht = row.get('Over_HT_2_5')
                 odds_under25_ht = row.get('Under_HT_2_5')
                 odds_over35_ht = row.get('Over_HT_3_5')
                 odds_under35_ht = row.get('Under_HT_3_5')
-
+ 
                 # 2H Goals
                 odds_over05_2h = row.get('Over_2H_0_5')
                 odds_under05_2h = row.get('Under_2H_0_5')
@@ -323,27 +330,41 @@ class ChronologicalBacktester:
                 odds_under25_2h = row.get('Under_2H_2_5')
                 odds_over35_2h = row.get('Over_2H_3_5')
                 odds_under35_2h = row.get('Under_2H_3_5')
-
+ 
                 # 2H Result
                 odds_h_2h = row.get('Odd_1_2H')
                 odds_d_2h = row.get('Odd_X_2H')
                 odds_a_2h = row.get('Odd_2_2H')
             elif odds_source == 'Avg':
-                odds_h = row.get('AvgH')
-                odds_d = row.get('AvgD')
-                odds_a = row.get('AvgA')
-                odds_over25 = row.get('Avg>2.5')
-                odds_under25 = row.get('Avg<2.5')
+                if odds_timing == 'closing':
+                    odds_h = row.get('AvgCH', row.get('AvgH'))
+                    odds_d = row.get('AvgCD', row.get('AvgD'))
+                    odds_a = row.get('AvgCA', row.get('AvgA'))
+                    odds_over25 = row.get('AvgC>2.5', row.get('Avg>2.5'))
+                    odds_under25 = row.get('AvgC<2.5', row.get('Avg<2.5'))
+                else:
+                    odds_h = row.get('AvgH')
+                    odds_d = row.get('AvgD')
+                    odds_a = row.get('AvgA')
+                    odds_over25 = row.get('Avg>2.5')
+                    odds_under25 = row.get('Avg<2.5')
                 odds_over05_ht = row.get('B365>0.5HT')
                 odds_under05_ht = row.get('B365<0.5HT')
                 odds_over15_ht = row.get('B365>1.5HT')
                 odds_under15_ht = row.get('B365<1.5HT')
             else: # Max
-                odds_h = row.get('MaxH')
-                odds_d = row.get('MaxD')
-                odds_a = row.get('MaxA')
-                odds_over25 = row.get('Max>2.5')
-                odds_under25 = row.get('Max<2.5')
+                if odds_timing == 'closing':
+                    odds_h = row.get('MaxCH', row.get('MaxH'))
+                    odds_d = row.get('MaxCD', row.get('MaxD'))
+                    odds_a = row.get('MaxCA', row.get('MaxA'))
+                    odds_over25 = row.get('MaxC>2.5', row.get('Max>2.5'))
+                    odds_under25 = row.get('MaxC<2.5', row.get('Max<2.5'))
+                else:
+                    odds_h = row.get('MaxH')
+                    odds_d = row.get('MaxD')
+                    odds_a = row.get('MaxA')
+                    odds_over25 = row.get('Max>2.5')
+                    odds_under25 = row.get('Max<2.5')
                 
             # Pinnacle closing line odds for CLV calculation
             closing_odds_h = row.get('PSCH', row.get('PSH', row.get('MaxCH')))
@@ -1665,7 +1686,7 @@ class ChronologicalBacktester:
         
         return summary_dict
 
-    def run_parallel_scan(self, leagues, start_date, end_date, value_threshold, initial_bankroll, staking_rule, stake_value, odds_source='B365', min_odds=1.0, max_odds=2.50, scan_type='markets', markets_list=None, use_ml=False, data_source='football-data', futpython_api_key=''):
+    def run_parallel_scan(self, leagues, start_date, end_date, value_threshold, initial_bankroll, staking_rule, stake_value, odds_source='B365', odds_timing='closing', min_odds=1.0, max_odds=2.50, scan_type='markets', markets_list=None, use_ml=False, data_source='football-data', futpython_api_key=''):
         """
         Runs a highly optimized parallel scan of either multiple markets or multiple leagues
         in a single chronological pass to avoid duplicate ratings computation.
@@ -1841,12 +1862,32 @@ class ChronologicalBacktester:
                                   league_home_goals_ht, league_away_goals_ht, hthg, htag)
                 continue
                 
-            odds_h = row.get('B365H') if odds_source == 'B365' else (row.get('AvgH') if odds_source == 'Avg' else row.get('MaxH'))
-            odds_d = row.get('B365D') if odds_source == 'B365' else (row.get('AvgD') if odds_source == 'Avg' else row.get('MaxD'))
-            odds_a = row.get('B365A') if odds_source == 'B365' else (row.get('AvgA') if odds_source == 'Avg' else row.get('MaxA'))
+            if odds_timing == 'closing':
+                if odds_source == 'B365':
+                    odds_h = row.get('B365CH', row.get('B365H'))
+                    odds_d = row.get('B365CD', row.get('B365D'))
+                    odds_a = row.get('B365CA', row.get('B365A'))
+                    odds_over25 = row.get('B365C>2.5', row.get('B365>2.5'))
+                    odds_under25 = row.get('B365C<2.5', row.get('B365<2.5'))
+                elif odds_source == 'Avg':
+                    odds_h = row.get('AvgCH', row.get('AvgH'))
+                    odds_d = row.get('AvgCD', row.get('AvgD'))
+                    odds_a = row.get('AvgCA', row.get('AvgA'))
+                    odds_over25 = row.get('AvgC>2.5', row.get('Avg>2.5'))
+                    odds_under25 = row.get('AvgC<2.5', row.get('Avg<2.5'))
+                else:
+                    odds_h = row.get('MaxCH', row.get('MaxH'))
+                    odds_d = row.get('MaxCD', row.get('MaxD'))
+                    odds_a = row.get('MaxCA', row.get('MaxA'))
+                    odds_over25 = row.get('MaxC>2.5', row.get('Max>2.5'))
+                    odds_under25 = row.get('MaxC<2.5', row.get('Max<2.5'))
+            else:
+                odds_h = row.get('B365H') if odds_source == 'B365' else (row.get('AvgH') if odds_source == 'Avg' else row.get('MaxH'))
+                odds_d = row.get('B365D') if odds_source == 'B365' else (row.get('AvgD') if odds_source == 'Avg' else row.get('MaxD'))
+                odds_a = row.get('B365A') if odds_source == 'B365' else (row.get('AvgA') if odds_source == 'Avg' else row.get('MaxA'))
+                odds_over25 = row.get('B365>2.5') if odds_source == 'B365' else (row.get('Avg>2.5') if odds_source == 'Avg' else row.get('Max>2.5'))
+                odds_under25 = row.get('B365<2.5') if odds_source == 'B365' else (row.get('Avg<2.5') if odds_source == 'Avg' else row.get('Max<2.5'))
             
-            odds_over25 = row.get('B365>2.5') if odds_source == 'B365' else (row.get('Avg>2.5') if odds_source == 'Avg' else row.get('Max>2.5'))
-            odds_under25 = row.get('B365<2.5') if odds_source == 'B365' else (row.get('Avg<2.5') if odds_source == 'Avg' else row.get('Max<2.5'))
             odds_over05_ht = row.get('Over_HT_0_5', row.get('B365>0.5HT'))
             odds_under05_ht = row.get('Under_HT_0_5', row.get('B365<0.5HT'))
             odds_over15_ht = row.get('Over_HT_1_5', row.get('B365>1.5HT'))

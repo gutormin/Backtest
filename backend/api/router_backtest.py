@@ -30,6 +30,7 @@ class BacktestRequest(BaseModel):
     stakingRule: str
     stakeValue: float
     oddsSource: str
+    odds_timing: Optional[str] = "closing"
     minOdds: Optional[float] = 1.0
     maxOdds: Optional[float] = 2.50
     exchange_commission: float = 0.0
@@ -203,6 +204,7 @@ def run_backtest(req: BacktestRequest):
             staking_rule=req.stakingRule,
             stake_value=req.stakeValue,
             odds_source=req.oddsSource,
+            odds_timing=req.odds_timing or 'closing',
             min_odds=req.minOdds or 1.0,
             max_odds=req.maxOdds or 2.50,
             exchange_commission=req.exchange_commission,
