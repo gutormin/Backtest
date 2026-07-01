@@ -5,6 +5,18 @@
 <meta charset="utf-8"/>
 <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
 <title>Sports Betting Backtester Pro</title>
+<script>
+window.addEventListener('error', function(e) {
+    if (e.message && !e.message.includes("ResizeObserver")) {
+        alert("ERRO GLOBAL JS: " + e.message + "\nLinha: " + e.lineno);
+    }
+});
+window.addEventListener('unhandledrejection', function(e) {
+    if (e.reason) {
+        alert("ERRO ASYNC JS: " + e.reason);
+    }
+});
+</script>
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
@@ -3048,7 +3060,7 @@
     </div>
 
     <!-- Custom Script com Cache Buster para evitar problemas de atualização -->
-    <script type="module" src="app.js?v=70"></script>
+    <script type="module" src="app.js?v=71"></script>
 
 <script>
 // Fallback inline: garante que window.switchTab exista IMEDIATAMENTE,
