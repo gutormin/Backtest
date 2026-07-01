@@ -2506,13 +2506,13 @@ function renderOptimizationTab(suggestions, results) {
         
         let actionBtnHtml = '';
         if (sug.type === 'ev') {
-            actionBtnHtml = `<button class="btn-scanner" style="margin: 0; font-size: 12px; padding: 6px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;" onclick="event.stopPropagation(); applyEvSuggestion(${sug.value})"><i class="fa-solid fa-wand-magic"></i> Aplicar</button>`;
+            actionBtnHtml = `<button class="btn-scanner" style="margin: 0; font-size: 12px; padding: 6px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;" onclick="applyEvSuggestion(${sug.value})"><i class="fa-solid fa-wand-magic"></i> Aplicar</button>`;
         } else if (sug.type === 'leagues') {
             const codesStr = JSON.stringify(sug.exclude_codes).replace(/"/g, '&quot;');
-            actionBtnHtml = `<button class="btn-scanner" style="margin: 0; font-size: 12px; padding: 6px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;" onclick='event.stopPropagation(); applyLeagueSuggestion(` + JSON.stringify(sug.exclude_codes) + `)'><i class="fa-solid fa-filter-circle-xmark"></i> Aplicar</button>`;
+            actionBtnHtml = `<button class="btn-scanner" style="margin: 0; font-size: 12px; padding: 6px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;" onclick='applyLeagueSuggestion(` + JSON.stringify(sug.exclude_codes) + `)'><i class="fa-solid fa-filter-circle-xmark"></i> Aplicar</button>`;
         } else {
             const escapedValue = sug.value.replace(/'/g, "\\'");
-            actionBtnHtml = `<button class="btn-scanner" style="margin: 0; font-size: 12px; padding: 6px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;" onclick="event.stopPropagation(); applyOddsSuggestion('${escapedValue}')"><i class="fa-solid fa-wand-magic-sparkles"></i> Aplicar</button>`;
+            actionBtnHtml = `<button class="btn-scanner" style="margin: 0; font-size: 12px; padding: 6px 12px; background: linear-gradient(135deg, #10b981 0%, #059669 100%); border-color: #10b981;" onclick="applyOddsSuggestion('${escapedValue}')"><i class="fa-solid fa-wand-magic-sparkles"></i> Aplicar</button>`;
         }
         
         div.appendChild(infoDiv);
