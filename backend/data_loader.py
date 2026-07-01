@@ -7,6 +7,7 @@ def read_csv_robust(path):
     try:
         df = pd.read_csv(path, encoding='utf-8')
     except Exception:
+        print(f"[Data Loader Warning] Encoding UTF-8 falhou para {path}. Fazendo fallback silencioso para Latin1 (ISO-8859-1).")
         df = pd.read_csv(path, encoding='latin1')
         
     return translate_custom_csv(df)
@@ -1059,9 +1060,7 @@ def fetch_futpython_data(league_code, start_date, api_key):
                             
                 # Derive HTHG and HTAG from Min_Goals_Home and Min_Goals_Away if they exist
                 import numpy as np
-                def parse_ht_goals_robust(row, min_col, ft_col):
-                    s_min = row.get(min_col)
-                    ft_val = row.get(ft_col, '0')
+                def parse_ht_goals_robust(s_min, ft_val):
                     try:
                         ft_goals = int(float(str(ft_val).strip() or 0))
                     except:
@@ -1087,9 +1086,9 @@ def fetch_futpython_data(league_code, start_date, api_key):
                     return goals
 
                 if 'Min_Goals_Home' in df.columns and 'FTHG' in df.columns:
-                    df['HTHG'] = df.apply(lambda r: parse_ht_goals_robust(r, 'Min_Goals_Home', 'FTHG'), axis=1)
+                    df['HTHG'] = [parse_ht_goals_robust(r, f) for r, f in zip(df['Min_Goals_Home'], df['FTHG'])]
                 if 'Min_Goals_Away' in df.columns and 'FTAG' in df.columns:
-                    df['HTAG'] = df.apply(lambda r: parse_ht_goals_robust(r, 'Min_Goals_Away', 'FTAG'), axis=1)
+                    df['HTAG'] = [parse_ht_goals_robust(r, f) for r, f in zip(df['Min_Goals_Away'], df['FTAG'])]
 
                 dataframes.append(df)
             elif res.status_code == 401:
