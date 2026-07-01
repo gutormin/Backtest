@@ -1522,6 +1522,10 @@ class ChronologicalBacktester:
                                 })
                             
             # Fit Calibration Periodically
+            # NOTE: threshold raised from 50 → 200 to avoid fitting the Platt
+            # scaler on pure noise when sample sizes are small. Below 200 obs
+            # the scaler was learning random variance, not a real calibration
+            # signal, and could make well-calibrated Poisson probs worse.
             self.matches_since_calibration += 1
             if self.matches_since_calibration >= 100:
                 self.matches_since_calibration = 0
@@ -1529,7 +1533,7 @@ class ChronologicalBacktester:
                     if len(hist['probs']) > 2000:
                         hist['probs'] = hist['probs'][-2000:]
                         hist['outcomes'] = hist['outcomes'][-2000:]
-                    if len(hist['probs']) >= 50:
+                    if len(hist['probs']) >= 200:  # raised from 50 – Phase 2 fix
                         if c_mkt not in self.calibrators:
                             self.calibrators[c_mkt] = PlattCalibrator(epochs=200)
                         self.calibrators[c_mkt].fit(hist['probs'], hist['outcomes'])
@@ -2600,6 +2604,7 @@ class ChronologicalBacktester:
                               league_home_goals_ht, league_away_goals_ht, hthg, htag)
                               
             # Fit Calibration Periodically
+            # NOTE: threshold raised from 50 → 200 (same fix as run() method)
             self.matches_since_calibration += 1
             if self.matches_since_calibration >= 100:
                 self.matches_since_calibration = 0
@@ -2607,7 +2612,7 @@ class ChronologicalBacktester:
                     if len(hist['probs']) > 2000:
                         hist['probs'] = hist['probs'][-2000:]
                         hist['outcomes'] = hist['outcomes'][-2000:]
-                    if len(hist['probs']) >= 50:
+                    if len(hist['probs']) >= 200:  # raised from 50 – Phase 2 fix
                         if c_mkt not in self.calibrators:
                             self.calibrators[c_mkt] = PlattCalibrator(epochs=200)
                         self.calibrators[c_mkt].fit(hist['probs'], hist['outcomes'])

@@ -109,7 +109,17 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1'):
     if not all_bets:
         return {"error": "Nenhuma aposta gerada pelas estratégias selecionadas."}
 
-    all_bets.sort(key=lambda x: x['date'])
+    # Sort all bets chronologically.
+    # Using (date, market, match_id) ensures that bets on the same day are
+    # processed in a consistent, deterministic order — critical for correct
+    # intraday drawdown calculation in the portfolio equity curve.
+    # Previously sorted only by date, which hid intraday volatility.
+    all_bets.sort(key=lambda x: (
+        x.get('date', ''),
+        x.get('market', ''),
+        str(x.get('match_id', x.get('home_team', '') + x.get('away_team', '')))
+    ))
+
 
     # ---------------------------------------------------------------
     # HISTORICAL SIMULATION

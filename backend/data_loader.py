@@ -28,17 +28,18 @@ def translate_custom_csv(df):
         }
         df.rename(columns=rename_dict, inplace=True)
         
-        # Calculate FTR (Full Time Result) if missing
+        # Calculate FTR (Full Time Result) if missing (Vectorized using np.select)
         if 'FTR' not in df.columns and 'FTHG' in df.columns and 'FTAG' in df.columns:
-            def calc_ftr(row):
-                if pd.isna(row['FTHG']) or pd.isna(row['FTAG']):
-                    return None
-                if row['FTHG'] > row['FTAG']:
-                    return 'H'
-                elif row['FTHG'] < row['FTAG']:
-                    return 'A'
-                return 'D'
-            df['FTR'] = df.apply(calc_ftr, axis=1)
+            import numpy as np
+            fthg = pd.to_numeric(df['FTHG'], errors='coerce')
+            ftag = pd.to_numeric(df['FTAG'], errors='coerce')
+            conditions = [
+                fthg.isna() | ftag.isna(),
+                fthg > ftag,
+                fthg < ftag
+            ]
+            choices = [None, 'H', 'A']
+            df['FTR'] = np.select(conditions, choices, default='D')
             
         # Optional: Map over/under odds if they exist in the spreadsheet
         # e.g., 'Odd Over 2.5' -> 'B365>2.5', 'Odd Under 2.5' -> 'B365<2.5'
