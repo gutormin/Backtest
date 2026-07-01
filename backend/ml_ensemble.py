@@ -3,19 +3,8 @@ import numpy as np
 
 logger = logging.getLogger(__name__)
 
-try:
-    from xgboost import XGBClassifier
-    HAS_XGB = True
-    logger.info("[MLEnsemble] XGBoost disponível e será usado.")
-except ImportError:
-    HAS_XGB = False
-    logger.warning(
-        "[MLEnsemble] XGBoost NÃO encontrado. "
-        "Usando RandomForest como fallback. "
-        "Resultados de estratégias com ML ativo podem diferir entre ambientes."
-    )
-    from sklearn.ensemble import RandomForestClassifier
-
+from xgboost import XGBClassifier
+logger.info("[MLEnsemble] XGBoost será usado.")
 
 class MLEnsemble:
     """
@@ -40,33 +29,22 @@ class MLEnsemble:
 
     def __init__(self, market_name: str):
         self.market_name = market_name
-        self.model_backend = "xgboost" if HAS_XGB else "random_forest"
+        self.model_backend = "xgboost"
         self.is_fitted = False
         self.n_samples_trained = 0
 
-        if HAS_XGB:
-            self.model = XGBClassifier(
-                n_estimators=300,
-                max_depth=4,
-                learning_rate=0.05,
-                subsample=0.8,
-                colsample_bytree=0.8,
-                min_child_weight=15,
-                eval_metric="logloss",
-                use_label_encoder=False,
-                verbosity=0,
-                n_jobs=1,
-            )
-        else:
-            # Fallback explícito — mesmos princípios de regularização
-            self.model = RandomForestClassifier(
-                n_estimators=300,
-                max_depth=4,
-                min_samples_leaf=15,
-                max_features="sqrt",
-                n_jobs=1,
-                random_state=42,
-            )
+        self.model = XGBClassifier(
+            n_estimators=300,
+            max_depth=4,
+            learning_rate=0.05,
+            subsample=0.8,
+            colsample_bytree=0.8,
+            min_child_weight=15,
+            eval_metric="logloss",
+            use_label_encoder=False,
+            verbosity=0,
+            n_jobs=1,
+        )
 
     def fit(self, X, y) -> bool:
         """
