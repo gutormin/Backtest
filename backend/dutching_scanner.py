@@ -32,7 +32,12 @@ SPORT_LEAGUE_MAP = {
     'soccer_norway_eliteserien': 'NORWAY_ELITESERIEN'
 }
 
-def fetch_dutching_opportunities(api_key='75d5d936cc573c75bacf71e12b5de769', source='odds_api', strategy='auto_ia'):
+def fetch_dutching_opportunities(api_key=None, source='odds_api', strategy='auto_ia'):
+    if not api_key:
+        import os
+        from dotenv import load_dotenv
+        load_dotenv()
+        api_key = os.getenv('THE_ODDS_API_KEY')
     opportunities = []
     poisson = PoissonModel()
     

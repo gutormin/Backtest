@@ -7,7 +7,10 @@ DATA_DIR = os.path.join(os.path.dirname(__file__), 'data')
 TRACKER_FILE  = os.path.join(DATA_DIR, 'live_odds_tracker.json')
 BASELINE_FILE = os.path.join(DATA_DIR, 'odds_baseline.json')   # ← NOVO: imutável
 
-API_KEY = '26ced02b008e91c1acdea04181df12ff'
+import os
+from dotenv import load_dotenv
+load_dotenv()
+API_KEY = os.getenv('THE_ODDS_API_KEY')
 SPORT   = 'upcoming'
 REGIONS = 'eu,uk,us'
 MARKETS = 'h2h,spreads,totals'

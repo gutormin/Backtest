@@ -652,7 +652,10 @@ async def run_automatic_dutching_scan():
     loop = asyncio.get_event_loop()
     min_edge = config.get("min_edge_pct", 1.0)
     min_hours_before = config.get("min_hours_before", 2.0)
-    token = get_api_token() or '75d5d936cc573c75bacf71e12b5de769'
+    import os
+            from dotenv import load_dotenv
+            load_dotenv()
+            token = get_api_token() or os.getenv('THE_ODDS_API_KEY')
     
     try:
         # Puxar oportunidades via The Odds API (live)

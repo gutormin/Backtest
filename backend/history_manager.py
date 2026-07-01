@@ -192,7 +192,10 @@ def add_strategy(data: dict):
                 from .data_loader import get_futpython_api_key
                 params["futpython_api_key"] = get_futpython_api_key()
             except Exception:
-                params["futpython_api_key"] = "cmqa6oz0p01i1wq6lzxknltmd"
+                import os
+                from dotenv import load_dotenv
+                load_dotenv()
+                params["futpython_api_key"] = os.getenv("FUTPYTHON_API_KEY")
 
     entry = {
         "id": provided_id if provided_id else str(uuid.uuid4()),
