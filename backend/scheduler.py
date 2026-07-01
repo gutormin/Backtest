@@ -1,6 +1,60 @@
 import os
 import json
 import asyncio
+import time
+
+STATE_FILE = os.path.join(DATA_DIR, 'scheduler_state.json')
+
+def get_last_run(task_name):
+    if not os.path.exists(STATE_FILE):
+        return 0.0
+    try:
+        with open(STATE_FILE, 'r') as f:
+            import json
+            state = json.load(f)
+            return state.get(task_name, 0.0)
+    except:
+        return 0.0
+
+def set_last_run(task_name, timestamp):
+    import json
+    state = {}
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, 'r') as f:
+                state = json.load(f)
+        except:
+            pass
+    state[task_name] = timestamp
+    with open(STATE_FILE, 'w') as f:
+        json.dump(state, f)
+import time
+
+STATE_FILE = os.path.join(DATA_DIR, 'scheduler_state.json')
+
+def get_last_run(task_name):
+    if not os.path.exists(STATE_FILE):
+        return 0.0
+    try:
+        with open(STATE_FILE, 'r') as f:
+            import json
+            state = json.load(f)
+            return state.get(task_name, 0.0)
+    except:
+        return 0.0
+
+def set_last_run(task_name, timestamp):
+    import json
+    state = {}
+    if os.path.exists(STATE_FILE):
+        try:
+            with open(STATE_FILE, 'r') as f:
+                state = json.load(f)
+        except:
+            pass
+    state[task_name] = timestamp
+    with open(STATE_FILE, 'w') as f:
+        json.dump(state, f)
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -477,14 +531,21 @@ async def run_scheduler_loop():
             config = get_scheduler_config()
             enabled = config.get("enabled", False)
             interval_hours = config.get("check_interval_hours", 6)
+            interval_seconds = interval_hours * 3600
+            last_run = get_last_run("tips_scan")
+            time_since_last = time.time() - last_run
             
             if enabled:
-                print(f"[Scheduler Run] Iniciando varredura agendada de novos jogos...")
-                res = await run_automatic_tips_scan()
-                print(f"[Scheduler Complete] Resultado: {res}")
-            
-            # Wait for next interval
-            await asyncio.sleep(interval_hours * 3600)
+                if time_since_last >= interval_seconds:
+                    print(f"[Scheduler Run] Iniciando varredura agendada de novos jogos...")
+                    res = await run_automatic_tips_scan()
+                    set_last_run("tips_scan", time.time())
+                    print(f"[Scheduler Complete] Resultado: {res}")
+                    await asyncio.sleep(interval_seconds)
+                else:
+                    await asyncio.sleep(interval_seconds - time_since_last)
+            else:
+                await asyncio.sleep(60)
             
         except asyncio.CancelledError:
             print("[Scheduler Shutdown] Robô automático de tips finalizado.")
@@ -585,14 +646,21 @@ async def run_arbitrage_scheduler_loop():
             config = get_arbitrage_scheduler_config()
             enabled = config.get("enabled", False)
             interval_hours = config.get("check_interval_hours", 1.0)
+            interval_seconds = interval_hours * 3600
+            last_run = get_last_run("arbitrage_scan")
+            time_since_last = time.time() - last_run
             
             if enabled:
-                print(f"[Arbitrage Scheduler Run] Buscando novas surebets...")
-                res = await run_automatic_arbitrage_scan()
-                print(f"[Arbitrage Scheduler Complete] Resultado: {res}")
-            
-            # Wait for next interval
-            await asyncio.sleep(interval_hours * 3600)
+                if time_since_last >= interval_seconds:
+                    print(f"[Arbitrage Scheduler Run] Buscando novas surebets...")
+                    res = await run_automatic_arbitrage_scan()
+                    set_last_run("arbitrage_scan", time.time())
+                    print(f"[Arbitrage Scheduler Complete] Resultado: {res}")
+                    await asyncio.sleep(interval_seconds)
+                else:
+                    await asyncio.sleep(interval_seconds - time_since_last)
+            else:
+                await asyncio.sleep(60)
             
         except asyncio.CancelledError:
             print("[Arbitrage Scheduler Shutdown] Robô de arbitragem finalizado.")
@@ -608,12 +676,22 @@ async def run_live_odds_tracker_loop():
     from .live_odds_tracker import fetch_and_update_live_odds
     while True:
         try:
-            # Run blocking I/O in thread pool
-            await asyncio.to_thread(fetch_and_update_live_odds)
+            interval_seconds = 1800
+            last_run = get_last_run("live_odds_scan")
+            time_since_last = time.time() - last_run
+            
+            if time_since_last >= interval_seconds:
+                await asyncio.to_thread(fetch_and_update_live_odds)
+                set_last_run("live_odds_scan", time.time())
+                await asyncio.sleep(interval_seconds)
+            else:
+                await asyncio.sleep(interval_seconds - time_since_last)
+        except asyncio.CancelledError:
+            print('[Live Odds Tracker] Cancelado.')
+            break
         except Exception as e:
             print(f'[Live Odds Tracker] Erro no loop: {e}')
-        # Run every 30 minutes
-        await asyncio.sleep(1800)
+            await asyncio.sleep(60)
 
 
 DUTCH_CONFIG_PATH = os.path.join(DATA_DIR, 'telegram_dutching_config.json')
@@ -653,9 +731,9 @@ async def run_automatic_dutching_scan():
     min_edge = config.get("min_edge_pct", 1.0)
     min_hours_before = config.get("min_hours_before", 2.0)
     import os
-            from dotenv import load_dotenv
-            load_dotenv()
-            token = get_api_token() or os.getenv('THE_ODDS_API_KEY')
+    from dotenv import load_dotenv
+    load_dotenv()
+    token = get_api_token() or os.getenv('THE_ODDS_API_KEY')
     
     try:
         # Puxar oportunidades via The Odds API (live)
@@ -722,14 +800,21 @@ async def run_dutching_scheduler_loop():
             config = get_dutching_scheduler_config()
             enabled = config.get("enabled", False)
             interval_hours = config.get("check_interval_hours", 1.0)
+            interval_seconds = interval_hours * 3600
+            last_run = get_last_run("dutching_scan")
+            time_since_last = time.time() - last_run
             
             if enabled:
-                print(f"[Dutching Scheduler Run] Buscando novas oportunidades de Dutching...")
-                res = await run_automatic_dutching_scan()
-                print(f"[Dutching Scheduler Complete] Resultado: {res}")
-            
-            # Espera o próximo intervalo
-            await asyncio.sleep(interval_hours * 3600)
+                if time_since_last >= interval_seconds:
+                    print(f"[Dutching Scheduler Run] Buscando novas oportunidades de Dutching...")
+                    res = await run_automatic_dutching_scan()
+                    set_last_run("dutching_scan", time.time())
+                    print(f"[Dutching Scheduler Complete] Resultado: {res}")
+                    await asyncio.sleep(interval_seconds)
+                else:
+                    await asyncio.sleep(interval_seconds - time_since_last)
+            else:
+                await asyncio.sleep(60)
             
         except asyncio.CancelledError:
             print("[Dutching Scheduler Shutdown] Robô de Dutching finalizado.")
