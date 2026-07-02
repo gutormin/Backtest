@@ -366,12 +366,15 @@ window.switchRadarTab = function(mode) {
     window.toggleSteamMode(mode);
 };
 
-const originalRunSteamScan = runSteamScan;
-window.runSteamScan = function() {
-    if (currentSteamMode === 'live') {
-        runLiveSteamScan();
-    } else {
-        originalRunSteamScan();
-    }
-};
+// Wait for DOMContentLoaded to capture the original runSteamScan from window object and override it
+window.addEventListener('DOMContentLoaded', () => {
+    const originalRunSteamScan = window.runSteamScan;
+    window.runSteamScan = function() {
+        if (currentSteamMode === 'live') {
+            runLiveSteamScan();
+        } else if (typeof originalRunSteamScan === 'function') {
+            originalRunSteamScan();
+        }
+    };
+});
 
