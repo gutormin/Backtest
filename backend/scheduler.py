@@ -3,6 +3,7 @@ import json
 import asyncio
 import time
 
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'data')
 STATE_FILE = os.path.join(DATA_DIR, 'scheduler_state.json')
 
 def get_last_run(task_name):

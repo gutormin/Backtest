@@ -1,12 +1,12 @@
 import os
 import requests
 from datetime import datetime
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def fetch_arbitrage_opportunities(allowed_bookies=None):
-    import os
-from dotenv import load_dotenv
-load_dotenv()
-API_KEY = os.getenv('THE_ODDS_API_KEY')
+    API_KEY = os.getenv('THE_ODDS_API_KEY')
     SPORT = 'upcoming' # Puxar os próximos jogos do mundo (para gastar 1 crédito e ter volume)
     REGIONS = 'eu,uk,us'
     MARKETS = 'h2h,spreads,totals'
