@@ -920,7 +920,7 @@ def compute_power_analysis(roi_pct, odds_mean, n_bets):
     z_beta = 0.84    # Para poder = 0.80
     effect = roi_pct / 100.0  # Converter percentual para proporção
 
-    if abs(effect) < 1e-10:
+    if abs(effect) < 0.005:  # ROI < 0.5% is practically zero effect, requiring an infinite sample
         return {
             'min_sample_size': 99999,
             'sample_sufficient': False,
@@ -928,7 +928,10 @@ def compute_power_analysis(roi_pct, odds_mean, n_bets):
         }
 
     n_min = ((z_alpha + z_beta) * sigma / effect) ** 2
-    n_min = max(1, int(math.ceil(n_min)))
+    if n_min > 99999 or math.isnan(n_min) or math.isinf(n_min):
+        n_min = 99999
+    else:
+        n_min = max(1, int(math.ceil(n_min)))
 
     power_ratio = n_bets / n_min if n_min > 0 else 0.0
 
@@ -985,8 +988,11 @@ def compute_rolling_roi(bets_history, window=None):
     last_roi = roi_values[-1] if len(roi_values) > 0 else 0.0
 
     # Calcular decaimento do edge
-    if abs(avg_roi) > 0.01:
-        edge_decay_pct = ((avg_roi - last_roi) / abs(avg_roi)) * 100.0
+    # Só faz sentido calcular decaimento se a média histórica for positiva (havia um edge inicial)
+    if avg_roi > 0.1:
+        edge_decay_pct = ((avg_roi - last_roi) / avg_roi) * 100.0
+        # Limitar o decaimento em caso de divisões por números muito pequenos
+        edge_decay_pct = max(-999.0, min(999.0, edge_decay_pct))
     else:
         edge_decay_pct = 0.0
 
