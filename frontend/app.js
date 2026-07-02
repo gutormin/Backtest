@@ -7267,8 +7267,12 @@ function renderHistoryGrid(history) {
         card.style.justifyContent = 'space-between';
 
         if (item.type === 'portfolio' || (p && p.strategy_ids)) {
-            // Portfolio Card
-            card.style.borderLeft = '4px solid #8b5cf6';
+            // Portfolio Card with premium distinct purple styling
+            card.style.borderLeft = '5px solid #a78bfa'; // Glowing purple border
+            card.style.background = 'linear-gradient(135deg, rgba(139, 92, 246, 0.12) 0%, rgba(20, 15, 45, 0.6) 100%)';
+            card.style.borderColor = 'rgba(139, 92, 246, 0.3)';
+            card.style.boxShadow = '0 8px 32px 0 rgba(139, 92, 246, 0.08), inset 0 1px 0 0 rgba(255, 255, 255, 0.05)';
+            
             const isActive = item.is_tg_active === true;
             const activeBadge = isActive ? `<span style="font-size: 11px; background: rgba(16, 185, 129, 0.2); color: #10b981; padding: 3px 6px; border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.3);"><i class="fa-brands fa-telegram"></i> Ativo no Robô</span>` : '';
             const btnActiveHtml = isActive ? 
@@ -7281,41 +7285,44 @@ function renderHistoryGrid(history) {
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
                                 <input type="checkbox" class="history-select-checkbox" data-type="portfolio" value="${item.id}" style="width: 18px; height: 18px; cursor: pointer;">
-                                <i class="fa-solid fa-layer-group" style="color: #8b5cf6; font-size: 18px;"></i>
-                                <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
+                                <i class="fa-solid fa-layer-group" style="color: #c084fc; font-size: 18px;"></i>
+                                <h4 style="margin: 0; color: #f3e8ff; font-size: 16px; font-weight: 700;">${item.name}</h4>
                             </div>
                             <div>${activeBadge}</div>
                         </div>
-                        <span style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">${dateStr}</span>
+                        <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 5px;">
+                            <span style="font-size: 10px; font-weight: 800; text-transform: uppercase; color: #e9d5ff; background: rgba(168, 85, 247, 0.3); border: 1px solid rgba(168, 85, 247, 0.5); padding: 2px 6px; border-radius: 4px; letter-spacing: 0.8px;">Portfólio</span>
+                            <span style="font-size: 12px; color: var(--text-muted); background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 4px;">${dateStr}</span>
+                        </div>
                     </div>
                     
-                    <div style="margin-bottom: 15px; font-size: 13px; color: var(--text-secondary);">
-                        <div style="margin-bottom: 4px;"><strong>Tipo:</strong> <span style="color:#8b5cf6;">Portfólio Combinado</span></div>
+                    <div style="margin-bottom: 15px; font-size: 13px; color: #e9d5ff;">
+                        <div style="margin-bottom: 4px;"><strong>Tipo:</strong> <span style="color:#c084fc; font-weight: 600;">Portfólio Combinado</span></div>
                         <div style="margin-bottom: 4px;"><strong>Estratégias:</strong> ${p.strategy_ids ? p.strategy_ids.length : 0} combinadas</div>
                     </div>
                     
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: rgba(0,0,0,0.2); padding: 10px; border-radius: 8px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 15px; background: rgba(139, 92, 246, 0.05); border: 1px solid rgba(139, 92, 246, 0.15); padding: 10px; border-radius: 8px;">
                         <div>
-                            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Win Rate</div>
+                            <div style="font-size: 11px; color: #d8b4fe; text-transform: uppercase;">Win Rate</div>
                             <div style="font-size: 15px; font-weight: 700; color: ${s.win_rate > 50 ? 'var(--success)' : 'var(--text-primary)'};">${s.win_rate}%</div>
                         </div>
                         <div>
-                            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Lucro</div>
+                            <div style="font-size: 11px; color: #d8b4fe; text-transform: uppercase;">Lucro</div>
                             <div style="font-size: 15px; font-weight: 700; color: ${s.net_profit > 0 ? 'var(--success)' : 'var(--danger)'};">$${s.net_profit}</div>
                         </div>
                         <div>
-                            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">ROI</div>
+                            <div style="font-size: 11px; color: #d8b4fe; text-transform: uppercase;">ROI</div>
                             <div style="font-size: 15px; font-weight: 700; color: ${s.roi > 0 ? 'var(--success)' : 'var(--danger)'};">${s.roi}%</div>
                         </div>
                         <div>
-                            <div style="font-size: 11px; color: var(--text-muted); text-transform: uppercase;">Drawdown</div>
+                            <div style="font-size: 11px; color: #d8b4fe; text-transform: uppercase;">Drawdown</div>
                             <div style="font-size: 15px; font-weight: 700; color: var(--danger);">${s.max_drawdown}%</div>
                         </div>
                     </div>
                 </div>
-                <div style="display: flex; gap: 10px; border-top: 1px solid rgba(255,255,255,0.05); padding-top: 15px; flex-wrap: wrap;">
+                <div style="display: flex; gap: 10px; border-top: 1px solid rgba(139, 92, 246, 0.15); padding-top: 15px; flex-wrap: wrap;">
                     <button class="btn-clear" onclick="deleteHistoryStrategy('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; color: var(--danger);"><i class="fa-solid fa-trash"></i> Excluir</button>
-                    <button class="btn-scanner" onclick="loadPortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; margin: 0; background: rgba(139, 92, 246, 0.2); border-color: #8b5cf6; color: #fff;"><i class="fa-solid fa-check-square"></i> Abrir</button>
+                    <button class="btn-scanner" onclick="loadPortfolio('${item.id}')" style="flex: 1; padding: 6px; font-size: 13px; margin: 0; background: rgba(168, 85, 247, 0.25); border-color: #a855f7; color: #fff;"><i class="fa-solid fa-check-square"></i> Abrir</button>
                     ${btnActiveHtml}
                 </div>
             `;
