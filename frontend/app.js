@@ -7280,6 +7280,7 @@ function renderHistoryGrid(history) {
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                         <div style="display: flex; flex-direction: column; gap: 5px;">
                             <div style="display: flex; align-items: center; gap: 10px;">
+                                <input type="checkbox" class="history-select-checkbox" data-type="portfolio" value="${item.id}" style="width: 18px; height: 18px; cursor: pointer;">
                                 <i class="fa-solid fa-layer-group" style="color: #8b5cf6; font-size: 18px;"></i>
                                 <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
                             </div>
@@ -7366,7 +7367,7 @@ function renderHistoryGrid(history) {
                 <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px;">
                     <div style="display: flex; flex-direction: column; gap: 5px;">
                         <div style="display: flex; align-items: center; gap: 10px;">
-                            <input type="checkbox" class="portfolio-checkbox" value="${item.id}" style="width: 18px; height: 18px; cursor: pointer;">
+                            <input type="checkbox" class="portfolio-checkbox history-select-checkbox" data-type="strategy" value="${item.id}" style="width: 18px; height: 18px; cursor: pointer;">
                             <h4 style="margin: 0; color: var(--text-primary); font-size: 16px;">${item.name}</h4>
                         </div>
                         <div>${activeBadge}</div>
@@ -9314,12 +9315,12 @@ async function loadPortfolio(id) {
         
         window.lastPortfolioStrategyIds = portfolio.params.strategy_ids;
         
-        document.querySelectorAll('.portfolio-checkbox').forEach(cb => cb.checked = false);
+        document.querySelectorAll('.history-select-checkbox').forEach(cb => cb.checked = false);
         
         if (portfolio.params && portfolio.params.strategy_ids) {
             let foundCount = 0;
             portfolio.params.strategy_ids.forEach(sid => {
-                const cb = document.querySelector(`.portfolio-checkbox[value="${sid}"]`);
+                const cb = document.querySelector(`.history-select-checkbox[value="${sid}"]`);
                 if (cb) {
                     cb.checked = true;
                     foundCount++;
@@ -9603,10 +9604,64 @@ window.testArbitrageTelegramAlert = testArbitrageTelegramAlert;
 window.runClustering = runClustering;
 window.saveClusterAiConfig = saveClusterAiConfig;
 window.loadClusterAiConfig = loadClusterAiConfig;
+async function selectAllHistory(checked) {
+    document.querySelectorAll('.history-select-checkbox').forEach(cb => {
+        cb.checked = checked;
+    });
+}
+
+async function deleteSelectedHistory() {
+    const checked = document.querySelectorAll('.history-select-checkbox:checked');
+    if (checked.length === 0) {
+        showToast('Nenhum item selecionado para exclusão.', 'warning');
+        return;
+    }
+
+    if (!confirm(`Tem certeza que deseja excluir os ${checked.length} itens selecionados?`)) {
+        return;
+    }
+
+    const btn = document.querySelector('button[onclick="deleteSelectedHistory()"]');
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Excluindo...';
+        btn.disabled = true;
+    }
+
+    let successCount = 0;
+    let failCount = 0;
+
+    for (const cb of checked) {
+        const id = cb.value;
+        try {
+            const res = await fetch(`${API_BASE_URL}/api/history/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                lsDeleteItem(id);
+                successCount++;
+            } else {
+                failCount++;
+            }
+        } catch (e) {
+            // Fallback: local deletion
+            lsDeleteItem(id);
+            successCount++;
+        }
+    }
+
+    if (btn) {
+        btn.innerHTML = '<i class="fa-solid fa-trash-can"></i> Excluir Selecionados';
+        btn.disabled = false;
+    }
+
+    showToast(`${successCount} itens excluídos com sucesso.${failCount > 0 ? ` ${failCount} falhas.` : ''}`, 'success');
+    loadHistoryTab();
+}
+
 window.deleteHistoryStrategy = deleteHistoryStrategy;
 window.reloadStrategyById = reloadStrategyById;
 window.reloadStrategy = reloadStrategy;
 window.toggleActivePortfolio = toggleActivePortfolio;
+window.selectAllHistory = selectAllHistory;
+window.deleteSelectedHistory = deleteSelectedHistory;
 window.onCalculatorLeagueChange = onCalculatorLeagueChange;
 window.applyEvSuggestion = applyEvSuggestion;
 window.applyLeagueSuggestion = applyLeagueSuggestion;

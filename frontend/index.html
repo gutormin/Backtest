@@ -2872,6 +2872,9 @@ window.addEventListener('unhandledrejection', function(e) {
                     <button class="btn-clear" onclick="loadHistoryTab()" style="padding: 8px 15px;"><i class="fa-solid fa-rotate-right"></i> Atualizar</button>
                     <button class="btn-clear" onclick="exportHistory()" style="padding: 8px 15px; background: rgba(52, 211, 153, 0.1); border-color: rgb(52, 211, 153); color: rgb(52, 211, 153);" title="Exportar Histórico para arquivo JSON"><i class="fa-solid fa-download"></i> Exportar</button>
                     <button class="btn-clear" onclick="triggerImportHistory()" style="padding: 8px 15px; background: rgba(99, 102, 241, 0.1); border-color: rgb(99, 102, 241); color: rgb(99, 102, 241);" title="Importar Histórico de arquivo JSON"><i class="fa-solid fa-upload"></i> Importar</button>
+                    <button class="btn-clear" onclick="selectAllHistory(true)" style="padding: 8px 15px; background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.15);" title="Selecionar Todos"><i class="fa-solid fa-square-check"></i> Selecionar Todos</button>
+                    <button class="btn-clear" onclick="selectAllHistory(false)" style="padding: 8px 15px; background: rgba(255, 255, 255, 0.05); border-color: rgba(255, 255, 255, 0.15);" title="Limpar Seleção"><i class="fa-solid fa-square"></i> Limpar Seleção</button>
+                    <button class="btn-clear" onclick="deleteSelectedHistory()" style="padding: 8px 15px; background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #f87171;" title="Excluir Todos os itens selecionados"><i class="fa-solid fa-trash-can"></i> Excluir Selecionados</button>
                     <input type="file" id="import-history-file" style="display: none;" onchange="importHistory(event)" accept=".json" />
                 </div>
 
@@ -3060,7 +3063,7 @@ window.addEventListener('unhandledrejection', function(e) {
     </div>
 
     <!-- Custom Script com Cache Buster para evitar problemas de atualização -->
-    <script type="module" src="app.js?v=78"></script>
+    <script type="module" src="app.js?v=79"></script>
 
 <script>
 // Fallback inline: garante que window.switchTab exista IMEDIATAMENTE,
