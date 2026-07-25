@@ -212,17 +212,16 @@ SEASONS = ['2021', '2122', '2223', '2324', '2425', '2526']
 SOUTH_AMERICAN_LEAGUES = {'ARG', 'BRA', 'MEX', 'USA'}
 
 def auto_detect_data_source(league_code):
-    """Returns the appropriate data source for a league code."""
+    """Returns the appropriate HISTORICAL data source for a league code.
+
+    DataFootball API is NOT returned here — it only provides live/upcoming odds,
+    not historical data for backtesting. Leagues that exist in the API but not
+    in CSV files will fall through to footballdata/futpython.
+    """
     if '/' in league_code:
         return 'futpython'  # pais/liga format from FutPythonTrader
     if league_code in SOUTH_AMERICAN_LEAGUES:
         return 'futpython'
-    # Check if league exists in DataFootball API list
-    api_leagues = get_api_leagues()
-    if api_leagues:
-        api_codes = {clean_league_code(name) for name in api_leagues}
-        if league_code in api_codes:
-            return 'datafootball'
     return 'footballdata'
 
 
