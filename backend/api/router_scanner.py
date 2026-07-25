@@ -420,11 +420,18 @@ def run_scan(req: ScanRequest):
         # Use majority source for the backtester call
         futpython_leagues = [l for l, s in league_sources.items() if s == 'futpython']
         footballdata_leagues = [l for l, s in league_sources.items() if s == 'footballdata']
+        datafootball_leagues = [l for l, s in league_sources.items() if s == 'datafootball']
         effective_data_source = 'futpython' if len(futpython_leagues) >= len(footballdata_leagues) else req.data_source
+
+        # ── DataFootball API has no historical data — use best available source ──
+        if effective_data_source == 'datafootball' or req.data_source == 'datafootball':
+            # For leagues not in FutPython format, footballdata CSVs are the historical source
+            effective_data_source = 'footballdata'
+            logger.info(f"Scan: DataFootball selecionado (sem historico) -> usando {effective_data_source} para backtest")
 
         if effective_data_source != req.data_source:
             logger.info(f"Scan: overriding data_source '{req.data_source}' -> '{effective_data_source}' "
-                        f"(FutPython: {len(futpython_leagues)}, FootballData: {len(footballdata_leagues)})")
+                        f"(FutPython: {len(futpython_leagues)}, FootballData: {len(footballdata_leagues)}, DataFootball: {len(datafootball_leagues)})")
 
         # Build odds source description for diagnostics
         odds_map = {
