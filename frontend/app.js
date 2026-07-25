@@ -5958,57 +5958,61 @@ async function runPortfolioBacktest(overrideStrategyIds) {
             })
         });
 
-        // Try to parse JSON — server may return HTML on crash (502/OOM)
-        let data;
+        // ── Parse response (JSON or HTML crash page) ──
+        const responseText = await res.text();
+        let data = null;
+        let parseError = null;
         try {
-            const text = await res.text();
-            try {
-                data = JSON.parse(text);
-            } catch (jsonErr) {
-                // Server returned non-JSON (likely 502 HTML crash page)
-                console.error('Resposta não-JSON do servidor (primeiros 200 chars):', text.substring(0, 200));
-                if (progressInterval) clearInterval(progressInterval);
-                if (progressContainer) {
-                    progressBar.style.width = '100%';
-                    progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
-                    progressLabel.innerHTML = '<i class="fa-solid fa-server" style="color: #ef4444;"></i> Servidor sobrecarregado';
-                    progressHint.innerText = 'O Render free tier (512MB) estourou. Tente com menos estratégias.';
-                    setTimeout(() => { progressContainer.style.display = 'none'; }, 6000);
-                }
-                if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
-                showToast('Servidor gratuito do Render atingiu limite de memória (512 MB). Tente rodar 1 ou 2 estratégias por vez.', 'error', 10000);
-                return;
-            }
-        } catch (textErr) {
-            console.error('Erro ao ler resposta:', textErr);
-            data = null;
+            data = JSON.parse(responseText);
+        } catch (jsonErr) {
+            parseError = responseText.substring(0, 200);
+            console.error('Resposta não-JSON do servidor:', parseError);
         }
 
-        // Cleanup progress bar on success
+        // ── Handle parse errors (502 crash) ──
+        if (parseError || !data) {
+            if (progressInterval) clearInterval(progressInterval);
+            if (progressContainer) {
+                progressBar.style.width = '100%';
+                progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+                progressLabel.innerHTML = '<i class="fa-solid fa-server" style="color: #ef4444;"></i> Servidor sobrecarregado';
+                progressHint.innerText = 'O Render free tier (512MB) estourou. Tente com menos estratégias.';
+                setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 6000);
+            }
+            if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
+            showToast('Servidor gratuito do Render atingiu limite de memória (512 MB). Tente rodar 1 ou 2 estratégias por vez.', 'error', 10000);
+            return;
+        }
+
+        // ── Handle API-level errors ──
+        if (!res.ok || data.error) {
+            if (progressInterval) clearInterval(progressInterval);
+            if (progressContainer) {
+                progressBar.style.width = '100%';
+                progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+                progressLabel.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color: #ef4444;"></i> ' + (data.error || 'Erro').substring(0, 40);
+                progressHint.innerText = data.detail || data.error || 'Erro desconhecido';
+                setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 5000);
+            }
+            if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
+            document.getElementById('portfolio-results-panel').style.display = 'block';
+            document.getElementById('port-metric-bankroll').innerText = '$0.00';
+            document.getElementById('port-metric-profit').innerText = '$0.00';
+            document.getElementById('port-metric-roi').innerText = '0.00%';
+            document.getElementById('port-metric-dd').innerText = '0.00%';
+            showToast(data.detail || data.error || 'Erro do servidor.', 'error');
+            return;
+        }
+
+        // ── SUCCESS: update progress bar to "done" but KEEP IT VISIBLE during rendering ──
         if (progressInterval) clearInterval(progressInterval);
         if (progressContainer) {
             progressBar.style.width = '100%';
-            if (data && !res.ok) {
-                progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
-                progressLabel.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color: #ef4444;"></i> Erro';
-            } else if (data) {
-                progressLabel.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Finalizado!';
-            }
+            progressBar.style.background = 'linear-gradient(90deg, #10b981, #34d399)';
+            progressLabel.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Processado! Renderizando resultados...';
             progressTime.innerText = progressSeconds + 's';
-            progressHint.innerText = data ? 'Carregando resultados...' : 'Falha ao processar';
-            setTimeout(() => { progressContainer.style.display = 'none'; }, 1500);
-        }
-
-        if (!data || !res.ok || data.error) {
-            if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
-            document.getElementById('portfolio-results-panel').style.display = 'block';
-            document.getElementById('port-metric-bankroll').innerText = `$0.00`;
-            document.getElementById('port-metric-profit').innerText = `$0.00`;
-            document.getElementById('port-metric-roi').innerText = `0.00%`;
-            document.getElementById('port-metric-dd').innerText = `0.00%`;
-            const tbody = document.getElementById('portfolio-bets-body');
-            if(tbody) tbody.innerHTML = `<tr><td colspan="10" class="text-center text-muted">Nenhuma aposta atendeu aos critérios (odds > 2.50 foram removidas).</td></tr>`;
-            return;
+            progressHint.innerText = `${data.total_bets || '?'} apostas encontradas — montando gráficos e tabelas`;
+            // DO NOT hide yet — wait for rendering to finish
         }
 
         // Show Portfolio Panel
@@ -6115,6 +6119,13 @@ async function runPortfolioBacktest(overrideStrategyIds) {
 
         // Reset button after successful run
         if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
+
+        // ── Hide progress bar AFTER everything is rendered ──
+        if (progressContainer) {
+            setTimeout(() => {
+                if (progressContainer) progressContainer.style.display = 'none';
+            }, 800);
+        }
 
     } catch (e) {
         console.error(e);
