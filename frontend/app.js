@@ -5947,40 +5947,78 @@ async function runPortfolioBacktest(overrideStrategyIds) {
         document.getElementById('port-metric-roi').innerText = 'Aguardando...';
         document.getElementById('port-metric-dd').innerText = '---';
 
-        const res = await fetch(`${API_BASE_URL}/api/portfolio_backtest`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                strategy_ids: strategyIds,
-                initial_bankroll: parseFloat(document.getElementById('portfolio-bankroll-input')?.value || 1000),
-                risk_method: riskMethod,
-                strategies_inline: selectedItems  // fallback when DB is empty post-deploy
-            })
-        });
+        // AbortController with 5-minute timeout (Render free tier = cold start + processing)
+        const abortCtrl = new AbortController();
+        const fetchTimeout = setTimeout(() => abortCtrl.abort(), 5 * 60 * 1000);
 
-        // ── Parse response (JSON or HTML crash page) ──
+        let res;
+        try {
+            res = await fetch(`${API_BASE_URL}/api/portfolio_backtest`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    strategy_ids: strategyIds,
+                    initial_bankroll: parseFloat(document.getElementById('portfolio-bankroll-input')?.value || 1000),
+                    risk_method: riskMethod,
+                    strategies_inline: selectedItems
+                }),
+                signal: abortCtrl.signal
+            });
+        } catch (fetchErr) {
+            clearTimeout(fetchTimeout);
+            if (progressInterval) clearInterval(progressInterval);
+            if (progressContainer) {
+                progressBar.style.width = '100%';
+                progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+                if (fetchErr.name === 'AbortError') {
+                    progressLabel.innerHTML = '<i class="fa-solid fa-clock" style="color: #ef4444;"></i> Timeout (5 min)';
+                    progressHint.innerText = 'O servidor gratuito demorou mais de 5 minutos. Tente novamente.';
+                } else {
+                    progressLabel.innerHTML = '<i class="fa-solid fa-wifi" style="color: #ef4444;"></i> Erro de rede';
+                    progressHint.innerText = 'Sem conexão com o servidor. Verifique sua internet.';
+                }
+                setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 6000);
+            }
+            if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
+            showToast(fetchErr.name === 'AbortError' ? 'Timeout: servidor demorou mais de 5 min.' : 'Erro de rede: sem conexão com o servidor.', 'error', 10000);
+            return;
+        }
+        clearTimeout(fetchTimeout);
+
+        // ── Parse response ──
         const responseText = await res.text();
         let data = null;
         let parseError = null;
+        const httpStatus = res.status;
         try {
             data = JSON.parse(responseText);
         } catch (jsonErr) {
-            parseError = responseText.substring(0, 200);
-            console.error('Resposta não-JSON do servidor:', parseError);
+            parseError = responseText.substring(0, 300);
+            console.error('Resposta não-JSON (HTTP ' + httpStatus + '):', parseError);
         }
 
-        // ── Handle parse errors (502 crash) ──
+        // ── Handle non-JSON responses (Render crash/waking/cold-start HTML) ──
         if (parseError || !data) {
             if (progressInterval) clearInterval(progressInterval);
             if (progressContainer) {
                 progressBar.style.width = '100%';
                 progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
-                progressLabel.innerHTML = '<i class="fa-solid fa-server" style="color: #ef4444;"></i> Servidor sobrecarregado';
-                progressHint.innerText = 'O Render free tier (512MB) estourou. Tente com menos estratégias.';
-                setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 6000);
+                const isDeploying = parseError && parseError.includes('Deploy');
+                const isWaking = parseError && parseError.includes('waking');
+                if (isDeploying || isWaking) {
+                    progressLabel.innerHTML = '<i class="fa-solid fa-rocket" style="color: #f59e0b;"></i> Render acordando...';
+                    progressHint.innerText = 'O servidor gratuito estava dormindo. Tente novamente em 30 segundos.';
+                } else if (httpStatus >= 500) {
+                    progressLabel.innerHTML = '<i class="fa-solid fa-server" style="color: #ef4444;"></i> Servidor sobrecarregado';
+                    progressHint.innerText = 'Erro ' + httpStatus + ' — O Render free tier (512MB) pode ter estourado. Tente com 1-2 estratégias.';
+                } else {
+                    progressLabel.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color: #ef4444;"></i> Resposta inesperada';
+                    progressHint.innerText = 'HTTP ' + httpStatus + ' — Tente novamente em alguns segundos.';
+                }
+                setTimeout(() => { if (progressContainer) progressContainer.style.display = 'none'; }, 8000);
             }
             if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
-            showToast('Servidor gratuito do Render atingiu limite de memória (512 MB). Tente rodar 1 ou 2 estratégias por vez.', 'error', 10000);
+            showToast(httpStatus >= 500 ? 'Servidor sobrecarregado (Render 512 MB). Tente com 1 ou 2 estratégias.' : 'Erro de comunicação com o servidor. Tente novamente.', 'error', 10000);
             return;
         }
 
