@@ -872,11 +872,41 @@ async def run_dutching_scheduler_loop():
 
 
 async def run_datafootball_sync_loop():
-    """Daily sync: append completed matches from DataFootball API to CSV files."""
-    from .datafootball_downloader import sync_today_completed
+    """Daily sync + auto-download historical data on first run if CSVs don't exist."""
+    from .datafootball_downloader import sync_today_completed, download_all, _generate_league_code
+    import json, os, asyncio as _asyncio
+
+    DATA_DIR_SYNC = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'data')
+
+    async def _smart_sync():
+        # Check if ANY DataFootball CSV exists
+        leagues_file = os.path.join(DATA_DIR_SYNC, 'datafootball_historical_leagues.json')
+        has_data = False
+        if os.path.exists(leagues_file):
+            try:
+                with open(leagues_file, 'r', encoding='utf-8') as f:
+                    league_map = json.load(f)
+                for name in league_map:
+                    code = _generate_league_code(name)
+                    csv_path = os.path.join(DATA_DIR_SYNC, f"{code}_all.csv")
+                    if os.path.exists(csv_path) and os.path.getsize(csv_path) > 5000:
+                        has_data = True
+                        break
+            except Exception:
+                pass
+
+        if not has_data:
+            logger.info("DataFootball: dados historicos nao encontrados. Iniciando download completo...")
+            loop = _asyncio.get_event_loop()
+            await loop.run_in_executor(None, lambda: download_all(leagues_file=leagues_file, test_mode=False))
+            logger.info("DataFootball: download completo finalizado.")
+
+        # Always run the today sync to catch latest results
+        return await _asyncio.to_thread(sync_today_completed)
+
     await _run_generic_scheduler_loop(
         task_name="datafootball_sync",
-        scan_func=lambda: asyncio.to_thread(sync_today_completed),
+        scan_func=_smart_sync,
         interval_seconds=21600,  # every 6 hours
         error_sleep=3600,
         log_labels={
