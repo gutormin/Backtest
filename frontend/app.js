@@ -5882,7 +5882,56 @@ async function runPortfolioBacktest(overrideStrategyIds) {
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Processando (Aguarde...)';
             btn.disabled = true;
         }
-        showToast('Rodando Portfólio. Pode levar até 2 min no servidor gratuito...', 'info');
+        showToast('Rodando Portfólio. Pode levar até 2 min por estratégia no servidor gratuito...', 'info', 8000);
+
+        // ---- Animated progress bar during processing ----
+        const progressContainer = document.getElementById('portfolio-progress-container');
+        const progressBar = document.getElementById('portfolio-progress-bar');
+        const progressLabel = document.getElementById('portfolio-progress-label');
+        const progressTime = document.getElementById('portfolio-progress-time');
+        const progressHint = document.getElementById('portfolio-progress-hint');
+
+        let progressInterval = null;
+        let progressSeconds = 0;
+        const nStrats = strategyIds.length;
+        const estimatedMaxSec = Math.min(nStrats * 50, 200); // ~50s per strategy on Render free tier, max 200s
+
+        if (progressContainer) {
+            progressContainer.style.display = 'block';
+            progressBar.style.width = '0%';
+            progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Carregando dados das estratégias...';
+            progressTime.innerText = '0s';
+            progressHint.innerText = `Processando ${nStrats} estratégia(s) — Render free tier ~50s cada`;
+
+            // Animate progress bar smoothly (logarithmic fill — fast start, slow finish)
+            progressInterval = setInterval(() => {
+                progressSeconds++;
+                progressTime.innerText = progressSeconds + 's';
+
+                // Non-linear progress: log curve that flattens near estimated time
+                // 60% at half estimated time, 85% at estimated time, never reaches 100%
+                const ratio = Math.min(progressSeconds / estimatedMaxSec, 1.0);
+                const pct = ratio < 0.5
+                    ? (ratio / 0.5) * 50  // 0→50% in first half
+                    : 50 + (ratio - 0.5) * 0.7 * 50; // 50→85% in second half, slower
+                const barPct = Math.min(Math.round(pct), 89); // never exceed 89% until done
+
+                progressBar.style.width = barPct + '%';
+
+                // Update labels based on phase
+                if (progressSeconds < 5) {
+                    progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Carregando dados das estratégias...';
+                } else if (progressSeconds < 15) {
+                    progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Executando backtests individuais...';
+                } else if (barPct < 70) {
+                    progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Combinando apostas do portfólio...';
+                } else {
+                    progressLabel.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculando métricas finais...';
+                }
+
+                progressHint.innerText = `${progressSeconds}s de ~${estimatedMaxSec}s estimados — não feche a página`;
+            }, 1000);
+        }
 
         // Hide standard Laboratory panels early so we don't see 0s
         const stdGrid = document.getElementById('standard-metrics-grid');
@@ -5911,7 +5960,26 @@ async function runPortfolioBacktest(overrideStrategyIds) {
 
         const data = await res.json();
 
+        // Cleanup progress bar
+        if (progressInterval) clearInterval(progressInterval);
+        if (progressContainer) {
+            progressBar.style.width = '100%';
+            progressLabel.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Finalizado!';
+            progressTime.innerText = progressSeconds + 's';
+            progressHint.innerText = 'Carregando resultados...';
+            setTimeout(() => { progressContainer.style.display = 'none'; }, 1500);
+        }
+
         if (!res.ok || data.error) {
+            // Cleanup progress bar on error too
+            if (progressInterval) clearInterval(progressInterval);
+            if (progressContainer) {
+                progressBar.style.width = '100%';
+                progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+                progressLabel.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color: #ef4444;"></i> Erro no servidor';
+                progressHint.innerText = data.detail || data.error || 'Erro desconhecido';
+                setTimeout(() => { progressContainer.style.display = 'none'; }, 4000);
+            }
             showToast(data.detail || data.error || 'Erro desconhecido do servidor.', 'error');
             if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
             document.getElementById('portfolio-results-panel').style.display = 'block';
@@ -6031,6 +6099,17 @@ async function runPortfolioBacktest(overrideStrategyIds) {
 
     } catch (e) {
         console.error(e);
+        // Cleanup progress bar on error
+        const pc = document.getElementById('portfolio-progress-container');
+        const pb = document.getElementById('portfolio-progress-bar');
+        const pl = document.getElementById('portfolio-progress-label');
+        const ph = document.getElementById('portfolio-progress-hint');
+        if (pc) {
+            if (pb) { pb.style.width = '100%'; pb.style.background = 'linear-gradient(90deg, #ef4444, #f87171)'; }
+            if (pl) pl.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="color: #ef4444;"></i> Erro de conexão';
+            if (ph) ph.innerText = 'Verifique sua internet e tente novamente';
+            setTimeout(() => { pc.style.display = 'none'; }, 5000);
+        }
         showToast('Erro: ' + e.message, 'error');
         const btn = document.querySelector('button[onclick="runPortfolioBacktest()"]');
         if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }

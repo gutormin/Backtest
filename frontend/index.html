@@ -1652,7 +1652,20 @@ window.addEventListener('unhandledrejection', function(e) {
                 </h3>
                 <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 0;">Backtest simultâneo de múltiplas estratégias operando a mesma banca.</p>
             </div>
-            <button class="btn-scanner" id="btn-save-portfolio" onclick="savePortfolio()" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-color: #8b5cf6; color: white; padding: 8px 15px; margin-top: 0;" title="Salvar este portfólio no histórico">
+            <div style="display: flex; gap: 15px; align-items: center;">
+                <div id="portfolio-progress-container" style="display: none; flex: 1; min-width: 250px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                        <span id="portfolio-progress-label" style="font-size: 12px; color: #a78bfa; font-weight: 600;"><i class="fa-solid fa-spinner fa-spin"></i> Inicializando...</span>
+                        <span id="portfolio-progress-time" style="font-size: 12px; color: var(--text-muted); font-family: var(--font-mono);">0s</span>
+                    </div>
+                    <div style="background: rgba(139, 92, 246, 0.1); border-radius: 8px; height: 8px; overflow: hidden; position: relative;">
+                        <div id="portfolio-progress-bar" style="background: linear-gradient(90deg, #8b5cf6, #a78bfa, #c084fc); height: 100%; width: 0%; border-radius: 8px; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 4px; text-align: center;">
+                        <span id="portfolio-progress-hint">Servidor gratuito Render — at&eacute; 2 min por estrat&eacute;gia</span>
+                    </div>
+                </div>
+                <button class="btn-scanner" id="btn-save-portfolio" onclick="savePortfolio()" style="background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%); border-color: #8b5cf6; color: white; padding: 8px 15px; margin-top: 0;" title="Salvar este portfólio no histórico">
                 <i class="fa-solid fa-star"></i> Salvar Combinação
             </button>
         </div>
