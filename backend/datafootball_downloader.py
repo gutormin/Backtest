@@ -338,9 +338,115 @@ def download_all(leagues_file=None, test_mode=False):
     logger.info(f"Time: {elapsed/60:.1f} minutes")
 
 
+def sync_today_completed(headers=None):
+    """
+    Incremental sync: fetch today's matches via /matches_day and append
+    any COMPLETED matches (with final scores) to the league CSV files.
+
+    This keeps the backtester data up-to-date daily without re-downloading
+    entire seasons. Called by the scheduler every 6-12 hours.
+
+    Returns: dict with {league_code: new_matches_count}
+    """
+    if headers is None:
+        token = _get_token()
+        if not token:
+            logger.error("No DataFootball token for sync_today_completed")
+            return {}
+        headers = {'Authorization': f'Bearer {token}'}
+
+    try:
+        r = requests.get(f"{BASE_URL}/matches_day", headers=headers, timeout=30)
+        if r.status_code != 200:
+            logger.error(f"matches_day returned {r.status_code}")
+            return {}
+        matches = r.json()
+    except Exception as e:
+        logger.error(f"Error fetching matches_day: {e}")
+        return {}
+
+    if not isinstance(matches, list):
+        logger.error("matches_day did not return a list")
+        return {}
+
+    # Process only COMPLETED matches with scores
+    completed = [m for m in matches
+                 if isinstance(m, dict)
+                 and m.get('status') == 'complete'
+                 and m.get('home_name')
+                 and m.get('homeGoalCount') is not None
+                 and m.get('awayGoalCount') is not None]
+
+    if not completed:
+        logger.info("sync_today: no completed matches today")
+        return {}
+
+    updates = {}
+    for match in completed:
+        league_name = match.get('league', '')
+        if not league_name:
+            continue
+
+        league_code = _generate_league_code(league_name)
+        row = match_to_backtester_row(match, league_code)
+        filename = f"{league_code}_all.csv"
+        filepath = os.path.join(DATA_DIR, filename)
+
+        # Only append if this match isn't already in the file
+        if os.path.exists(filepath):
+            try:
+                existing = pd.read_csv(filepath, encoding='utf-8')
+                dup = existing[(existing['Date'] == row['Date']) &
+                               (existing['HomeTeam'] == row['HomeTeam']) &
+                               (existing['AwayTeam'] == row['AwayTeam'])]
+                if len(dup) > 0:
+                    continue  # Already saved, skip
+            except Exception:
+                pass
+
+        # Append single row
+        df = pd.DataFrame([row])
+        write_header = not os.path.exists(filepath)
+        df.to_csv(filepath, mode='a' if not write_header else 'w',
+                  index=False, header=write_header, encoding='utf-8')
+
+        updates[league_code] = updates.get(league_code, 0) + 1
+
+    if updates:
+        logger.info(f"sync_today: added {sum(updates.values())} new matches across {len(updates)} leagues")
+        for code, count in sorted(updates.items()):
+            logger.info(f"  {code}: +{count} matches")
+
+    return updates
+
+
+def get_available_datafootball_leagues():
+    """Return list of league dicts for the frontend selector (same format as get_all_available_leagues)."""
+    leagues_file = os.path.join(DATA_DIR, 'datafootball_historical_leagues.json')
+    if not os.path.exists(leagues_file):
+        return []
+    with open(leagues_file, 'r', encoding='utf-8') as f:
+        league_map = json.load(f)
+    result = []
+    for name in sorted(league_map.keys()):
+        code = _generate_league_code(name)
+        result.append({
+            'code': code,
+            'name': name,
+            'type': 'datafootball',
+            'match_count': league_map[name],
+        })
+    return result
+
+
 if __name__ == '__main__':
     import sys
     logging.basicConfig(level=logging.INFO, format='%(asctime)s [%(levelname)s] %(message)s')
 
-    test_mode = '--test' in sys.argv
-    download_all(test_mode=test_mode)
+    if '--sync-today' in sys.argv:
+        # Incremental sync only
+        sync_today_completed()
+    elif '--test' in sys.argv:
+        download_all(test_mode=True)
+    else:
+        download_all(test_mode=False)

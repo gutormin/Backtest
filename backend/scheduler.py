@@ -869,3 +869,22 @@ async def run_dutching_scheduler_loop():
             "cancelled": "Dutching scheduler finalizado.",
         }
     )
+
+
+async def run_datafootball_sync_loop():
+    """Daily sync: append completed matches from DataFootball API to CSV files."""
+    from .datafootball_downloader import sync_today_completed
+    await _run_generic_scheduler_loop(
+        task_name="datafootball_sync",
+        scan_func=lambda: asyncio.to_thread(sync_today_completed),
+        interval_seconds=21600,  # every 6 hours
+        error_sleep=3600,
+        log_labels={
+            "startup": "DataFootball Sync diario iniciado.",
+            "scanning": "Sincronizando partidas finalizadas da DataFootball API...",
+            "done": "DataFootball Sync concluida:",
+            "scan_error": "DataFootball Sync falhou:",
+            "loop_error": "Erro no DataFootball Sync:",
+            "cancelled": "DataFootball Sync finalizado.",
+        }
+    )

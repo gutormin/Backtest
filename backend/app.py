@@ -92,7 +92,7 @@ def _register_all_routers(app: FastAPI):
 
 def _start_schedulers():
     """Start background schedulers (local dev only)."""
-    from .scheduler import run_scheduler_loop, run_arbitrage_scheduler_loop, run_live_odds_tracker_loop, run_dutching_scheduler_loop
+    from .scheduler import run_scheduler_loop, run_arbitrage_scheduler_loop, run_live_odds_tracker_loop, run_dutching_scheduler_loop, run_datafootball_sync_loop
     from .cluster_ai_tracker import run_cluster_ai_alerts_loop
 
     try:
@@ -116,6 +116,7 @@ def _start_schedulers():
     asyncio.create_task(_delayed_task("live_odds", run_live_odds_tracker_loop, 0.5))
     asyncio.create_task(_delayed_task("cluster_ai", run_cluster_ai_alerts_loop, 2.0))
     asyncio.create_task(_delayed_task("dutching", run_dutching_scheduler_loop, 0.5))
+    asyncio.create_task(_delayed_task("datafootball_sync", run_datafootball_sync_loop, 60))  # start after 60s
 
 
 # ---- App construction (order matters: routes before mount) ----
