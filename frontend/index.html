@@ -43,6 +43,7 @@ window.addEventListener('unhandledrejection', function(e) {
     <select id="topbar-data-source" aria-label="Fonte de dados" onchange="var ds=document.getElementById('data-source-select'); ds.value=this.value; ds.dispatchEvent(new Event('change'))">
       <option value="footballdata">Football-Data (Global)</option>
       <option value="futpython">FutPythonTrader (América do Sul)</option>
+      <option value="datafootball">DataFootball API (BTTS/HT)</option>
     </select>
     <button class="btn-topbar btn-topbar--primary" id="btn-topbar-run" onclick="runBacktest()" aria-label="Executar backtest">
       <i class="fa-solid fa-play"></i> Executar
@@ -99,6 +100,7 @@ window.addEventListener('unhandledrejection', function(e) {
 <select id="data-source-select" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 4px; margin-bottom: 10px;" onchange="window.handleDataSourceChange()">
     <option value="footballdata">Padrão Global (Football-Data)</option>
     <option value="futpython">América do Sul (FutPythonTrader)</option>
+    <option value="datafootball">Global com BTTS/HT (DataFootball API)</option>
 </select>
 <div id="futpython-config" style="display: none; margin-bottom: 10px;">
     <input type="text" id="futpython-api-key" placeholder="API Key da FutPythonTrader..." value="cmqa6oz0p01i1wq6lzxknltmd" style="width: 100%; background: var(--bg-darker); border: 1px solid var(--border-color); color: var(--text-primary); padding: 8px; border-radius: 4px;" onchange="window.saveFutpythonKey(this.value)">

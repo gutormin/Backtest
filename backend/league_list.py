@@ -104,6 +104,29 @@ def get_all_available_leagues(source="footballdata"):
                 all_leagues.append({'code': code, 'name': name, 'type': 'aggregate'})
         return all_leagues
 
+    if source == 'datafootball':
+        # Read cached DataFootball API league list
+        config_path = os.path.join(DATA_DIR, 'api_leagues_list.json')
+        if not os.path.exists(config_path):
+            return []
+        try:
+            with open(config_path, 'r', encoding='utf-8') as f:
+                names = json.load(f)
+            # Dynamically generate codes same as clean_league_code()
+            import re
+            leagues_list = []
+            for name in names:
+                code = re.sub(r'[^a-zA-Z0-9\s\-]', '', name)
+                code = re.sub(r'[\s\-]+', '_', code).upper()
+                leagues_list.append({
+                    'code': code,
+                    'name': name,
+                    'type': 'datafootball',
+                })
+            return leagues_list
+        except Exception:
+            return []
+
     all_leagues = []
     seen_codes = set()
 

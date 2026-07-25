@@ -217,6 +217,12 @@ def auto_detect_data_source(league_code):
         return 'futpython'  # pais/liga format from FutPythonTrader
     if league_code in SOUTH_AMERICAN_LEAGUES:
         return 'futpython'
+    # Check if league exists in DataFootball API list
+    api_leagues = get_api_leagues()
+    if api_leagues:
+        api_codes = {clean_league_code(name) for name in api_leagues}
+        if league_code in api_codes:
+            return 'datafootball'
     return 'footballdata'
 
 
@@ -902,6 +908,22 @@ def get_all_available_leagues(source="footballdata"):
     """Returns a list of all leagues supported by the system."""
     if source == "futpython":
         return get_futpython_leagues()
+
+    if source == "datafootball":
+        # Return leagues from DataFootball API (live matches with BTTS/HT odds)
+        api_names = get_api_leagues()
+        if not api_names:
+            return []
+        leagues_list = []
+        for name in api_names:
+            code = clean_league_code(name)
+            leagues_list.append({
+                'code': code,
+                'name': name,
+                'type': 'datafootball',
+                'api_name': name
+            })
+        return leagues_list
         
     all_leagues = []
     seen_codes = set()
