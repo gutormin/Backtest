@@ -171,6 +171,11 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1', 
 
     total_matches_in_file = 0
     all_seasons = set()
+
+    # ── FREE TIER: pre-clean memory before processing strategies ──
+    import gc
+    gc.collect()
+
     for s in selected_strategies:
         sid = s['id']
         try:
@@ -194,10 +199,26 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1', 
             futpython_api_key = get_futpython_api_key() if data_source == 'futpython' else p.get('futpython_api_key', '')
 
             bt = ChronologicalBacktester()
+
+            # ── FREE TIER OPTIMIZATION ──
+            # On Render free tier (512 MB), loading 5+ years of data × 4 strategies = OOM crash.
+            # Limit portfolio backtests to last 2.5 years and shrink end_date slightly to
+            # exclude partial current-season data that bloats memory without adding value.
+            pf_start = p.get('startDate', p.get('start_date', '2021-01-01'))
+            pf_end   = p.get('endDate', p.get('end_date', datetime.today().strftime('%Y-%m-%d')))
+            try:
+                pf_start_dt = datetime.strptime(pf_start, '%Y-%m-%d')
+                cutoff = datetime(2024, 1, 1)  # Only last ~2.5 years for free tier safety
+                if pf_start_dt < cutoff:
+                    pf_start = '2024-01-01'
+                    logger.info(f"Portfolio free-tier: data reduzida para {pf_start} → {pf_end} (estratégia '{s['name'][:40]}')")
+            except Exception:
+                pass
+
             res = bt.run(
                 leagues=p.get('leagues', []),
-                start_date=p.get('startDate', p.get('start_date', '2021-01-01')),
-                end_date=p.get('endDate', p.get('end_date', datetime.today().strftime('%Y-%m-%d'))),
+                start_date=pf_start,
+                end_date=pf_end,
                 market=mkt_str,
                 value_threshold=p.get('valueThreshold', p.get('value_threshold', 1.05)),
                 initial_bankroll=1000.0,
@@ -249,7 +270,9 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1', 
             per_strategy_status[sid]['error_message'] = str(e)
             logger.error(f"Portfolio: exceção na estratégia '{s.get('name','?')}': {e}")
 
-        # Free memory between strategies — critical for Render free tier (512 MB)
+        # ── Aggressive memory cleanup between strategies (Render free tier: 512 MB) ──
+        # Each strategy loads multi-year CSV datasets into pandas DataFrames.
+        # Without explicit cleanup, 4 strategies = OOM → 502 crash.
         gc.collect()
 
     if not all_bets:
