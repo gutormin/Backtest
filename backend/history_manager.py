@@ -45,29 +45,36 @@ def get_pg_connection():
     if url.startswith("postgres://"):
         url = url.replace("postgres://", "postgresql://", 1)
     import psycopg2
-    return psycopg2.connect(url)
+    return psycopg2.connect(url, connect_timeout=10)
 
 def init_db():
+    global DATABASE_URL
     if DATABASE_URL:
-        conn = get_pg_connection()
         try:
-            with conn.cursor() as cur:
-                cur.execute("""
-                    CREATE TABLE IF NOT EXISTS strategies (
-                        id TEXT PRIMARY KEY,
-                        name TEXT NOT NULL,
-                        type TEXT NOT NULL,
-                        created_at TEXT NOT NULL,
-                        is_tg_active INTEGER DEFAULT 0,
-                        parameters TEXT NOT NULL
-                    )
-                """)
-                conn.commit()
+            conn = get_pg_connection()
         except Exception as e:
-            logger.error(f"Erro ao inicializar banco PostgreSQL: {e}", exc_info=True)
-        finally:
-            conn.close()
-        return
+            logger.error(f"FALHA ao conectar ao PostgreSQL (conexão recusada): {e}. Usando SQLite local como fallback.", exc_info=True)
+            DATABASE_URL = None  # Disable PG for all subsequent calls — fallback to SQLite
+        else:
+            try:
+                with conn.cursor() as cur:
+                    cur.execute("""
+                        CREATE TABLE IF NOT EXISTS strategies (
+                            id TEXT PRIMARY KEY,
+                            name TEXT NOT NULL,
+                            type TEXT NOT NULL,
+                            created_at TEXT NOT NULL,
+                            is_tg_active INTEGER DEFAULT 0,
+                            parameters TEXT NOT NULL
+                        )
+                    """)
+                    conn.commit()
+                logger.info("Banco PostgreSQL inicializado com sucesso.")
+            except Exception as e:
+                logger.error(f"Erro ao inicializar banco PostgreSQL: {e}", exc_info=True)
+            finally:
+                conn.close()
+            return
 
     conn = get_db_connection()
     try:

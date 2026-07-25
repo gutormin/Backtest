@@ -34,10 +34,16 @@ def api_get_history():
 def api_debug_db():
     try:
         h = load_history()
+        db_url = os.environ.get("DATABASE_URL", "")
+        db_active = bool(db_url)
+        # Mask sensitive info
+        db_preview = db_url[:30] + "..." if db_active else "NOT SET"
         return {
             "file_exists": os.path.exists("data/history_strategies.json"),
             "file_size": os.path.getsize("data/history_strategies.json") if os.path.exists("data/history_strategies.json") else 0,
             "items_count": len(h),
+            "database": "PostgreSQL" if db_active else "SQLite",
+            "database_url_preview": db_preview,
             "items": [{"id": x.get("id"), "name": x.get("name"), "type": x.get("type"), "created_at": x.get("created_at")} for x in h]
         }
     except Exception as e:
