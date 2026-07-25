@@ -406,6 +406,17 @@ def run_scan(req: ScanRequest):
         from ..data_loader import clear_league_data_cache
         clear_league_data_cache()
 
+        # ── Auto-detect data source per league ──
+        # The frontend sends a single data_source for ALL leagues, but leagues can be
+        # from different sources (FutPython for SA, football-data for EU).
+        # We ignore req.data_source and detect per league.
+        effective_data_source = req.data_source
+        if req.leagues:
+            detected = auto_detect_data_source(req.leagues[0])
+            if detected != effective_data_source:
+                logger.info(f"Scan: overriding data_source '{effective_data_source}' -> '{detected}' (detected from leagues)")
+                effective_data_source = detected
+
         backtester = ChronologicalBacktester()
         scan_results = []
 
@@ -429,7 +440,7 @@ def run_scan(req: ScanRequest):
                 min_odds=req.minOdds or 1.0,
                 max_odds=req.maxOdds or 2.50,
                 use_ml=req.use_ml,
-                data_source=req.data_source,
+                data_source=effective_data_source,
                 futpython_api_key=req.futpython_api_key,
                 model_type=req.model_type
             )
@@ -545,7 +556,7 @@ def run_scan(req: ScanRequest):
                 scan_type='markets',
                 markets_list=market_codes,
                 use_ml=req.use_ml,
-                data_source=req.data_source,
+                data_source=effective_data_source,
                 futpython_api_key=req.futpython_api_key,
                 model_type=req.model_type
             )
@@ -600,7 +611,7 @@ def run_scan(req: ScanRequest):
                 scan_type='leagues',
                 markets_list=market_list,
                 use_ml=req.use_ml,
-                data_source=req.data_source,
+                data_source=effective_data_source,
                 futpython_api_key=req.futpython_api_key,
                 model_type=req.model_type
             )
@@ -652,7 +663,7 @@ def run_scan(req: ScanRequest):
                 scan_type='combinations',
                 markets_list=market_codes,
                 use_ml=req.use_ml,
-                data_source=req.data_source,
+                data_source=effective_data_source,
                 futpython_api_key=req.futpython_api_key,
                 model_type=req.model_type
             )
@@ -706,7 +717,7 @@ def run_scan(req: ScanRequest):
                 scan_type='staking',
                 markets_list=market_codes,
                 use_ml=req.use_ml,
-                data_source=req.data_source,
+                data_source=effective_data_source,
                 futpython_api_key=req.futpython_api_key,
                 model_type=req.model_type
             )
@@ -1176,15 +1187,24 @@ def get_autopilot_predictions(source: str = 'api'):
             if token:
                 df_fixtures = load_upcoming_from_api(token)
                 
+        # ── DataFootball API fallback: fixtures.csv is often stale (off-season) ──
+        token_fallback = get_api_token()
+        if token_fallback:
+            try:
+                df_fixtures = load_upcoming_from_api(token_fallback)
+                logger.info("Scanner: DataFootball API fallback loaded successfully")
+            except Exception as e:
+                logger.warning(f"DataFootball API fallback failed: {e}")
+
         if df_fixtures.empty:
-            sync_fixtures(force=False)
+            sync_fixtures(force=True)
             fixtures_path = os.path.join(DATA_DIR, 'fixtures.csv')
             if os.path.exists(fixtures_path):
                 df_fixtures = pd.read_csv(fixtures_path, encoding='latin1')
-                df_fixtures.columns = [c.replace('ï»¿', '').replace('\ufeff', '').strip() for c in df_fixtures.columns]
+                df_fixtures.columns = [c.replace('﻿', '').replace('﻿', '').strip() for c in df_fixtures.columns]
             else:
                 return []
-                
+
         all_leagues = get_all_available_leagues()
         league_codes = [l['code'] for l in all_leagues]
         poisson = PoissonModel()
