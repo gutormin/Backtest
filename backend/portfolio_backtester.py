@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import math
 import logging
+import gc
 import scipy.stats as stats
 from datetime import datetime
 
@@ -247,6 +248,9 @@ def run_portfolio(strategy_ids, initial_bankroll=1000.0, risk_method='fixed_1', 
             per_strategy_status[sid]['status'] = 'error'
             per_strategy_status[sid]['error_message'] = str(e)
             logger.error(f"Portfolio: exceção na estratégia '{s.get('name','?')}': {e}")
+
+        # Free memory between strategies — critical for Render free tier (512 MB)
+        gc.collect()
 
     if not all_bets:
         # Return detailed per-strategy status so the frontend knows WHY

@@ -5958,29 +5958,48 @@ async function runPortfolioBacktest(overrideStrategyIds) {
             })
         });
 
-        const data = await res.json();
+        // Try to parse JSON — server may return HTML on crash (502/OOM)
+        let data;
+        try {
+            const text = await res.text();
+            try {
+                data = JSON.parse(text);
+            } catch (jsonErr) {
+                // Server returned non-JSON (likely 502 HTML crash page)
+                console.error('Resposta não-JSON do servidor (primeiros 200 chars):', text.substring(0, 200));
+                if (progressInterval) clearInterval(progressInterval);
+                if (progressContainer) {
+                    progressBar.style.width = '100%';
+                    progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+                    progressLabel.innerHTML = '<i class="fa-solid fa-server" style="color: #ef4444;"></i> Servidor sobrecarregado';
+                    progressHint.innerText = 'O Render free tier (512MB) estourou. Tente com menos estratégias.';
+                    setTimeout(() => { progressContainer.style.display = 'none'; }, 6000);
+                }
+                if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
+                showToast('Servidor gratuito do Render atingiu limite de memória (512 MB). Tente rodar 1 ou 2 estratégias por vez.', 'error', 10000);
+                return;
+            }
+        } catch (textErr) {
+            console.error('Erro ao ler resposta:', textErr);
+            data = null;
+        }
 
-        // Cleanup progress bar
+        // Cleanup progress bar on success
         if (progressInterval) clearInterval(progressInterval);
         if (progressContainer) {
             progressBar.style.width = '100%';
-            progressLabel.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Finalizado!';
+            if (data && !res.ok) {
+                progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
+                progressLabel.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color: #ef4444;"></i> Erro';
+            } else if (data) {
+                progressLabel.innerHTML = '<i class="fa-solid fa-circle-check" style="color: #10b981;"></i> Finalizado!';
+            }
             progressTime.innerText = progressSeconds + 's';
-            progressHint.innerText = 'Carregando resultados...';
+            progressHint.innerText = data ? 'Carregando resultados...' : 'Falha ao processar';
             setTimeout(() => { progressContainer.style.display = 'none'; }, 1500);
         }
 
-        if (!res.ok || data.error) {
-            // Cleanup progress bar on error too
-            if (progressInterval) clearInterval(progressInterval);
-            if (progressContainer) {
-                progressBar.style.width = '100%';
-                progressBar.style.background = 'linear-gradient(90deg, #ef4444, #f87171)';
-                progressLabel.innerHTML = '<i class="fa-solid fa-circle-exclamation" style="color: #ef4444;"></i> Erro no servidor';
-                progressHint.innerText = data.detail || data.error || 'Erro desconhecido';
-                setTimeout(() => { progressContainer.style.display = 'none'; }, 4000);
-            }
-            showToast(data.detail || data.error || 'Erro desconhecido do servidor.', 'error');
+        if (!data || !res.ok || data.error) {
             if (btn) { btn.innerHTML = '<i class="fa-solid fa-layer-group"></i> Rodar Portfólio Selecionado'; btn.disabled = false; }
             document.getElementById('portfolio-results-panel').style.display = 'block';
             document.getElementById('port-metric-bankroll').innerText = `$0.00`;
