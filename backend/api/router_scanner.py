@@ -410,15 +410,43 @@ def run_scan(req: ScanRequest):
         # The frontend sends a single data_source for ALL leagues, but leagues can be
         # from different sources (FutPython for SA, football-data for EU).
         # We ignore req.data_source and detect per league.
-        effective_data_source = req.data_source
-        if req.leagues:
-            detected = auto_detect_data_source(req.leagues[0])
-            if detected != effective_data_source:
-                logger.info(f"Scan: overriding data_source '{effective_data_source}' -> '{detected}' (detected from leagues)")
-                effective_data_source = detected
+        # ── Build per-league data source map ──
+        league_sources = {}
+        for league in req.leagues:
+            ds = auto_detect_data_source(league)
+            league_sources[league] = ds
+            logger.info(f"Scan source: {league} -> {ds}")
+
+        # Use majority source for the backtester call
+        futpython_leagues = [l for l, s in league_sources.items() if s == 'futpython']
+        footballdata_leagues = [l for l, s in league_sources.items() if s == 'footballdata']
+        effective_data_source = 'futpython' if len(futpython_leagues) >= len(footballdata_leagues) else req.data_source
+
+        if effective_data_source != req.data_source:
+            logger.info(f"Scan: overriding data_source '{req.data_source}' -> '{effective_data_source}' "
+                        f"(FutPython: {len(futpython_leagues)}, FootballData: {len(footballdata_leagues)})")
+
+        # Build odds source description for diagnostics
+        odds_map = {
+            'B365': 'Bet365',
+            'BW': 'Betway', 'WH': 'William Hill', 'PS': 'Pinnacle',
+            'Avg': 'Média Mercado', 'Max': 'Máxima Mercado',
+            'BF': 'Betfair', 'BFE': 'Betfair Exchange',
+        }
+        odds_label = odds_map.get(req.oddsSource, req.oddsSource)
 
         backtester = ChronologicalBacktester()
         scan_results = []
+
+        # Store diagnostics for response
+        scan_diagnostics = {
+            "data_source_used": effective_data_source,
+            "odds_source": req.oddsSource,
+            "odds_source_label": odds_label,
+            "per_league_source": league_sources,
+            "futpython_leagues": futpython_leagues,
+            "footballdata_leagues": footballdata_leagues,
+        }
 
         # Walk-forward mode: single market or league, expanding window validation
         if getattr(req, 'walk_forward_folds', 0) >= 2:
@@ -822,12 +850,16 @@ def run_scan(req: ScanRequest):
                 r['eqs_percentile_bets'] = _percentile(r['eqs_score'], bets_scores.get(band, []))
                 r['eqs_percentile_bets_label'] = f'Top entre {band} apostas' if r['eqs_percentile_bets'] is not None else None
 
+        # Merge backtester diagnostics with our source diagnostics
+        bt_diag = getattr(backtester, 'last_scan_diagnostics', {})
+        merged_diag = {**scan_diagnostics, **bt_diag}
+
         return {
             "status": "success",
             "scan_type": req.scanType,
             "results": scan_results,
             "scan_results": scan_results,
-            "diagnostics": getattr(backtester, 'last_scan_diagnostics', {})
+            "diagnostics": merged_diag
         }
     except Exception as e:
         import traceback

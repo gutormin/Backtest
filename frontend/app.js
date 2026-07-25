@@ -4629,7 +4629,9 @@ function renderEqsResults(results, scanType, requestData, diagnostics) {
                         <i class="fa-solid fa-microscope"></i> Relatório de Diagnóstico do Scanner
                     </h4>
                     <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 10px;">
-                        Fonte de dados consultada: <span style="color: var(--text-primary); font-weight: bold; text-transform: uppercase;">${diagnostics.data_source || requestData.data_source}</span>
+                        Fonte selecionada: <span style="color: var(--text-secondary); font-weight: bold; text-transform: uppercase;">${requestData.data_source}</span><br>
+                        Fonte realmente usada: <span style="color: var(--text-primary); font-weight: bold; text-transform: uppercase;">${diagnostics.data_source_used || diagnostics.data_source || '?'}</span><br>
+                        Odds consultadas: <span style="color: #fbbf24; font-weight: bold;">${diagnostics.odds_source_label || diagnostics.odds_source || 'B365'}</span> (${diagnostics.odds_source || 'B365'})
                     </p>
                     <div style="font-size: 11px; color: var(--text-secondary); margin-bottom: 12px;">
                         <b>Carregamento por Liga:</b>
