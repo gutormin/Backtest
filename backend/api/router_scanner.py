@@ -529,8 +529,8 @@ def run_scan(req: ScanRequest):
             {'code': 'dnb_h', 'name': 'DNB Mandante'},
             {'code': 'dnb_a', 'name': 'DNB Visitante'},
             # Handicap Asiático
-            {'code': 'ah_home', 'name': 'AH Casa'},
-            {'code': 'ah_away', 'name': 'AH Fora'},
+            {'code': 'ah_home', 'name': 'AH Casa (sem dados - indisponível)', 'disabled': True},
+            {'code': 'ah_away', 'name': 'AH Fora (sem dados - indisponível)', 'disabled': True},
             # Vitória sem Sofrer Gols
             {'code': 'win_to_nil_home', 'name': 'Mandante Ganha de Zero'},
             {'code': 'win_to_nil_away', 'name': 'Visitante Ganha de Zero'},
