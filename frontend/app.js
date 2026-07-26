@@ -166,33 +166,34 @@ const MARKET_COLUMN_MAP = {
         'lay_cs_00': 'Estimado (Poisson)', 'lay_cs_11': 'Estimado (Poisson)', 'lay_cs_01': 'Estimado (Poisson)',
         'lay_cs_02': 'Estimado (Poisson)', 'lay_cs_12': 'Estimado (Poisson)',
     },
-    // ── FutPython (America do Sul) ── Brasil, Argentina, Chile, Peru, etc.
+    // ── FutPython (America do Sul) ──
     'futpython': {
+        // FutPython: coverage varies by league. Romania=full, Chile/Peru=limited.
         // 1X2
-        'home': 'Real (FutPython)',  'away': 'Real (FutPython)',  'draw': 'Real (FutPython)',
+        'home': 'Real',  'away': 'Real',  'draw': 'Real',
         // Double Chance / Lay
-        'lay_home': 'Real (DC_X2)',   'lay_away': 'Real (DC_1X)',   'lay_draw': 'Real (DC_12)',
-        'lay_home_ex': 'Real (DC_X2)', 'lay_away_ex': 'Real (DC_1X)', 'lay_draw_ex': 'Real (DC_12)',
+        'lay_home': 'Parcial',   'lay_away': 'Parcial',   'lay_draw': 'Parcial',
+        'lay_home_ex': 'Parcial', 'lay_away_ex': 'Parcial', 'lay_draw_ex': 'Parcial',
         // Over/Under FT
-        'over15': 'Real (FutPython)',  'under15': 'Real (FutPython)',
-        'over25': 'Real (FutPython)',  'under25': 'Real (FutPython)',
-        'over35': 'Real (FutPython)',  'under35': 'Real (FutPython)',
-        'over45': 'Real (FutPython)',  'under45': 'Real (FutPython)',
-        'over55': 'Estimado (Poisson)', 'under55': 'Estimado (Poisson)',
+        'over15': 'Real',  'under15': 'Real',
+        'over25': 'Real',  'under25': 'Real',
+        'over35': 'Real',  'under35': 'Real',
+        'over45': 'Real',  'under45': 'Real',
+        'over55': 'Estimado', 'under55': 'Estimado',
         // BTTS
-        'btts_yes': 'Real (FutPython)',  'btts_no': 'Real (FutPython)',
-        // DNB
-        'dnb_h': 'Real (FutPython)',  'dnb_a': 'Real (FutPython)',
+        'btts_yes': 'Parcial',  'btts_no': 'Parcial',
+        // DNB — columns exist but 0% populated in most leagues
+        'dnb_h': 'Indisponivel',  'dnb_a': 'Indisponivel',
         // Asian Handicap
         'ah_home': 'Indisponivel',   'ah_away': 'Indisponivel',
         // HT 1X2
-        'ht_home': 'Real (FutPython)', 'ht_draw': 'Real (FutPython)', 'ht_away': 'Real (FutPython)',
+        'ht_home': 'Parcial', 'ht_draw': 'Parcial', 'ht_away': 'Parcial',
         // HT Over/Under
-        'ht_over05': 'Real (FutPython)', 'ht_under05': 'Real (FutPython)',
-        'ht_over15': 'Real (FutPython)', 'ht_under15': 'Real (FutPython)',
-        'ht_over25': 'Real (FutPython)', 'ht_under25': 'Real (FutPython)',
-        'ht_over35': 'Real (FutPython)', 'ht_under35': 'Real (FutPython)',
-        // 2H 1X2 — FutPython nao tem dados de 2o tempo
+        'ht_over05': 'Parcial', 'ht_under05': 'Parcial',
+        'ht_over15': 'Parcial', 'ht_under15': 'Parcial',
+        'ht_over25': 'Parcial', 'ht_under25': 'Parcial',
+        'ht_over35': 'Parcial', 'ht_under35': 'Parcial',
+        // 2H — not available
         'sh_home': 'Indisponivel', 'sh_draw': 'Indisponivel', 'sh_away': 'Indisponivel',
         'sh_over05': 'Indisponivel', 'sh_under05': 'Indisponivel',
         'sh_over15': 'Indisponivel', 'sh_under15': 'Indisponivel',
@@ -200,21 +201,21 @@ const MARKET_COLUMN_MAP = {
         'sh_over35': 'Indisponivel', 'sh_under35': 'Indisponivel',
         // Win to Nil
         'win_to_nil_home': 'Indisponivel', 'win_to_nil_away': 'Indisponivel',
-        // Corners 1X2 — FutPython nao tem
+        // Corners 1X2 — not in FutPython
         'corners_1': 'Indisponivel', 'corners_x': 'Indisponivel', 'corners_2': 'Indisponivel',
-        // Corners Over/Under — FutPython tem via Bet365
-        'corners_over_75': 'Real (B365)',   'corners_under_75': 'Real (B365)',
-        'corners_over_85': 'Real (B365)',   'corners_under_85': 'Real (B365)',
-        'corners_over_95': 'Real (B365)',   'corners_under_95': 'Real (B365)',
-        'corners_over_105': 'Real (B365)',  'corners_under_105': 'Real (B365)',
-        'corners_over_115': 'Real (B365)',  'corners_under_115': 'Real (B365)',
+        // Corners Over/Under — varies by league
+        'corners_over_75': 'Parcial',   'corners_under_75': 'Parcial',
+        'corners_over_85': 'Parcial',   'corners_under_85': 'Parcial',
+        'corners_over_95': 'Parcial',   'corners_under_95': 'Parcial',
+        'corners_over_105': 'Parcial',  'corners_under_105': 'Parcial',
+        'corners_over_115': 'Parcial',  'corners_under_115': 'Parcial',
         // Correct Score
-        'cs_10': 'Real (FutPython)', 'cs_20': 'Real (FutPython)', 'cs_21': 'Real (FutPython)',
-        'cs_00': 'Real (FutPython)', 'cs_11': 'Real (FutPython)', 'cs_01': 'Real (FutPython)',
-        'cs_02': 'Real (FutPython)', 'cs_12': 'Real (FutPython)',
-        'lay_cs_10': 'Real (FutPython)', 'lay_cs_20': 'Real (FutPython)', 'lay_cs_21': 'Real (FutPython)',
-        'lay_cs_00': 'Real (FutPython)', 'lay_cs_11': 'Real (FutPython)', 'lay_cs_01': 'Real (FutPython)',
-        'lay_cs_02': 'Real (FutPython)', 'lay_cs_12': 'Real (FutPython)',
+        'cs_10': 'Parcial', 'cs_20': 'Parcial', 'cs_21': 'Parcial',
+        'cs_00': 'Parcial', 'cs_11': 'Parcial', 'cs_01': 'Parcial',
+        'cs_02': 'Parcial', 'cs_12': 'Parcial',
+        'lay_cs_10': 'Parcial', 'lay_cs_20': 'Parcial', 'lay_cs_21': 'Parcial',
+        'lay_cs_00': 'Parcial', 'lay_cs_11': 'Parcial', 'lay_cs_01': 'Parcial',
+        'lay_cs_02': 'Parcial', 'lay_cs_12': 'Parcial',
     },
     // ── DataFootball API ── 40 ligas globais com odds em tempo real
     'datafootball': {
@@ -289,6 +290,8 @@ function updateMarketBadgesUI() {
                 colSpan.innerHTML = ' <span class=\"mkt-status mkt-unavailable\">Indisponivel</span>';
             } else if (label.startsWith('Estimado')) {
                 colSpan.innerHTML = ' <span class=\"mkt-status mkt-estimated\">Estimado</span>';
+            } else if (label.startsWith('Parcial')) {
+                colSpan.innerHTML = ' <span class=\"mkt-status mkt-partial\">Parcial</span>';
             } else if (label.startsWith('Real')) {
                 colSpan.innerHTML = ' <span class=\"mkt-status mkt-real\">Real</span>';
             }
@@ -347,6 +350,11 @@ function updateMarketBadgesUI() {
             background: rgba(16, 185, 129, 0.15);
             color: #10b981;
             border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .mkt-partial {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.3);
         }
         .mkt-estimated {
             background: rgba(245, 158, 11, 0.15);
