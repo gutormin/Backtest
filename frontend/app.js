@@ -104,207 +104,265 @@ async function handleDataSourceChange() {
     }
 }
 
+// =========================================================================
+// MARKET AVAILABILITY PER DATA SOURCE
+// =========================================================================
+// Legend: 'Real'  = odds from bookmaker in historical CSV
+//         'Estimado' = Poisson model fallback (no real odds in data)
+//         'Indisponivel' = no data at all for this market+source combo
+// =========================================================================
 const MARKET_COLUMN_MAP = {
+    // ── Football-Data (Global) ── Premier League, La Liga, Bundesliga, etc.
     'footballdata': {
-        'home': 'odds_ft_1',
-        'away': 'odds_ft_2',
-        'draw': 'odds_ft_x',
-        'lay_home': 'odds_doublechance_x2',
-        'lay_away': 'odds_doublechance_1x',
-        'lay_draw': 'odds_doublechance_12',
-        'lay_home_ex': 'odds_doublechance_x2 (Lay)',
-        'lay_away_ex': 'odds_doublechance_1x (Lay)',
-        'lay_draw_ex': 'odds_doublechance_12 (Lay)',
-        'over15': 'odds_ft_over15',
-        'over25': 'odds_ft_over25',
-        'under25': 'odds_ft_under25',
-        'over35': 'odds_ft_over35',
-        'under35': 'odds_ft_under35',
-        'over45': 'odds_ft_over45',
-        'under45': 'odds_ft_under45',
-        'over55': 'Poisson (Estimado)',
-        'under55': 'Poisson (Estimado)',
-        'btts_yes': 'odds_btts_yes',
-        'btts_no': 'odds_btts_no',
-        'dnb_h': 'odds_dnb_1',
-        'dnb_a': 'odds_dnb_2',
-        'ah_home': 'Poisson (Estimado)',
-        'ah_away': 'Poisson (Estimado)',
-        'ht_home': 'odds_1st_half_result_1',
-        'ht_draw': 'odds_1st_half_result_x',
-        'ht_away': 'odds_1st_half_result_2',
-        'ht_over05': 'odds_1st_half_over05',
-        'ht_under05': 'odds_1st_half_under05',
-        'ht_over15': 'odds_1st_half_over15',
-        'ht_under15': 'odds_1st_half_under15',
-        'ht_over25': 'odds_1st_half_over25',
-        'ht_under25': 'odds_1st_half_under25',
-        'ht_over35': 'odds_1st_half_over35',
-        'ht_under35': 'odds_1st_half_under35',
-        'sh_home': 'odds_2nd_half_result_1',
-        'sh_draw': 'odds_2nd_half_result_x',
-        'sh_away': 'odds_2nd_half_result_2',
-        'sh_over05': 'odds_2nd_half_over05',
-        'sh_under05': 'odds_2nd_half_under05',
-        'sh_over15': 'odds_2nd_half_over15',
-        'sh_under15': 'odds_2nd_half_under15',
-        'sh_over25': 'odds_2nd_half_over25',
-        'sh_under25': 'odds_2nd_half_under25',
-        'sh_over35': 'odds_2nd_half_over35',
-        'sh_under35': 'odds_2nd_half_under35',
-        'win_to_nil_home': 'odds_win_to_nil_1',
-        'win_to_nil_away': 'odds_win_to_nil_2',
-        'corners_1': 'odds_corners_1',
-        'corners_x': 'odds_corners_x',
-        'corners_2': 'odds_corners_2',
-        'corners_over_75': 'odds_corners_over_75',
-        'corners_under_75': 'odds_corners_under_75',
-        'corners_over_85': 'odds_corners_over_85',
-        'corners_under_85': 'odds_corners_under_85',
-        'corners_over_95': 'odds_corners_over_95',
-        'corners_under_95': 'odds_corners_under_95',
-        'corners_over_105': 'odds_corners_over_105',
-        'corners_under_105': 'odds_corners_under_105',
-        'corners_over_115': 'odds_corners_over_115',
-        'corners_under_115': 'odds_corners_under_115',
-        'cs_10': 'Poisson (Estimado)',
-        'cs_20': 'Poisson (Estimado)',
-        'cs_21': 'Poisson (Estimado)',
-        'cs_00': 'Poisson (Estimado)',
-        'cs_11': 'Poisson (Estimado)',
-        'cs_01': 'Poisson (Estimado)',
-        'cs_02': 'Poisson (Estimado)',
-        'cs_12': 'Poisson (Estimado)',
-        'lay_cs_10': 'Poisson (Estimado)',
-        'lay_cs_20': 'Poisson (Estimado)',
-        'lay_cs_21': 'Poisson (Estimado)',
-        'lay_cs_00': 'Poisson (Estimado)',
-        'lay_cs_11': 'Poisson (Estimado)',
-        'lay_cs_01': 'Poisson (Estimado)',
-        'lay_cs_02': 'Poisson (Estimado)',
-        'lay_cs_12': 'Poisson (Estimado)'
+        // 1X2
+        'home': 'Real (B365 odds_ft_1)',     'away': 'Real (B365 odds_ft_2)',
+        'draw': 'Real (B365 odds_ft_x)',
+        // Double Chance / Lay
+        'lay_home': 'Real (B365 DC_X2)',      'lay_away': 'Real (B365 DC_1X)',
+        'lay_draw': 'Real (B365 DC_12)',
+        'lay_home_ex': 'Real (B365 DC_X2)',   'lay_away_ex': 'Real (B365 DC_1X)',
+        'lay_draw_ex': 'Real (B365 DC_12)',
+        // Over/Under FT
+        'over15': 'Real (B365)',  'under15': 'Real (B365)',
+        'over25': 'Real (B365)',  'under25': 'Real (B365)',
+        'over35': 'Real (B365)',  'under35': 'Real (B365)',
+        'over45': 'Real (B365)',  'under45': 'Real (B365)',
+        'over55': 'Estimado (Poisson)', 'under55': 'Estimado (Poisson)',
+        // BTTS
+        'btts_yes': 'Real (B365)',  'btts_no': 'Real (B365)',
+        // DNB
+        'dnb_h': 'Real (B365)',  'dnb_a': 'Real (B365)',
+        // Asian Handicap
+        'ah_home': 'Indisponivel',   'ah_away': 'Indisponivel',
+        // HT 1X2
+        'ht_home': 'Real (B365)',  'ht_draw': 'Real (B365)',  'ht_away': 'Real (B365)',
+        // HT Over/Under
+        'ht_over05': 'Real (B365)',  'ht_under05': 'Real (B365)',
+        'ht_over15': 'Real (B365)',  'ht_under15': 'Real (B365)',
+        'ht_over25': 'Real (B365)',  'ht_under25': 'Real (B365)',
+        'ht_over35': 'Real (B365)',  'ht_under35': 'Real (B365)',
+        // 2H 1X2
+        'sh_home': 'Real (B365)',  'sh_draw': 'Real (B365)',  'sh_away': 'Real (B365)',
+        // 2H Over/Under
+        'sh_over05': 'Real (B365)',  'sh_under05': 'Real (B365)',
+        'sh_over15': 'Real (B365)',  'sh_under15': 'Real (B365)',
+        'sh_over25': 'Real (B365)',  'sh_under25': 'Real (B365)',
+        'sh_over35': 'Real (B365)',  'sh_under35': 'Real (B365)',
+        // Win to Nil
+        'win_to_nil_home': 'Real (B365)',  'win_to_nil_away': 'Real (B365)',
+        // Corners 1X2
+        'corners_1': 'Real (B365)',  'corners_x': 'Real (B365)',  'corners_2': 'Real (B365)',
+        // Corners Over/Under
+        'corners_over_75': 'Real (B365)',   'corners_under_75': 'Real (B365)',
+        'corners_over_85': 'Real (B365)',   'corners_under_85': 'Real (B365)',
+        'corners_over_95': 'Real (B365)',   'corners_under_95': 'Real (B365)',
+        'corners_over_105': 'Real (B365)',  'corners_under_105': 'Real (B365)',
+        'corners_over_115': 'Real (B365)',  'corners_under_115': 'Real (B365)',
+        // Correct Score
+        'cs_10': 'Estimado (Poisson)', 'cs_20': 'Estimado (Poisson)', 'cs_21': 'Estimado (Poisson)',
+        'cs_00': 'Estimado (Poisson)', 'cs_11': 'Estimado (Poisson)', 'cs_01': 'Estimado (Poisson)',
+        'cs_02': 'Estimado (Poisson)', 'cs_12': 'Estimado (Poisson)',
+        'lay_cs_10': 'Estimado (Poisson)', 'lay_cs_20': 'Estimado (Poisson)', 'lay_cs_21': 'Estimado (Poisson)',
+        'lay_cs_00': 'Estimado (Poisson)', 'lay_cs_11': 'Estimado (Poisson)', 'lay_cs_01': 'Estimado (Poisson)',
+        'lay_cs_02': 'Estimado (Poisson)', 'lay_cs_12': 'Estimado (Poisson)',
     },
+    // ── FutPython (America do Sul) ── Brasil, Argentina, Chile, Peru, etc.
     'futpython': {
-        'home': 'Odd_1_FT',
-        'away': 'Odd_2_FT',
-        'draw': 'Odd_X_FT',
-        'lay_home': 'DC_X2',
-        'lay_away': 'DC_1X',
-        'lay_draw': 'DC_12',
-        'lay_home_ex': 'DC_X2 (Lay)',
-        'lay_away_ex': 'DC_1X (Lay)',
-        'lay_draw_ex': 'DC_12 (Lay)',
-        'over15': 'Over_FT_1_5',
-        'over25': 'Over_FT_2_5',
-        'under25': 'Under_FT_2_5',
-        'over35': 'Over_FT_3_5',
-        'under35': 'Under_FT_3_5',
-        'over45': 'Over_FT_4_5',
-        'under45': 'Under_FT_4_5',
-        'over55': 'Poisson (Estimado)',
-        'under55': 'Poisson (Estimado)',
-        'btts_yes': 'BTTS_Yes',
-        'btts_no': 'BTTS_No',
-        'dnb_h': 'Indisponível',
-        'dnb_a': 'Indisponível',
-        'ah_home': 'AH_Home_neg/pos_*',
-        'ah_away': 'AH_Away_neg/pos_*',
-        'ht_home': 'Odd_1_HT',
-        'ht_draw': 'Odd_X_HT',
-        'ht_away': 'Odd_2_HT',
-        'ht_over05': 'Over_HT_0_5',
-        'ht_under05': 'Under_HT_0_5',
-        'ht_over15': 'Over_HT_1_5',
-        'ht_under15': 'Under_HT_1_5',
-        'ht_over25': 'Over_HT_2_5',
-        'ht_under25': 'Under_HT_2_5',
-        'ht_over35': 'Over_HT_3_5',
-        'ht_under35': 'Under_HT_3_5',
-        'sh_home': 'Indisponível',
-        'sh_draw': 'Indisponível',
-        'sh_away': 'Indisponível',
-        'sh_over05': 'Indisponível',
-        'sh_under05': 'Indisponível',
-        'sh_over15': 'Indisponível',
-        'sh_under15': 'Indisponível',
-        'sh_over25': 'Indisponível',
-        'sh_under25': 'Indisponível',
-        'sh_over35': 'Indisponível',
-        'sh_under35': 'Indisponível',
-        'win_to_nil_home': 'Indisponível',
-        'win_to_nil_away': 'Indisponível',
-        'corners_1': 'Indisponível',
-        'corners_x': 'Indisponível',
-        'corners_2': 'Indisponível',
-        'corners_over_75': 'Indisponível',
-        'corners_under_75': 'Indisponível',
-        'corners_over_85': 'Indisponível',
-        'corners_under_85': 'Indisponível',
-        'corners_over_95': 'Indisponível',
-        'corners_under_95': 'Indisponível',
-        'corners_over_105': 'Indisponível',
-        'corners_under_105': 'Indisponível',
-        'corners_over_115': 'Indisponível',
-        'corners_under_115': 'Indisponível',
-        'cs_10': 'CS_1_0',
-        'cs_20': 'CS_2_0',
-        'cs_21': 'CS_2_1',
-        'cs_00': 'CS_0_0',
-        'cs_11': 'CS_1_1',
-        'cs_01': 'CS_0_1',
-        'cs_02': 'CS_0_2',
-        'cs_12': 'CS_1_2',
-        'lay_cs_10': 'CS_1_0 (Lay)',
-        'lay_cs_20': 'CS_2_0 (Lay)',
-        'lay_cs_21': 'CS_2_1 (Lay)',
-        'lay_cs_00': 'CS_0_0 (Lay)',
-        'lay_cs_11': 'CS_1_1 (Lay)',
-        'lay_cs_01': 'CS_0_1 (Lay)',
-        'lay_cs_02': 'CS_0_2 (Lay)',
-        'lay_cs_12': 'CS_1_2 (Lay)'
+        // 1X2
+        'home': 'Real (FutPython)',  'away': 'Real (FutPython)',  'draw': 'Real (FutPython)',
+        // Double Chance / Lay
+        'lay_home': 'Real (DC_X2)',   'lay_away': 'Real (DC_1X)',   'lay_draw': 'Real (DC_12)',
+        'lay_home_ex': 'Real (DC_X2)', 'lay_away_ex': 'Real (DC_1X)', 'lay_draw_ex': 'Real (DC_12)',
+        // Over/Under FT
+        'over15': 'Real (FutPython)',  'under15': 'Real (FutPython)',
+        'over25': 'Real (FutPython)',  'under25': 'Real (FutPython)',
+        'over35': 'Real (FutPython)',  'under35': 'Real (FutPython)',
+        'over45': 'Real (FutPython)',  'under45': 'Real (FutPython)',
+        'over55': 'Estimado (Poisson)', 'under55': 'Estimado (Poisson)',
+        // BTTS
+        'btts_yes': 'Real (FutPython)',  'btts_no': 'Real (FutPython)',
+        // DNB
+        'dnb_h': 'Real (FutPython)',  'dnb_a': 'Real (FutPython)',
+        // Asian Handicap
+        'ah_home': 'Indisponivel',   'ah_away': 'Indisponivel',
+        // HT 1X2
+        'ht_home': 'Real (FutPython)', 'ht_draw': 'Real (FutPython)', 'ht_away': 'Real (FutPython)',
+        // HT Over/Under
+        'ht_over05': 'Real (FutPython)', 'ht_under05': 'Real (FutPython)',
+        'ht_over15': 'Real (FutPython)', 'ht_under15': 'Real (FutPython)',
+        'ht_over25': 'Real (FutPython)', 'ht_under25': 'Real (FutPython)',
+        'ht_over35': 'Real (FutPython)', 'ht_under35': 'Real (FutPython)',
+        // 2H 1X2 — FutPython nao tem dados de 2o tempo
+        'sh_home': 'Indisponivel', 'sh_draw': 'Indisponivel', 'sh_away': 'Indisponivel',
+        'sh_over05': 'Indisponivel', 'sh_under05': 'Indisponivel',
+        'sh_over15': 'Indisponivel', 'sh_under15': 'Indisponivel',
+        'sh_over25': 'Indisponivel', 'sh_under25': 'Indisponivel',
+        'sh_over35': 'Indisponivel', 'sh_under35': 'Indisponivel',
+        // Win to Nil
+        'win_to_nil_home': 'Indisponivel', 'win_to_nil_away': 'Indisponivel',
+        // Corners 1X2 — FutPython nao tem
+        'corners_1': 'Indisponivel', 'corners_x': 'Indisponivel', 'corners_2': 'Indisponivel',
+        // Corners Over/Under — FutPython tem via Bet365
+        'corners_over_75': 'Real (B365)',   'corners_under_75': 'Real (B365)',
+        'corners_over_85': 'Real (B365)',   'corners_under_85': 'Real (B365)',
+        'corners_over_95': 'Real (B365)',   'corners_under_95': 'Real (B365)',
+        'corners_over_105': 'Real (B365)',  'corners_under_105': 'Real (B365)',
+        'corners_over_115': 'Real (B365)',  'corners_under_115': 'Real (B365)',
+        // Correct Score
+        'cs_10': 'Real (FutPython)', 'cs_20': 'Real (FutPython)', 'cs_21': 'Real (FutPython)',
+        'cs_00': 'Real (FutPython)', 'cs_11': 'Real (FutPython)', 'cs_01': 'Real (FutPython)',
+        'cs_02': 'Real (FutPython)', 'cs_12': 'Real (FutPython)',
+        'lay_cs_10': 'Real (FutPython)', 'lay_cs_20': 'Real (FutPython)', 'lay_cs_21': 'Real (FutPython)',
+        'lay_cs_00': 'Real (FutPython)', 'lay_cs_11': 'Real (FutPython)', 'lay_cs_01': 'Real (FutPython)',
+        'lay_cs_02': 'Real (FutPython)', 'lay_cs_12': 'Real (FutPython)',
+    },
+    // ── DataFootball API ── 40 ligas globais com odds em tempo real
+    'datafootball': {
+        // 1X2
+        'home': 'Real (DataFootball)', 'away': 'Real (DataFootball)', 'draw': 'Real (DataFootball)',
+        // Double Chance / Lay
+        'lay_home': 'Real (DataFootball)',  'lay_away': 'Real (DataFootball)',
+        'lay_draw': 'Real (DataFootball)',
+        'lay_home_ex': 'Real (DataFootball)', 'lay_away_ex': 'Real (DataFootball)',
+        'lay_draw_ex': 'Real (DataFootball)',
+        // Over/Under FT
+        'over15': 'Real (DataFootball)', 'under15': 'Real (DataFootball)',
+        'over25': 'Real (DataFootball)', 'under25': 'Real (DataFootball)',
+        'over35': 'Real (DataFootball)', 'under35': 'Real (DataFootball)',
+        'over45': 'Real (DataFootball)', 'under45': 'Real (DataFootball)',
+        'over55': 'Estimado (Poisson)',   'under55': 'Estimado (Poisson)',
+        // BTTS
+        'btts_yes': 'Real (DataFootball)', 'btts_no': 'Real (DataFootball)',
+        // DNB
+        'dnb_h': 'Real (DataFootball)', 'dnb_a': 'Real (DataFootball)',
+        // Asian Handicap — nenhuma API tem
+        'ah_home': 'Indisponivel',     'ah_away': 'Indisponivel',
+        // HT 1X2
+        'ht_home': 'Real (DataFootball)', 'ht_draw': 'Real (DataFootball)', 'ht_away': 'Real (DataFootball)',
+        // HT Over/Under
+        'ht_over05': 'Real (DataFootball)', 'ht_under05': 'Real (DataFootball)',
+        'ht_over15': 'Real (DataFootball)', 'ht_under15': 'Real (DataFootball)',
+        'ht_over25': 'Real (DataFootball)', 'ht_under25': 'Real (DataFootball)',
+        'ht_over35': 'Real (DataFootball)', 'ht_under35': 'Real (DataFootball)',
+        // 2H 1X2 — DataFootball tem
+        'sh_home': 'Real (DataFootball)', 'sh_draw': 'Real (DataFootball)', 'sh_away': 'Real (DataFootball)',
+        // 2H Over/Under — DataFootball tem
+        'sh_over05': 'Real (DataFootball)', 'sh_under05': 'Real (DataFootball)',
+        'sh_over15': 'Real (DataFootball)', 'sh_under15': 'Real (DataFootball)',
+        'sh_over25': 'Real (DataFootball)', 'sh_under25': 'Real (DataFootball)',
+        'sh_over35': 'Real (DataFootball)', 'sh_under35': 'Real (DataFootball)',
+        // Win to Nil — DataFootball nao tem
+        'win_to_nil_home': 'Indisponivel', 'win_to_nil_away': 'Indisponivel',
+        // Corners 1X2 — DataFootball tem
+        'corners_1': 'Real (DataFootball)', 'corners_x': 'Real (DataFootball)', 'corners_2': 'Real (DataFootball)',
+        // Corners Over/Under — DataFootball tem
+        'corners_over_75': 'Real (DataFootball)',  'corners_under_75': 'Real (DataFootball)',
+        'corners_over_85': 'Real (DataFootball)',  'corners_under_85': 'Real (DataFootball)',
+        'corners_over_95': 'Real (DataFootball)',  'corners_under_95': 'Real (DataFootball)',
+        'corners_over_105': 'Real (DataFootball)', 'corners_under_105': 'Real (DataFootball)',
+        'corners_over_115': 'Real (DataFootball)', 'corners_under_115': 'Real (DataFootball)',
+        // Correct Score — DataFootball nao tem
+        'cs_10': 'Estimado (Poisson)', 'cs_20': 'Estimado (Poisson)', 'cs_21': 'Estimado (Poisson)',
+        'cs_00': 'Estimado (Poisson)', 'cs_11': 'Estimado (Poisson)', 'cs_01': 'Estimado (Poisson)',
+        'cs_02': 'Estimado (Poisson)', 'cs_12': 'Estimado (Poisson)',
+        'lay_cs_10': 'Estimado (Poisson)', 'lay_cs_20': 'Estimado (Poisson)', 'lay_cs_21': 'Estimado (Poisson)',
+        'lay_cs_00': 'Estimado (Poisson)', 'lay_cs_11': 'Estimado (Poisson)', 'lay_cs_01': 'Estimado (Poisson)',
+        'lay_cs_02': 'Estimado (Poisson)', 'lay_cs_12': 'Estimado (Poisson)',
     }
 };
 
 function updateMarketBadgesUI() {
-    const activeSource = window.currentDataSource;
-    const badgesFd = document.querySelectorAll('.mkt-badge-fd');
-    const badgesFp = document.querySelectorAll('.mkt-badge-fp');
-    
-    if (activeSource === 'footballdata') {
-        badgesFd.forEach(b => b.classList.remove('mkt-badge-dimmed'));
-        badgesFp.forEach(b => b.classList.add('mkt-badge-dimmed'));
-    } else if (activeSource === 'futpython') {
-        badgesFd.forEach(b => b.classList.add('mkt-badge-dimmed'));
-        badgesFp.forEach(b => b.classList.remove('mkt-badge-dimmed'));
-    } else {
-        badgesFd.forEach(b => b.classList.remove('mkt-badge-dimmed'));
-        badgesFp.forEach(b => b.classList.remove('mkt-badge-dimmed'));
-    }
-    
-    // Update dynamic column name display next to each market option
+    const activeSource = window.currentDataSource || 'footballdata';
     const options = document.querySelectorAll('.multiselect-option-item');
+
     options.forEach(opt => {
         const checkbox = opt.querySelector('input[type="checkbox"]');
         if (!checkbox) return;
         const val = checkbox.value;
+
+        // 1. Update column name badge (Real/Estimado/Indisponivel)
         const colSpan = opt.querySelector('.mkt-col-name');
-        if (!colSpan) return;
-        
         const sourceMap = MARKET_COLUMN_MAP[activeSource];
-        if (sourceMap && sourceMap[val]) {
-            const colName = sourceMap[val];
-            if (colName === 'Indisponível') {
-                colSpan.textContent = ' (Indisponível)';
-                colSpan.style.color = '#ff4a4a';
-            } else {
-                colSpan.textContent = ` (${colName})`;
-                colSpan.style.color = 'var(--text-secondary)';
+        if (colSpan && sourceMap && sourceMap[val]) {
+            const label = sourceMap[val];
+            if (label === 'Indisponivel') {
+                colSpan.innerHTML = ' <span class=\"mkt-status mkt-unavailable\">Indisponivel</span>';
+            } else if (label.startsWith('Estimado')) {
+                colSpan.innerHTML = ' <span class=\"mkt-status mkt-estimated\">Estimado</span>';
+            } else if (label.startsWith('Real')) {
+                colSpan.innerHTML = ' <span class=\"mkt-status mkt-real\">Real</span>';
             }
-        } else {
-            colSpan.textContent = '';
         }
+
+        // 2. Update FD/FP/DF source badges to reflect availability per source
+        const badgesContainer = opt.querySelector('.mkt-status-badges');
+        if (!badgesContainer || !sourceMap) return;
+
+        const label = sourceMap[val];
+        const isAvailable = label && label !== 'Indisponivel';
+
+        ['fd', 'fp', 'df'].forEach(src => {
+            const badge = badgesContainer.querySelector(`.mkt-badge-${src}`);
+            if (!badge) return;
+            // Check if THIS source has data for THIS market
+            let srcAvailable = false;
+            const srcMap = MARKET_COLUMN_MAP[src === 'fd' ? 'footballdata' : src === 'fp' ? 'futpython' : 'datafootball'];
+            if (srcMap && srcMap[val]) {
+                srcAvailable = srcMap[val] !== 'Indisponivel';
+            }
+            // Dim if not active source
+            if (src === (activeSource === 'footballdata' ? 'fd' : activeSource === 'futpython' ? 'fp' : 'df')) {
+                badge.style.opacity = '1';
+                badge.style.filter = 'none';
+            } else {
+                badge.style.opacity = '0.35';
+                badge.style.filter = 'grayscale(0.5)';
+            }
+            // Gray out if unavailable for that source
+            if (!srcAvailable) {
+                badge.style.opacity = '0.25';
+                badge.style.textDecoration = 'line-through';
+                badge.style.color = '#ef4444';
+            }
+        });
     });
 }
+
+// ── CSS-injected market status badges ──
+(function injectMarketBadgeStyles() {
+    if (document.getElementById('mkt-badge-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'mkt-badge-styles';
+    style.textContent = `
+        .mkt-status {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-left: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .mkt-real {
+            background: rgba(16, 185, 129, 0.15);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+        .mkt-estimated {
+            background: rgba(245, 158, 11, 0.15);
+            color: #f59e0b;
+            border: 1px solid rgba(245, 158, 11, 0.3);
+        }
+        .mkt-unavailable {
+            background: rgba(239, 68, 68, 0.12);
+            color: #ef4444;
+            border: 1px solid rgba(239, 68, 68, 0.25);
+            text-decoration: line-through;
+        }
+        .mkt-badge-dimmed { opacity: 0.35; filter: grayscale(0.5); }
+    `;
+    document.head.appendChild(style);
+})();
 
 
 function saveFutpythonKey(val) {
